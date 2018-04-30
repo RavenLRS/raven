@@ -1,4 +1,4 @@
-menu "Raven RC"
+menu "Raven LRS"
 
 config RAVEN_TX_SUPPORT
     bool "Enable TX support"
