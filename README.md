@@ -4,8 +4,6 @@ Raven is completely open source a long range system (LRS) based on LoRa
 which also supports peer to peer communications (so for example, 
 flight controllers in aircrafts can talk directly to each other).
 
-![Raven TX on a Q X7](docs/images/raven_qx7.png?raw=true "Raven TX on a Q X7")
-
 # Main features
 
 - Long Range support using LoRa for the main RC link between TX and RX.
@@ -27,6 +25,8 @@ controller. Air protocol is limited to 100Hz for now, but will support up
 to 150hz with telemetry or 200hz without telemetry in the near future.
 - Multiple RX protocols supported (SBUS+SmartPort, CRSF, MSP, CRSF, ...).
 - Support for backup batteries (useful for missing aircraft recovery).
+
+![Raven TX on a Q X7](docs/images/raven_qx7.png?raw=true "Raven TX on a Q X7")
 
 ## Building Raven
 
