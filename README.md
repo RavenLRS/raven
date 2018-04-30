@@ -1,6 +1,32 @@
-# Raven Long Range System
+# Raven Long Range System
 
-Raven is completely open source a long range system (LRS) which runs on inexpensive ESP32 and uses LoRa for the link layer.
+Raven is completely open source a long range system (LRS) based on LoRa
+which also supports peer to peer communications (so for example, 
+flight controllers in aircrafts can talk directly to each other).
+
+![Raven TX on a Q X7](docs/images/raven_qx7.png?raw=true "Raven TX on a Q X7")
+
+# Main features
+
+- Long Range support using LoRa for the main RC link between TX and RX.
+- Full telemetry, integrated with the radio (voice alerts with OpenTX, etc...).
+- Up to 20 channels.
+- Support for P2P for aircraft to aircraft communication (either direct 
+or via pilots on the ground). Allows, for example, displaying a radar in the
+OSD, automatically choosing a free VTX channel or automatically following
+another aircraft.
+- OLED screens, both on the TX and RX with channel monitor, telemetry 
+viewer and full configuration (requires at least one button on the board).
+- Bluetooh MSP bridge using the same serial port as the RC link (works with
+all the existing Betaflight/iNAV configurators with support for Bluetooth).
+- Model ID with 64 memory slots.
+- Fully configurable from the radio using CRSF scripts (crossfire.lua
+and device.lua).
+- Low latency. 250Hz between radio and TX as well as between TX and flight
+controller. Air protocol is limited to 100Hz for now, but will support up
+to 150hz with telemetry or 200hz without telemetry in the near future.
+- Multiple RX protocols supported (SBUS+SmartPort, CRSF, MSP, CRSF, ...).
+- Support for backup batteries (useful for missing aircraft recovery).
 
 ## Building Raven
 
