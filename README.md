@@ -31,7 +31,8 @@ to 150hz with telemetry or 200hz without telemetry in the near future.
 ## Building Raven
 
 Raven is built on top of [esp-idf](https://github.com/espressif/esp-idf), so as a first step to build raven you should install
-and configure it.
+and configure it. Note that you should install the `v3.0-rc1` version (run
+`git checkout v3.0-rc1` after cloning the esp-idf repo).
 
 Make sure all the requires submodules have been checked out by running `git submodule init` followed by `git submodule update`.
 
