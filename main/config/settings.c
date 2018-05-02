@@ -226,7 +226,7 @@ static const char *lora_band_table[] = {
 #endif
 };
 static const char *tx_input_table[] = {"CRSF", "Test"};
-static const char *tx_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw" /*, "100mw"*/};
+static const char *tx_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(tx_rf_power_table) == TX_RF_POWER_LAST - TX_RF_POWER_FIRST + 1, "tx_rf_power_table invalid");
 static const char *rx_output_table[] = {"SBUS/Smartport", "MSP", "CRSF", "FPort"};
 static const char *msp_baudrate_table[] = {"115200"};

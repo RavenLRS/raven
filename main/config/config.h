@@ -34,7 +34,7 @@ typedef enum {
     TX_RF_POWER_100mw,
 
     TX_RF_POWER_FIRST = TX_RF_POWER_AUTO,
-    TX_RF_POWER_LAST = TX_RF_POWER_50mw, // TODO
+    TX_RF_POWER_LAST = TX_RF_POWER_100mw,
     TX_RF_POWER_DEFAULT = TX_RF_POWER_AUTO,
 } tx_rf_power_e;
 
