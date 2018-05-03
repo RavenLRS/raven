@@ -5,6 +5,7 @@
 #include <hal/log.h>
 
 #include "air/air.h"
+#include "air/air_rf_power.h"
 
 #include "config/config.h"
 
@@ -110,26 +111,14 @@ static void rc_data_initialize(rc_t *rc)
     (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RF_POWER, 20, time_micros_now());
 }
 
-// returns power in dBm
 static int rc_get_tx_rf_power(rc_t *rc)
 {
-    switch ((tx_rf_power_e)settings_get_key_u8(SETTING_KEY_TX_RF_POWER))
-    {
-    case TX_RF_POWER_1mw:
-        return 0;
-    case TX_RF_POWER_10mw:
-        return 10;
-    case TX_RF_POWER_25mw:
-        return 14;
-    case TX_RF_POWER_AUTO:
-        // TODO: Actual dynamic power
-    case TX_RF_POWER_50mw:
-        return 17;
-    case TX_RF_POWER_100mw:
-        return 20;
-    }
-    UNREACHABLE();
-    return 0;
+    return air_rf_power_to_dbm(settings_get_key_u8(SETTING_KEY_TX_RF_POWER));
+}
+
+static bool rc_should_enable_power_test(rc_t *rc)
+{
+    return settings_get_key_u8(SETTING_KEY_RF_POWER_TEST);
 }
 
 static void rc_reconfigure_input(rc_t *rc)
@@ -225,26 +214,41 @@ static void rc_reconfigure_output(rc_t *rc)
     {
         air_lora_band_e band = settings_get_key_u8(SETTING_KEY_LORA_BAND);
         rmp_set_pairing(rc->rmp, NULL);
+
+        if (rc_should_enable_power_test(rc))
+        {
+            output_air_rf_power_test_init(&rc->outputs.air_power_test, rc->lora, band);
+            rc->output = (output_t *)&rc->outputs.air_power_test;
+            break;
+        }
+
         if (rc->state.bind_active)
         {
             output_air_bind_init(&rc->outputs.air_bind, config_get_addr(), rc->lora, band);
             rc->output = (output_t *)&rc->outputs.air_bind;
+            break;
         }
-        else
+
+        output_air_init(&rc->outputs.air, config_get_addr(), rc->lora, band, rc->rmp);
+        rc->output = (output_t *)&rc->outputs.air;
+        output_config.air.tx_power = rc_get_tx_rf_power(rc);
+        if (config_get_paired_rx(&pairing, NULL))
         {
-            output_air_init(&rc->outputs.air, config_get_addr(), rc->lora, band, rc->rmp);
-            rc->output = (output_t *)&rc->outputs.air;
-            output_config.air.tx_power = rc_get_tx_rf_power(rc);
-            if (config_get_paired_rx(&pairing, NULL))
-            {
-                air_io_bind(&rc->outputs.air.air, &pairing);
-                rmp_set_pairing(rc->rmp, &pairing);
-            }
-            rc->output_config = &output_config.air;
+            air_io_bind(&rc->outputs.air.air, &pairing);
+            rmp_set_pairing(rc->rmp, &pairing);
         }
+        rc->output_config = &output_config.air;
+
+        break;
     }
-    break;
     case RC_MODE_RX:
+        if (rc_should_enable_power_test(rc))
+        {
+            output_air_rf_power_test_init(&rc->outputs.air_power_test, rc->lora, settings_get_key_u8(SETTING_KEY_LORA_BAND));
+            rc->output = (output_t *)&rc->outputs.air_power_test;
+            break;
+        }
+
         switch (config_get_output_type())
         {
         case RX_OUTPUT_SBUS_SPORT:
@@ -636,6 +640,10 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
     else if (SETTING_IS(setting, SETTING_KEY_LORA_BAND))
     {
         rc_invalidate_air(rc);
+    }
+    else if (SETTING_IS(setting, SETTING_KEY_RF_POWER_TEST))
+    {
+        rc_invalidate_output(rc);
     }
     else
     {

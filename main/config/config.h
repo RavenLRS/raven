@@ -26,19 +26,6 @@ typedef enum {
 } tx_input_type_e;
 
 typedef enum {
-    TX_RF_POWER_AUTO = 0,
-    TX_RF_POWER_1mw,
-    TX_RF_POWER_10mw,
-    TX_RF_POWER_25mw,
-    TX_RF_POWER_50mw,
-    TX_RF_POWER_100mw,
-
-    TX_RF_POWER_FIRST = TX_RF_POWER_AUTO,
-    TX_RF_POWER_LAST = TX_RF_POWER_100mw,
-    TX_RF_POWER_DEFAULT = TX_RF_POWER_AUTO,
-} tx_rf_power_e;
-
-typedef enum {
     RX_OUTPUT_SBUS_SPORT,
     RX_OUTPUT_MSP,
     RX_OUTPUT_CRSF,

@@ -16,6 +16,9 @@ typedef enum {
 void led_init(void);
 void led_update(void);
 
+void led_on(led_id_e led_id);
+void led_off(led_id_e led_id);
+
 void led_blink(led_id_e led_id);
 void led_set_blink_mode(led_id_e led_id, led_blink_mode_e mode);
 void led_set_blink_period(led_id_e led_id, time_ticks_t period);

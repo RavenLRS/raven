@@ -4,6 +4,7 @@
 #include <hal/log.h>
 
 #include "air/air_lora.h"
+#include "air/air_rf_power.h"
 
 #include "config/config.h"
 
@@ -226,8 +227,8 @@ static const char *lora_band_table[] = {
 #endif
 };
 static const char *tx_input_table[] = {"CRSF", "Test"};
-static const char *tx_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
-_Static_assert(ARRAY_COUNT(tx_rf_power_table) == TX_RF_POWER_LAST - TX_RF_POWER_FIRST + 1, "tx_rf_power_table invalid");
+static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
+_Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");
 static const char *rx_output_table[] = {"SBUS/Smartport", "MSP", "CRSF", "FPort"};
 static const char *msp_baudrate_table[] = {"115200"};
 static const char *screen_orientation_table[] = {"Horizontal", "Horizontal (buttons at the right)", "Vertical", "Vertical (buttons on top)"};
@@ -258,7 +259,7 @@ static setting_t settings[] = {
     U8_MAP_SETTING(SETTING_KEY_LORA_BAND, "LoRa Band", 0, FOLDER_ID_ROOT, lora_band_table, AIR_LORA_BAND_DEFAULT),
 
     FOLDER(SETTING_KEY_TX, "TX", FOLDER_ID_TX, FOLDER_ID_ROOT, setting_visibility_tx),
-    U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, tx_rf_power_table, TX_RF_POWER_DEFAULT),
+    U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),
     STRING_SETTING(SETTING_KEY_TX_PILOT_NAME, "Pilot Name", FOLDER_ID_TX),
     U8_MAP_SETTING(SETTING_KEY_TX_INPUT, "Input", 0, FOLDER_ID_TX, tx_input_table, TX_INPUT_FIRST),
     PIN_SETTING(SETTING_KEY_TX_CRSF_PIN, "CRSF Pin", FOLDER_ID_TX, PIN_DEFAULT_TX_IDX),
@@ -331,6 +332,8 @@ static setting_t settings[] = {
     FOLDER(SETTING_KEY_DEVICES, "Other Devices", FOLDER_ID_DEVICES, FOLDER_ID_ROOT, NULL),
 
     CMD_SETTING(SETTING_KEY_POWER_OFF, "Power Off", FOLDER_ID_ROOT, 0, SETTING_CMD_FLAG_CONFIRM),
+
+    BOOL_SETTING(SETTING_KEY_RF_POWER_TEST, "RF Power Test", SETTING_FLAG_EPHEMERAL, FOLDER_ID_ROOT, false),
 
     FOLDER(SETTING_KEY_ABOUT, "About", FOLDER_ID_ABOUT, FOLDER_ID_ROOT, NULL),
     RO_STRING_SETTING(SETTING_KEY_ABOUT_VERSION, "Version", FOLDER_ID_ABOUT, SOFTWARE_VERSION),

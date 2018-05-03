@@ -12,6 +12,7 @@
 
 #include "output/output_air.h"
 #include "output/output_air_bind.h"
+#include "output/output_air_rf_power_test.h"
 #include "output/output_crsf.h"
 #include "output/output_fport.h"
 #include "output/output_msp.h"
@@ -56,6 +57,7 @@ typedef struct rc_s
     union {
         output_air_t air;
         output_air_bind_t air_bind;
+        output_air_rf_power_test_t air_power_test;
         output_crsf_t crsf;
         output_fport_t fport;
         output_msp_t msp;
