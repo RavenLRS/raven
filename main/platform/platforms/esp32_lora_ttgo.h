@@ -3,8 +3,6 @@
 // User button
 #define BUTTON_1 0
 
-#define LED_1 2
-
 // LoRa connection
 // GPIO5  -- SX1278's SCK
 // GPIO19 -- SX1278's MISO
