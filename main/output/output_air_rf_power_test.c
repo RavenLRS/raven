@@ -9,7 +9,7 @@
 
 #include "output_air_rf_power_test.h"
 
-#define LED_BLINK_MS 300
+#define LED_BLINK_MS 500
 
 #define RF_TEST_TX_MS 5000   // Transmit for 5 seconds
 #define RF_TEST_WAIT_MS 5000 // Wait for 5s between power levels
