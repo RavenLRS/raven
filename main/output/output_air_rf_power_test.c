@@ -92,7 +92,6 @@ static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, time
     }
     if (output->state == RF_POWER_TEST_STATE_TX && lora_is_tx_done(output->lora))
     {
-        LOG_I(TAG, "LORA SEND");
         output_air_rf_power_test_send(output);
     }
     return true;
