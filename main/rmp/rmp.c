@@ -542,7 +542,7 @@ void rmp_process_message(rmp_t *rmp, rmp_msg_t *msg, rmp_transport_type_e source
         peer = rmp_add_peer(rmp, &msg->src);
         if (!peer)
         {
-            LOG_W(TAG, "Can't handle message from %s, no space for more peers", addr_buf)
+            LOG_W(TAG, "Can't handle message from %s, no space for more peers", addr_buf);
             return;
         }
     }
