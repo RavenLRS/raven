@@ -15,7 +15,7 @@ static bool settings_rmp_requires_auth(void)
     return true;
 }
 
-static void settings_rmp_send_setting(rmp_t *rmp, rmp_req_t *req, settings_rmp_msg_t *resp, settings_view_t *view, setting_t *setting, settings_rmp_code_e code)
+static void settings_rmp_send_setting(rmp_t *rmp, rmp_req_t *req, settings_rmp_msg_t *resp, settings_view_t *view, const setting_t *setting, settings_rmp_code_e code)
 {
     assert(code == SETTINGS_RMP_READ || code == SETTINGS_RMP_WRITE);
 
@@ -73,7 +73,7 @@ static void settings_rmp_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
         settings_rmp_msg_t resp;
         const settings_rmp_msg_t *msg = req->msg->payload;
         settings_view_t view;
-        setting_t *setting;
+        const setting_t *setting;
         switch ((settings_rmp_code_e)msg->code)
         {
         case SETTINGS_RMP_HELO:

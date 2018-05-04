@@ -121,12 +121,14 @@ typedef enum {
 
 typedef union {
     uint8_t u8;
+// Unused for now, let's save some memory
+#if 0
     int8_t i8;
     uint16_t u16;
     int16_t i16;
     uint32_t u32;
     int32_t i32;
-    char *s;
+#endif
 } setting_value_t;
 
 typedef struct setting_s
@@ -141,8 +143,7 @@ typedef struct setting_s
     const setting_value_t min;
     const setting_value_t max;
     const setting_value_t def_val;
-    setting_value_t val;
-    void *data;
+    const void *data;
 } setting_t;
 
 typedef enum {
@@ -166,14 +167,14 @@ void settings_remove_listener(setting_changed_f callback, void *user_data);
 
 int settings_get_count(void);
 
-setting_t *settings_get_setting_at(int idx);
-setting_t *settings_get_key(const char *key);
+const setting_t *settings_get_setting_at(int idx);
+const setting_t *settings_get_key(const char *key);
 uint8_t settings_get_key_u8(const char *key);
 int settings_get_key_pin_num(const char *key);
 bool settings_get_key_bool(const char *key);
 const char *settings_get_key_string(const char *key);
-setting_t *settings_get_key_idx(const char *key, int *idx);
-setting_t *settings_get_folder(folder_id_e folder);
+const setting_t *settings_get_key_idx(const char *key, int *idx);
+const setting_t *settings_get_folder(folder_id_e folder);
 bool settings_is_folder_visible(settings_view_e view_id, folder_id_e folder);
 bool setting_is_visible(settings_view_e view_id, const char *key);
 
@@ -183,17 +184,17 @@ int32_t setting_get_min(const setting_t *setting);
 int32_t setting_get_max(const setting_t *setting);
 int32_t setting_get_default(const setting_t *setting);
 uint8_t setting_get_u8(const setting_t *setting);
-void setting_set_u8(setting_t *setting, uint8_t v);
-int setting_get_pin_num(setting_t *setting);
+void setting_set_u8(const setting_t *setting, uint8_t v);
+int setting_get_pin_num(const setting_t *setting);
 bool setting_get_bool(const setting_t *setting);
-void setting_set_bool(setting_t *setting, bool v);
-const char *setting_get_string(setting_t *setting);
-void setting_set_string(setting_t *setting, const char *s);
+void setting_set_bool(const setting_t *setting, bool v);
+const char *setting_get_string(const setting_t *setting);
+void setting_set_string(const setting_t *setting, const char *s);
 
-const char *setting_map_name(setting_t *setting, uint8_t val);
-void setting_format_name(char *buf, size_t size, setting_t *setting);
-void setting_format(char *buf, size_t size, setting_t *setting);
-void setting_format_value(char *buf, size_t size, setting_t *setting);
+const char *setting_map_name(const setting_t *setting, uint8_t val);
+void setting_format_name(char *buf, size_t size, const setting_t *setting);
+void setting_format(char *buf, size_t size, const setting_t *setting);
+void setting_format_value(char *buf, size_t size, const setting_t *setting);
 
 // These functions are only valid for settings with the SETTING_FLAG_CMD flag
 setting_cmd_flag_e setting_cmd_get_flags(const setting_t *setting);
@@ -201,10 +202,10 @@ bool setting_cmd_exec(const setting_t *setting);
 
 int setting_receiver_get_rx_num(const setting_t *setting);
 
-void setting_increment(setting_t *setting);
-void setting_decrement(setting_t *setting);
+void setting_increment(const setting_t *setting);
+void setting_decrement(const setting_t *setting);
 
 bool settings_view_get(settings_view_t *view, settings_view_e view_id, folder_id_e folder);
 bool settings_view_get_folder_view(settings_view_t *view, settings_view_e view_id, folder_id_e folder, bool recursive);
-setting_t *settings_view_get_setting_at(settings_view_t *view, int idx);
-int settings_view_get_parent_index(settings_view_t *view, setting_t *setting);
+const setting_t *settings_view_get_setting_at(settings_view_t *view, int idx);
+int settings_view_get_parent_index(settings_view_t *view, const setting_t *setting);

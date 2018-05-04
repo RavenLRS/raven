@@ -47,7 +47,7 @@ typedef struct config_s
     // to rewrite all entries every time we switch RX. This way, we only do a full
     // renumbering once the seq overflows.
     uint8_t rx_seq;
-    setting_t *rc_mode;
+    const setting_t *rc_mode;
 } config_t;
 
 static config_t config;

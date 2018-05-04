@@ -136,7 +136,7 @@ typedef struct output_s
     time_micros_t min_update_interval;
     time_micros_t max_update_interval;
     time_micros_t next_update;
-    setting_t *craft_name_setting;
+    const setting_t *craft_name_setting;
     output_flags_e flags;
     output_vtable_t vtable;
 } output_t;

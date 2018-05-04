@@ -87,7 +87,7 @@ static void ui_handle_noscreen_button_long_press(void *user_data)
 
 static void ui_handle_noscreen_button_really_long_press(void *user_data)
 {
-    setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
+    const setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
     bool is_binding = setting_get_bool(bind_setting);
     if (time_micros_now() < SECS_TO_MICROS(15) && !is_binding)
     {

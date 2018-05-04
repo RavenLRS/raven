@@ -180,7 +180,7 @@ static int menu_setting_build_entries(menu_t *menu, folder_id_e folder)
         menu_entry_t *entry = &dyn_entries[ii];
         entry->title = menu_local_setting_title;
         entry->action = menu_local_setting_action;
-        entry->data = settings_view_get_setting_at(&view, ii);
+        entry->data = (void *)settings_view_get_setting_at(&view, ii);
     }
     dyn_entries[view.count] = MENU_BACK_ENTRY;
     dyn_entries[view.count + 1] = MENU_END;
@@ -205,7 +205,7 @@ static void menu_settings_enter_folder(folder_id_e folder)
     menu->data1 = folder;
     for (int ii = 0; ii < settings_get_count(); ii++)
     {
-        setting_t *setting = settings_get_setting_at(ii);
+        const setting_t *setting = settings_get_setting_at(ii);
         if (setting_get_folder_id(setting) == folder)
         {
             menu->prompt = setting->name;
@@ -224,7 +224,7 @@ static const char *menu_confirm_ok_title(void *data, char *buf, uint16_t bufsize
 
 static void menu_confirm_ok_action(void *data)
 {
-    setting_t *setting = data;
+    const setting_t *setting = data;
     setting_cmd_exec(setting);
     menu_back_action(data);
 }
@@ -416,14 +416,14 @@ static void menu_rmp_port_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
 
 static const char *menu_local_setting_title(void *data, char *buf, uint16_t bufsize)
 {
-    setting_t *setting = data;
+    const setting_t *setting = data;
     setting_format(buf, bufsize, setting);
     return buf;
 }
 
 static void menu_local_setting_action(void *data)
 {
-    setting_t *setting = data;
+    const setting_t *setting = data;
     if (setting->type == SETTING_TYPE_FOLDER)
     {
         menu_settings_enter_folder(setting_get_folder_id(setting));
@@ -437,7 +437,7 @@ static void menu_local_setting_action(void *data)
             if (cmd_flags & (SETTING_CMD_FLAG_CONFIRM))
             {
                 menu_confirm.prompt = setting->name;
-                menu_confirm.entries[0].data = setting;
+                menu_confirm.entries[0].data = (void *)setting;
                 menu_enter(&menu_confirm);
             }
         }

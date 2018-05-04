@@ -363,7 +363,7 @@ static void rc_update_binding(rc_t *rc)
         // another one is still powered.
         rc_dismiss_alternative_pairings(rc);
         // Bind request accepted, disable bind mode
-        setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
+        const setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
         setting_set_bool(bind_setting, false);
     }
 }
@@ -773,7 +773,7 @@ void rc_init(rc_t *rc, lora_t *lora, rmp_t *rmp)
 
     if (rc_should_autostart_bind(rc))
     {
-        setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
+        const setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
         setting_set_bool(bind_setting, true);
     }
 }

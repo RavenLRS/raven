@@ -29,7 +29,6 @@ static const char *TAG = "Settings";
 #define BOOL(v) {.u8 = (v ? 1 : 0)}
 #define U8(v) {.u8 = v}
 #define U16(v) {.u16 = v}
-#define STR(v) {.s = v}
 // clang-format on
 
 static char settings_string_storage[2][SETTING_STRING_BUFFER_SIZE];
@@ -42,13 +41,13 @@ static char pin_number_names[PIN_USABLE_COUNT][3];
 static const char *pin_names[PIN_USABLE_COUNT];
 
 #define FOLDER(k, n, id, p, fn) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_FOLDER, .flags = SETTING_FLAG_READONLY | SETTING_FLAG_EPHEMERAL, .folder = p, .def_val = U8(id), .val = U8(id), .data = fn }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_FOLDER, .flags = SETTING_FLAG_READONLY | SETTING_FLAG_EPHEMERAL, .folder = p, .def_val = U8(id), .data = fn }
 #define STRING_SETTING(k, n, p) \
     (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .folder = p }
-#define FLAGS_STRING_SETTING(k, n, f, p, v, d) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .flags = f, .folder = p, .val = STR(v), .data = d }
+#define FLAGS_STRING_SETTING(k, n, f, p, d) \
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .flags = f, .folder = p, .data = d }
 #define RO_STRING_SETTING(k, n, p, v) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .flags = SETTING_FLAG_READONLY, .folder = p, .val = STR(v) }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .flags = SETTING_FLAG_READONLY, .folder = p, .data = v }
 #define U8_SETTING(k, n, f, p, mi, ma, def) \
     (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U8, .flags = f, .folder = p, .min = U8(mi), .max = U8(ma), .def_val = U8(def) }
 #define U8_MAP_SETTING_UNIT(k, n, f, p, m, u, def) \
@@ -64,7 +63,7 @@ static const char *pin_names[PIN_USABLE_COUNT];
 #define RX_FOLDER_ID(n) (0xFF - n)
 
 #define RX_KEY(k, n) (k #n)
-#define RX_STRING_SETTING(k, n, p, f) FLAGS_STRING_SETTING(k, n, SETTING_FLAG_READONLY | SETTING_FLAG_DYNAMIC, p, NULL, f)
+#define RX_STRING_SETTING(k, n, p, f) FLAGS_STRING_SETTING(k, n, SETTING_FLAG_READONLY | SETTING_FLAG_DYNAMIC, p, f)
 #define RX_CMD(k, n, p) CMD_SETTING(k, n, p, 0, SETTING_CMD_FLAG_CONFIRM)
 
 #define RX_ENSURE_COUNT(n) _Static_assert(CONFIG_MAX_PAIRED_RX == n, "invalid CONFIG_MAX_PAIRED_RX vs settings")
@@ -89,10 +88,10 @@ typedef enum {
     SETTING_DYNAMIC_FORMAT_VALUE,
 } setting_dynamic_format_e;
 
-typedef setting_visibility_e (*setting_visibility_f)(folder_id_e folder, settings_view_e view_id, setting_t *setting);
-typedef int (*setting_dynamic_format_f)(char *buf, size_t size, setting_t *setting, setting_dynamic_format_e fmt);
+typedef setting_visibility_e (*setting_visibility_f)(folder_id_e folder, settings_view_e view_id, const setting_t *setting);
+typedef int (*setting_dynamic_format_f)(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt);
 
-static setting_visibility_e setting_visibility_root(folder_id_e folder, settings_view_e view_id, setting_t *setting)
+static setting_visibility_e setting_visibility_root(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     if (SETTING_IS(setting, SETTING_KEY_RC_MODE))
     {
@@ -129,7 +128,7 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
     return SETTING_VISIBILITY_SHOW;
 }
 
-static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_view_e view_id, setting_t *setting)
+static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     if (SETTING_IS(setting, SETTING_KEY_TX_INPUT))
     {
@@ -142,7 +141,7 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
     return SETTING_VISIBILITY_SHOW;
 }
 
-static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_view_e view_id, setting_t *setting)
+static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     if (SETTING_IS(setting, SETTING_KEY_RX_SBUS_PIN) || SETTING_IS(setting, SETTING_KEY_RX_SBUS_INVERTED) ||
         SETTING_IS(setting, SETTING_KEY_RX_SPORT_PIN) || SETTING_IS(setting, SETTING_KEY_RX_SPORT_INVERTED))
@@ -171,13 +170,13 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
     return SETTING_VISIBILITY_SHOW;
 }
 
-static setting_visibility_e setting_visibility_receivers(folder_id_e folder, settings_view_e view_id, setting_t *setting)
+static setting_visibility_e setting_visibility_receivers(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     int rx_num = setting_receiver_get_rx_num(setting);
     return SETTING_SHOW_IF(config_get_paired_rx_at(NULL, rx_num));
 }
 
-static int setting_format_rx_name(char *buf, size_t size, setting_t *setting, setting_dynamic_format_e fmt)
+static int setting_format_rx_name(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
 {
     if (fmt == SETTING_DYNAMIC_FORMAT_VALUE)
     {
@@ -192,7 +191,7 @@ static int setting_format_rx_name(char *buf, size_t size, setting_t *setting, se
     return 0;
 }
 
-static int setting_format_rx_addr(char *buf, size_t size, setting_t *setting, setting_dynamic_format_e fmt)
+static int setting_format_rx_addr(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
 {
     if (fmt == SETTING_DYNAMIC_FORMAT_VALUE)
     {
@@ -246,7 +245,9 @@ static const char *view_crsf_input_tx_settings[] = {
     SETTING_KEY_ABOUT_BUILD_DATE,
 };
 
-static setting_t settings[] = {
+static setting_value_t setting_values[SETTING_COUNT];
+
+static const setting_t settings[] = {
     FOLDER("", "Settings", FOLDER_ID_ROOT, 0, setting_visibility_root),
 #if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
     U8_MAP_SETTING(SETTING_KEY_RC_MODE, "RC Mode", 0, FOLDER_ID_ROOT, mode_table, RC_MODE_TX),
@@ -367,6 +368,27 @@ static void map_setting_keys(settings_view_t *view, const char *keys[], int size
     }
 }
 
+static setting_value_t *setting_get_val_ptr(const setting_t *setting)
+{
+    int index = setting - settings;
+    return &setting_values[index];
+}
+
+static char *setting_get_str_ptr(const setting_t *setting)
+{
+    if (setting->type == SETTING_TYPE_STRING)
+    {
+        if (setting->flags & SETTING_FLAG_READONLY)
+        {
+            // Stored in the data ptr in the setting
+            return (char *)setting->data;
+        }
+        // The u8 stored the string index
+        return settings_string_storage[setting_get_val_ptr(setting)->u8];
+    }
+    return NULL;
+}
+
 static void setting_save(const setting_t *setting)
 {
     if (setting->flags & SETTING_FLAG_EPHEMERAL)
@@ -376,7 +398,7 @@ static void setting_save(const setting_t *setting)
     switch (setting->type)
     {
     case SETTING_TYPE_U8:
-        storage_set_u8(&storage, setting->key, setting->val.u8);
+        storage_set_u8(&storage, setting->key, setting_get_val_ptr(setting)->u8);
         break;
         /*
     case SETTING_TYPE_I8:
@@ -396,7 +418,7 @@ static void setting_save(const setting_t *setting)
         break;
         */
     case SETTING_TYPE_STRING:
-        storage_set_str(&storage, setting->key, setting->val.s);
+        storage_set_str(&storage, setting->key, setting_get_str_ptr(setting));
         break;
     case SETTING_TYPE_FOLDER:
         break;
@@ -417,7 +439,7 @@ static void setting_changed(const setting_t *setting)
     setting_save(setting);
 }
 
-static void setting_move(setting_t *setting, int delta)
+static void setting_move(const setting_t *setting, int delta)
 {
     if (setting->flags & SETTING_FLAG_READONLY)
     {
@@ -428,21 +450,22 @@ static void setting_move(setting_t *setting, int delta)
     case SETTING_TYPE_U8:
     {
         uint8_t v;
-        if (delta < 0 && setting->val.u8 == 0)
+        uint8_t ov = setting_get_val_ptr(setting)->u8;
+        if (delta < 0 && ov == 0)
         {
             v = setting->max.u8;
         }
-        else if (delta > 0 && setting->val.u8 == setting->max.u8)
+        else if (delta > 0 && ov == setting->max.u8)
         {
             v = 0;
         }
         else
         {
-            v = setting->val.u8 + delta;
+            v = ov + delta;
         }
-        if (v != setting->val.u8)
+        if (v != ov)
         {
-            setting->val.u8 = v;
+            setting_get_val_ptr(setting)->u8 = v;
             setting_changed(setting);
         }
         break;
@@ -468,7 +491,7 @@ void settings_init(void)
     for (int ii = 0; ii < ARRAY_COUNT(settings); ii++)
     {
         bool found = true;
-        setting_t *setting = &settings[ii];
+        const setting_t *setting = &settings[ii];
         if (setting->flags & SETTING_FLAG_READONLY)
         {
             continue;
@@ -477,7 +500,7 @@ void settings_init(void)
         switch (setting->type)
         {
         case SETTING_TYPE_U8:
-            found = storage_get_u8(&storage, setting->key, &setting->val.u8);
+            found = storage_get_u8(&storage, setting->key, &setting_get_val_ptr(setting)->u8);
             break;
             /*
         case SETTING_TYPE_I8:
@@ -498,11 +521,11 @@ void settings_init(void)
             */
         case SETTING_TYPE_STRING:
             assert(string_storage_index < ARRAY_COUNT(settings_string_storage));
-            setting->val.s = settings_string_storage[string_storage_index++];
+            setting_get_val_ptr(setting)->u8 = string_storage_index++;
             size = sizeof(settings_string_storage[0]);
-            if (!storage_get_str(&storage, setting->key, setting->val.s, &size))
+            if (!storage_get_str(&storage, setting->key, setting_get_str_ptr(setting), &size))
             {
-                memset(setting->val.s, 0, SETTING_STRING_BUFFER_SIZE);
+                memset(setting_get_str_ptr(setting), 0, SETTING_STRING_BUFFER_SIZE);
             }
             // We can't copy the default_value over to string settings, otherwise
             // the pointer becomes NULL.
@@ -513,7 +536,7 @@ void settings_init(void)
         }
         if (!found && !(setting->flags & SETTING_FLAG_CMD))
         {
-            memcpy(&setting->val, &setting->def_val, sizeof(setting->val));
+            memcpy(setting_get_val_ptr(setting), &setting->def_val, sizeof(setting->def_val));
         }
     }
 }
@@ -548,12 +571,12 @@ void settings_remove_listener(setting_changed_f callback, void *user_data)
     UNREACHABLE();
 }
 
-setting_t *settings_get_setting_at(int idx)
+const setting_t *settings_get_setting_at(int idx)
 {
     return &settings[idx];
 }
 
-setting_t *settings_get_key(const char *key)
+const setting_t *settings_get_key(const char *key)
 {
     return settings_get_key_idx(key, NULL);
 }
@@ -578,7 +601,7 @@ const char *settings_get_key_string(const char *key)
     return setting_get_string(settings_get_key(key));
 }
 
-setting_t *settings_get_key_idx(const char *key, int *idx)
+const setting_t *settings_get_key_idx(const char *key, int *idx)
 {
     for (int ii = 0; ii < ARRAY_COUNT(settings); ii++)
     {
@@ -594,7 +617,7 @@ setting_t *settings_get_key_idx(const char *key, int *idx)
     return NULL;
 }
 
-setting_t *settings_get_folder(folder_id_e folder)
+const setting_t *settings_get_folder(folder_id_e folder)
 {
     for (int ii = 0; ii < ARRAY_COUNT(settings); ii++)
     {
@@ -608,19 +631,19 @@ setting_t *settings_get_folder(folder_id_e folder)
 
 bool settings_is_folder_visible(settings_view_e view_id, folder_id_e folder)
 {
-    setting_t *setting = settings_get_folder(folder);
+    const setting_t *setting = settings_get_folder(folder);
     return setting && setting_is_visible(view_id, setting->key);
 }
 
 bool setting_is_visible(settings_view_e view_id, const char *key)
 {
-    setting_t *setting = settings_get_key(key);
+    const setting_t *setting = settings_get_key(key);
     if (setting)
     {
         setting_visibility_e visibility = SETTING_VISIBILITY_SHOW;
         if (setting->folder)
         {
-            setting_t *folder = NULL;
+            const setting_t *folder = NULL;
             for (int ii = 0; ii < ARRAY_COUNT(settings); ii++)
             {
                 if (setting_get_folder_id(&settings[ii]) == setting->folder)
@@ -644,7 +667,7 @@ folder_id_e setting_get_folder_id(const setting_t *setting)
 {
     if (setting->type == SETTING_TYPE_FOLDER)
     {
-        return setting->val.u8;
+        return setting->def_val.u8;
     }
     return 0;
 }
@@ -699,14 +722,15 @@ int32_t setting_get_default(const setting_t *setting)
 uint8_t setting_get_u8(const setting_t *setting)
 {
     assert(setting->type == SETTING_TYPE_U8);
-    return setting->val.u8;
+    return setting_get_val_ptr(setting)->u8;
 }
 
 // Commands need special processing when used via setting values.
 // This is only used when exposing the settings via CRSF.
-static void setting_set_u8_cmd(setting_t *setting, uint8_t v)
+static void setting_set_u8_cmd(const setting_t *setting, uint8_t v)
 {
     setting_cmd_flag_e cmd_flags = setting_cmd_get_flags(setting);
+    setting_value_t *val = setting_get_val_ptr(setting);
     switch ((setting_cmd_status_e)v)
     {
     case SETTING_CMD_STATUS_CHANGE:
@@ -714,12 +738,12 @@ static void setting_set_u8_cmd(setting_t *setting, uint8_t v)
         {
             // Setting needs a confirmation. Change its value to SETTING_CMD_STATUS_ASK_CONFIRM
             // So clients know they need to show the dialog.
-            setting->val.u8 = SETTING_CMD_STATUS_ASK_CONFIRM;
+            val->u8 = SETTING_CMD_STATUS_ASK_CONFIRM;
             break;
         }
         if (cmd_flags & SETTING_CMD_FLAG_WARNING)
         {
-            setting->val.u8 = SETTING_CMD_STATUS_SHOW_WARNING;
+            val->u8 = SETTING_CMD_STATUS_SHOW_WARNING;
             break;
         }
         // TODO: Timeout if the client doesn't commit or discard after some time for
@@ -730,13 +754,13 @@ static void setting_set_u8_cmd(setting_t *setting, uint8_t v)
         break;
     case SETTING_CMD_STATUS_COMMIT:
         setting_cmd_exec(setting);
-        setting->val.u8 = 0;
+        val->u8 = 0;
         break;
     case SETTING_CMD_STATUS_NONE:
     case SETTING_CMD_STATUS_DISCARD:
         // TODO: If the command shows a warning while it's active,
         // we need to generate a notification when it stops.
-        setting->val.u8 = 0;
+        val->u8 = 0;
         break;
     default:
         // TODO: Once we have a timeout, reset it here
@@ -744,7 +768,7 @@ static void setting_set_u8_cmd(setting_t *setting, uint8_t v)
     }
 }
 
-void setting_set_u8(setting_t *setting, uint8_t v)
+void setting_set_u8(const setting_t *setting, uint8_t v)
 {
     assert(setting->type == SETTING_TYPE_U8);
 
@@ -756,49 +780,49 @@ void setting_set_u8(setting_t *setting, uint8_t v)
 
     v = MIN(v, setting->max.u8);
     v = MAX(v, setting->min.u8);
-    if ((setting->flags & SETTING_FLAG_READONLY) == 0 && setting->val.u8 != v)
+    if ((setting->flags & SETTING_FLAG_READONLY) == 0 && setting_get_val_ptr(setting)->u8 != v)
     {
-        setting->val.u8 = v;
+        setting_get_val_ptr(setting)->u8 = v;
         setting_changed(setting);
     }
 }
 
-int setting_get_pin_num(setting_t *setting)
+int setting_get_pin_num(const setting_t *setting)
 {
     assert(setting->val_names == pin_names);
-    return usable_pin_at(setting->val.u8);
+    return usable_pin_at(setting_get_val_ptr(setting)->u8);
 }
 
 bool setting_get_bool(const setting_t *setting)
 {
     assert(setting->type == SETTING_TYPE_U8);
-    return setting->val.u8;
+    return setting_get_val_ptr(setting)->u8 ? true : false;
 }
 
-void setting_set_bool(setting_t *setting, bool v)
+void setting_set_bool(const setting_t *setting, bool v)
 {
     assert(setting->type == SETTING_TYPE_U8);
-    uint8_t val = v ? 1 : 0;
-    if (val != setting->val.u8)
-    {
-        setting->val.u8 = val;
-        setting_changed(setting);
-    }
+    setting_set_u8(setting, v ? 1 : 0);
 }
 
-const char *setting_get_string(setting_t *setting)
+const char *setting_get_string(const setting_t *setting)
 {
     assert(setting->type == SETTING_TYPE_STRING);
     assert((setting->flags & SETTING_FLAG_DYNAMIC) == 0);
-    return setting->val.s;
+    return setting_get_str_ptr(setting);
 }
 
-void setting_set_string(setting_t *setting, const char *s)
+void setting_set_string(const setting_t *setting, const char *s)
 {
     assert(setting->type == SETTING_TYPE_STRING);
-    if (!STR_EQUAL(setting->val.s, s))
+    if (setting->flags & SETTING_FLAG_READONLY)
     {
-        strlcpy(setting->val.s, s, SETTING_STRING_BUFFER_SIZE);
+        return;
+    }
+    char *v = setting_get_str_ptr(setting);
+    if (!STR_EQUAL(v, s))
+    {
+        strlcpy(v, s, SETTING_STRING_BUFFER_SIZE);
         setting_changed(setting);
     }
 }
@@ -808,7 +832,7 @@ int settings_get_count(void)
     return ARRAY_COUNT(settings);
 }
 
-const char *setting_map_name(setting_t *setting, uint8_t val)
+const char *setting_map_name(const setting_t *setting, uint8_t val)
 {
     if (setting->flags & SETTING_FLAG_NAME_MAP && setting->val_names)
     {
@@ -820,7 +844,7 @@ const char *setting_map_name(setting_t *setting, uint8_t val)
     return NULL;
 }
 
-void setting_format_name(char *buf, size_t size, setting_t *setting)
+void setting_format_name(char *buf, size_t size, const setting_t *setting)
 {
     if (setting->name)
     {
@@ -832,7 +856,7 @@ void setting_format_name(char *buf, size_t size, setting_t *setting)
     }
 }
 
-void setting_format(char *buf, size_t size, setting_t *setting)
+void setting_format(char *buf, size_t size, const setting_t *setting)
 {
     char name[SETTING_NAME_BUFFER_SIZE];
 
@@ -854,11 +878,11 @@ void setting_format(char *buf, size_t size, setting_t *setting)
     snprintf(buf, size, "%s: %s", name, value);
 }
 
-void setting_format_value(char *buf, size_t size, setting_t *setting)
+void setting_format_value(char *buf, size_t size, const setting_t *setting)
 {
     if (setting->flags & SETTING_FLAG_NAME_MAP)
     {
-        const char *name = setting_map_name(setting, setting->val.u8);
+        const char *name = setting_map_name(setting, setting_get_u8(setting));
         snprintf(buf, size, "%s", name);
     }
     else
@@ -866,7 +890,7 @@ void setting_format_value(char *buf, size_t size, setting_t *setting)
         switch (setting->type)
         {
         case SETTING_TYPE_U8:
-            snprintf(buf, size, "%u", setting->val.u8);
+            snprintf(buf, size, "%u", setting_get_u8(setting));
             break;
             /*
         case SETTING_TYPE_I8:
@@ -887,7 +911,7 @@ void setting_format_value(char *buf, size_t size, setting_t *setting)
             */
         case SETTING_TYPE_STRING:
         {
-            const char *value = setting->val.s;
+            const char *value = setting_get_str_ptr(setting);
             char value_buf[SETTING_STRING_BUFFER_SIZE];
             if (setting->flags & SETTING_FLAG_DYNAMIC)
             {
@@ -947,12 +971,12 @@ int setting_receiver_get_rx_num(const setting_t *setting)
     return -1;
 }
 
-void setting_increment(setting_t *setting)
+void setting_increment(const setting_t *setting)
 {
     setting_move(setting, 1);
 }
 
-void setting_decrement(setting_t *setting)
+void setting_decrement(const setting_t *setting)
 {
     setting_move(setting, -1);
 }
@@ -962,7 +986,7 @@ static void settings_view_get_actual_folder_view(settings_view_t *view, settings
     setting_visibility_f visibility_fn = NULL;
     for (int ii = 0; ii < SETTING_COUNT; ii++)
     {
-        setting_t *setting = &settings[ii];
+        const setting_t *setting = &settings[ii];
         if (setting_get_folder_id(setting) == folder)
         {
             visibility_fn = settings[ii].data;
@@ -1020,7 +1044,7 @@ bool settings_view_get(settings_view_t *view, settings_view_e view_id, folder_id
     return false;
 }
 
-setting_t *settings_view_get_setting_at(settings_view_t *view, int idx)
+const setting_t *settings_view_get_setting_at(settings_view_t *view, int idx)
 {
     if (idx >= 0 && idx < view->count)
     {
@@ -1029,11 +1053,11 @@ setting_t *settings_view_get_setting_at(settings_view_t *view, int idx)
     return NULL;
 }
 
-int settings_view_get_parent_index(settings_view_t *view, setting_t *setting)
+int settings_view_get_parent_index(settings_view_t *view, const setting_t *setting)
 {
     for (int ii = 0; ii < view->count; ii++)
     {
-        setting_t *vs = settings_view_get_setting_at(view, ii);
+        const setting_t *vs = settings_view_get_setting_at(view, ii);
         if (vs->type == SETTING_TYPE_FOLDER && setting_get_folder_id(vs) == setting->folder)
         {
             return ii;
