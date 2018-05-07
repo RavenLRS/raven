@@ -1,0 +1,23 @@
+sudo: false
+
+git:
+  depth: 5
+
+addons:
+  apt:
+    packages:
+      - gcc
+      - git
+      - wget
+      - make
+      - libncurses-dev
+      - flex
+      - bison
+      - gperf
+      - python
+      - python-serial
+
+language: cpp
+dist: trusty
+
+script: ./.travis.sh
