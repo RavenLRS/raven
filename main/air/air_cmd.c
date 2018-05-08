@@ -12,6 +12,8 @@ int air_cmd_size(air_cmd_e cmd)
     case AIR_CMD_SWITCH_MODE_4:
     case AIR_CMD_SWITCH_MODE_5:
         return 0;
+    case AIR_CMD_REJECT_MODE:
+        return 1;
     case AIR_CMD_MSP:
     case AIR_CMD_RMP:
         return -1;

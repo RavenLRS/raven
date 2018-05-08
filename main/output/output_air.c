@@ -41,13 +41,13 @@ static void output_air_lora_callback(lora_t *lora, lora_callback_reason_e reason
         // resets the FIFO, while adding a minimal time overhead since
         // we would need to at least put it in idle to update the
         // payload size.
-        lora_sleep(output_air->lora);
+        lora_sleep(output_air->lora.lora);
         // Don't enable RX mode if there's no telemetry in this cycle,
         // just get ready for the next send.
         if (output_air->expecting_downlink_packet)
         {
-            lora_set_payload_size(output_air->lora, sizeof(air_rx_packet_t));
-            lora_enable_continous_rx(output_air->lora);
+            lora_set_payload_size(output_air->lora.lora, sizeof(air_rx_packet_t));
+            lora_enable_continous_rx(output_air->lora.lora);
         }
         break;
     }
@@ -55,11 +55,11 @@ static void output_air_lora_callback(lora_t *lora, lora_callback_reason_e reason
 
 static void output_air_update_lora_mode(output_air_t *output_air)
 {
-    air_lora_set_parameters(output_air->lora, output_air->air_mode);
+    air_lora_set_parameters(output_air->lora.lora, output_air->air_mode);
     air_cmd_switch_mode_ack_reset(&output_air->switch_air_mode);
     output_air->requested_air_mode = 0;
-    output_air->start_switch_air_mode_up_at = 0;
-    output_air->start_switch_air_mode_down_at = 0;
+    output_air->start_switch_air_mode_faster_at = 0;
+    output_air->start_switch_air_mode_longer_at = 0;
     output_air->full_cycle_time = air_lora_full_cycle_time(output_air->air_mode);
     output_air->uplink_cycle_time = air_lora_uplink_cycle_time(output_air->air_mode);
     failsafe_set_max_interval(&output_air->output.failsafe, air_lora_tx_failsafe_interval(output_air->air_mode));
@@ -70,7 +70,7 @@ static void output_air_update_frequency(output_air_t *output_air, unsigned freq_
     if (output_air->freq_index != freq_index)
     {
         output_air->freq_index = freq_index;
-        lora_set_frequency(output_air->lora, output_air->freq_table.freqs[freq_index]);
+        lora_set_frequency(output_air->lora.lora, output_air->freq_table.freqs[freq_index]);
     }
 }
 
@@ -108,13 +108,13 @@ static void output_air_stop_ack(output_air_t *output_air, rc_data_t *data)
 static void output_air_lora_start(output_air_t *output_air)
 {
     output_air_update_lora_mode(output_air);
-    lora_set_tx_power(output_air->lora, output_air->tx_power);
+    lora_set_tx_power(output_air->lora.lora, output_air->tx_power);
     output_air->tx_power = -1;
-    lora_set_sync_word(output_air->lora, air_sync_word(output_air->air.pairing.key));
-    air_freq_table_init(&output_air->freq_table, output_air->air.pairing.key, air_lora_band_frequency(output_air->band));
+    lora_set_sync_word(output_air->lora.lora, air_sync_word(output_air->air.pairing.key));
+    air_freq_table_init(&output_air->freq_table, output_air->air.pairing.key, air_lora_band_frequency(output_air->lora.band));
     output_air->freq_index = 0xFF;
     output_air_update_frequency(output_air, 0);
-    lora_set_callback(output_air->lora, output_air_lora_callback, output_air);
+    lora_set_callback(output_air->lora.lora, output_air_lora_callback, output_air);
     output_air->consecutive_downlink_lost_packets = 0;
     output_air->expecting_downlink_packet = false;
 }
@@ -128,37 +128,51 @@ static void output_air_stream_telemetry_decoded(void *user, int telemetry_id, co
     {
     case MODE_SWITCH_TELEMETRY_ID:
     {
-        MODE_SWITCH_TELEMETRY_TYPE value = MODE_SWITCH_TELEMETRY_GET_VALUE(t);
-        if (value >= MODE_SWITCH_FASTER_VALUE && output_air->air_mode > output_air->air_mode_fastest &&
-            !air_cmd_switch_mode_ack_in_progress(&output_air->switch_air_mode))
+        if (air_cmd_switch_mode_ack_in_progress(&output_air->switch_air_mode))
         {
-            if (output_air->start_switch_air_mode_down_at == 0)
+            // We're already switching modes
+            //
+            // TODO: If we're switching up and we should now switch down,
+            // cancel the old switch and start the new one.
+            break;
+        }
+        MODE_SWITCH_TELEMETRY_TYPE value = MODE_SWITCH_TELEMETRY_GET_VALUE(t);
+        if (value >= MODE_SWITCH_FASTER_VALUE)
+        {
+            air_lora_mode_e faster = air_lora_mode_faster(output_air->air_mode, output_air->common_air_modes_mask);
+            if (air_lora_mode_is_valid(faster))
             {
-                output_air->start_switch_air_mode_down_at = now + MODE_SWITCH_WAIT_INTERVAL_US;
-            }
-            else if (now > output_air->start_switch_air_mode_down_at)
-            {
-                output_air->requested_air_mode = air_lora_mode_faster(output_air->air_mode);
-                output_air_start_switch_air_mode(output_air);
+                if (output_air->start_switch_air_mode_faster_at == 0)
+                {
+                    output_air->start_switch_air_mode_faster_at = now + MODE_SWITCH_WAIT_INTERVAL_US;
+                }
+                else if (now > output_air->start_switch_air_mode_faster_at)
+                {
+                    output_air->requested_air_mode = faster;
+                    output_air_start_switch_air_mode(output_air);
+                }
             }
         }
-        else if (value <= MODE_SWITCH_LONGER_VALUE && output_air->air_mode < output_air->air_mode_longest &&
-                 !air_cmd_switch_mode_ack_in_progress(&output_air->switch_air_mode))
+        else if (value <= MODE_SWITCH_LONGER_VALUE)
         {
-            if (output_air->start_switch_air_mode_up_at == 0)
+            air_lora_mode_e longer = air_lora_mode_longer(output_air->air_mode, output_air->common_air_modes_mask);
+            if (air_lora_mode_is_valid(longer))
             {
-                output_air->start_switch_air_mode_up_at = now + MODE_SWITCH_WAIT_INTERVAL_US;
-            }
-            else if (now > output_air->start_switch_air_mode_up_at)
-            {
-                output_air->requested_air_mode = air_lora_mode_longer(output_air->air_mode);
-                output_air_start_switch_air_mode(output_air);
+                if (output_air->start_switch_air_mode_longer_at == 0)
+                {
+                    output_air->start_switch_air_mode_longer_at = now + MODE_SWITCH_WAIT_INTERVAL_US;
+                }
+                else if (now > output_air->start_switch_air_mode_longer_at)
+                {
+                    output_air->requested_air_mode = longer;
+                    output_air_start_switch_air_mode(output_air);
+                }
             }
         }
         else
         {
-            output_air->start_switch_air_mode_up_at = 0;
-            output_air->start_switch_air_mode_down_at = 0;
+            output_air->start_switch_air_mode_faster_at = 0;
+            output_air->start_switch_air_mode_longer_at = 0;
         }
         break;
     }
@@ -201,6 +215,17 @@ static void output_air_stream_cmd_decoded(void *user, air_cmd_e cmd, const void 
     case AIR_CMD_SWITCH_MODE_5:
         // Only sent upstream
         break;
+    case AIR_CMD_REJECT_MODE:
+    {
+        // The RX rejected a mode change. Remove it from the the current modes bitmask
+        // XXX: Should we update this in permanent storage?
+        if (size == 1)
+        {
+            const uint8_t *mode = data;
+            output_air->common_air_modes_mask = air_lora_mode_mask_remove(output_air->common_air_modes_mask, *mode);
+        }
+        break;
+    }
     case AIR_CMD_MSP:
     {
         msp_conn_t *conn = msp_io_get_conn(&output_air->output.msp);
@@ -289,7 +314,7 @@ static void output_air_send_control_packet(output_air_t *output_air, rc_data_t *
 {
     if (output_air->tx_power >= 0)
     {
-        lora_set_tx_power(output_air->lora, output_air->tx_power);
+        lora_set_tx_power(output_air->lora.lora, output_air->tx_power);
         output_air->tx_power = -1;
     }
 
@@ -380,7 +405,7 @@ static void output_air_send_control_packet(output_air_t *output_air, rc_data_t *
         pkt.data[p++] = c;
     }
     air_tx_packet_prepare(&pkt, output_air->air.pairing.key);
-    lora_send(output_air->lora, &pkt, sizeof(pkt));
+    lora_send(output_air->lora.lora, &pkt, sizeof(pkt));
     //LOG_BUFFER_I("LORAOUT", &pkt, sizeof(pkt));
 }
 
@@ -390,13 +415,13 @@ static void output_air_recv_packet(output_air_t *output_air, rc_data_t *data, ti
     int rssi, snr, lq;
 
     output_air->rx_done = false;
-    if (lora_read(output_air->lora, &in_pkt, sizeof(in_pkt)) == sizeof(in_pkt))
+    if (lora_read(output_air->lora.lora, &in_pkt, sizeof(in_pkt)) == sizeof(in_pkt))
     {
         //LOG_BUFFER_I("LORAIN", &in_pkt, sizeof(in_pkt));
         if (air_rx_packet_validate(&in_pkt, output_air->air.pairing.key))
         {
             air_stream_feed_input(&output_air->air_stream, in_pkt.seq, in_pkt.data, sizeof(in_pkt.data), now);
-            rssi = lora_rssi(output_air->lora, &snr, &lq);
+            rssi = lora_rssi(output_air->lora.lora, &snr, &lq);
             air_io_update_rssi(&output_air->air, rssi, snr, lq, now);
             output_air->consecutive_downlink_lost_packets = 0;
             output_air->expecting_downlink_packet = false;
@@ -432,18 +457,19 @@ static bool output_air_open(void *output, void *config)
         // No pairing
         return false;
     }
-    if (!air_lora_modes_unpack(output_air->air.pairing_info.modes, &output_air->air_mode_fastest, &output_air->air_mode_longest))
+    if (!air_lora_modes_intersect(&output_air->common_air_modes_mask, output_air->air.pairing_info.modes, output_air->lora.modes))
     {
-        // No info to retrieve the supported modes
+        LOG_W(TAG, "No common LoRa modules between RX and this TX");
         return false;
     }
+    output_air->air_mode_longest = air_lora_mode_longest(output_air->common_air_modes_mask);
+    output_air->air_mode = output_air->air_mode_longest;
     LOG_I(TAG, "Open with key %u", output_air->air.pairing.key);
     output_air_config_t *config_air = config;
     output_air->tx_power = config_air->tx_power;
     output_air->seq = 0;
     output_air->is_listening = false;
     output_air->force_stream_feed = false;
-    output_air->air_mode = output_air->air_mode_longest;
     output_air_lora_start(output_air);
     air_stream_init(&output_air->air_stream, NULL,
                     output_air_stream_telemetry_decoded, output_air_stream_cmd_decoded, output);
@@ -475,17 +501,16 @@ static void output_air_close(void *output, void *config)
 {
     LOG_I(TAG, "Close");
     output_air_t *output_air = output;
-    lora_set_callback(output_air->lora, NULL, NULL);
-    lora_sleep(output_air->lora);
+    lora_set_callback(output_air->lora.lora, NULL, NULL);
+    lora_sleep(output_air->lora.lora);
 }
 
-void output_air_init(output_air_t *output, air_addr_t addr, lora_t *lora, air_lora_band_e band, rmp_t *rmp)
+void output_air_init(output_air_t *output, air_addr_t addr, air_lora_config_t *lora, rmp_t *rmp)
 {
-    output->lora = lora;
-    output->band = band;
+    output->lora = *lora;
     output->requested_air_mode = 0;
-    output->start_switch_air_mode_up_at = 0;
-    output->start_switch_air_mode_down_at = 0;
+    output->start_switch_air_mode_faster_at = 0;
+    output->start_switch_air_mode_longer_at = 0;
     output->output.flags = OUTPUT_FLAG_REMOTE;
     output->output.vtable = (output_vtable_t){
         .open = output_air_open,

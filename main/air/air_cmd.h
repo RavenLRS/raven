@@ -17,6 +17,7 @@ typedef enum {
     AIR_CMD_SWITCH_MODE_4 = 4,
     AIR_CMD_SWITCH_MODE_5 = 5,
 
+    AIR_CMD_REJECT_MODE = 31,
     AIR_CMD_MSP = 32,
     AIR_CMD_RMP = 33,
 } air_cmd_e;

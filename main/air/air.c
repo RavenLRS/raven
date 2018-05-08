@@ -72,7 +72,6 @@ void air_bind_packet_prepare(air_bind_packet_t *packet)
     }
     // No antenna nor true diversity supported yet
     packet->info.channels = RC_CHANNELS_NUM;
-    packet->info.modes = air_lora_modes_pack();
     memcpy(packet->prefix, RAVEN_EXPLICIT_PKT_MARKER, RAVEN_EXPLICIT_PKT_MARKER_LEN);
     memset(packet->reserved, 0, sizeof(packet->reserved));
     packet->crc = crc8_dvb_s2_bytes(&packet->version, sizeof(*packet) - offsetof(air_bind_packet_t, version) - 1);

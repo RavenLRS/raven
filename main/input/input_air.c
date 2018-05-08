@@ -33,13 +33,13 @@ typedef enum {
 static void input_air_update_lora_frequency(input_air_t *input_air, unsigned freq_index)
 {
     input_air->freq_index = freq_index;
-    lora_set_frequency(input_air->lora, input_air->freq_table.freqs[freq_index]);
-    lora_enable_continous_rx(input_air->lora);
+    lora_set_frequency(input_air->lora.lora, input_air->freq_table.freqs[freq_index]);
+    lora_enable_continous_rx(input_air->lora.lora);
 }
 
 static void input_air_update_lora_mode(input_air_t *input_air)
 {
-    air_lora_set_parameters(input_air->lora, input_air->air_mode);
+    air_lora_set_parameters(input_air->lora.lora, input_air->air_mode);
     air_cmd_switch_mode_ack_reset(&input_air->switch_air_mode);
     input_air->full_cycle_time = air_lora_full_cycle_time(input_air->air_mode);
     input_air->uplink_cycle_time = air_lora_uplink_cycle_time(input_air->air_mode);
@@ -48,14 +48,15 @@ static void input_air_update_lora_mode(input_air_t *input_air)
 
 static void input_air_lora_start(input_air_t *input_air)
 {
-    lora_set_sync_word(input_air->lora, air_sync_word(input_air->air.pairing.key));
-    air_freq_table_init(&input_air->freq_table, input_air->air.pairing.key, air_lora_band_frequency(input_air->band));
-    lora_set_tx_power(input_air->lora, 17);
+    lora_set_sync_word(input_air->lora.lora, air_sync_word(input_air->air.pairing.key));
+    air_freq_table_init(&input_air->freq_table, input_air->air.pairing.key, air_lora_band_frequency(input_air->lora.band));
+    // TODO: RX used 17dBm fixed power
+    lora_set_tx_power(input_air->lora.lora, 17);
     input_air_update_lora_mode(input_air);
-    lora_sleep(input_air->lora);
-    lora_set_payload_size(input_air->lora, sizeof(air_tx_packet_t));
+    lora_sleep(input_air->lora.lora);
+    lora_set_payload_size(input_air->lora.lora, sizeof(air_tx_packet_t));
     input_air_update_lora_frequency(input_air, 0);
-    lora_enable_continous_rx(input_air->lora);
+    lora_enable_continous_rx(input_air->lora.lora);
     input_air->rx_errors = 0;
     input_air->rx_success = 0;
     input_air->air_state = AIR_INPUT_STATE_RX;
@@ -100,8 +101,11 @@ static void input_air_stream_cmd_decoded(void *user, air_cmd_e cmd, const void *
     {
         air_lora_mode_e mode = air_lora_mode_from_cmd(cmd);
         // Make sure we support this mode, reject it otherwise
-        if (mode < input_air->air_mode_fastest || mode > input_air->air_mode_longest)
+        if (!air_lora_mode_mask_contains(input_air->common_air_modes_mask, mode))
         {
+            uint8_t mode8 = mode;
+            air_stream_feed_output_cmd(&input_air->air_stream,
+                                       AIR_CMD_REJECT_MODE, &mode8, sizeof(mode8));
             break;
         }
         if (mode != input_air->air_mode && mode != input_air->switch_air_mode.mode)
@@ -114,6 +118,9 @@ static void input_air_stream_cmd_decoded(void *user, air_cmd_e cmd, const void *
         }
         break;
     }
+    case AIR_CMD_REJECT_MODE:
+        // Nothing to do here, the air input does't request mode changes
+        break;
     case AIR_CMD_MSP:
     {
         msp_conn_t *conn = msp_io_get_conn(&input_air->input.msp);
@@ -219,11 +226,11 @@ static void input_air_send_response(input_air_t *input_air, rc_data_t *data, tim
     }
     // XXX: Reset the LoRa modem before sending. Otherwise sometimes we don't
     // get the TX done interrupt.
-    lora_sleep(input_air->lora);
+    lora_sleep(input_air->lora.lora);
     air_rx_packet_prepare(&out_pkt, input_air->air.pairing.key);
     //LOG_BUFFER_I("LORAOUT", &out_pkt, sizeof(out_pkt));
     input_air->air_state = AIR_INPUT_STATE_TX;
-    lora_send(input_air->lora, &out_pkt, sizeof(out_pkt));
+    lora_send(input_air->lora.lora, &out_pkt, sizeof(out_pkt));
 }
 
 static unsigned input_air_next_expected_tx_seq(input_air_t *input_air)
@@ -270,9 +277,9 @@ static bool input_air_prepare_next_receive(input_air_t *input_air)
 
 static inline bool input_air_receive(input_air_t *input_air, air_tx_packet_t *pkt)
 {
-    if (lora_is_rx_done(input_air->lora))
+    if (lora_is_rx_done(input_air->lora.lora))
     {
-        size_t read_size = lora_read(input_air->lora, pkt, sizeof(*pkt));
+        size_t read_size = lora_read(input_air->lora.lora, pkt, sizeof(*pkt));
         //LOG_BUFFER_I("LORAIN", pkt, read_size);
         if (read_size != sizeof(*pkt) || !air_tx_packet_validate(pkt, input_air->air.pairing.key))
         {
@@ -280,7 +287,7 @@ static inline bool input_air_receive(input_air_t *input_air, air_tx_packet_t *pk
             // Reading the FIFO puts the module in IDLE state because we need
             // to set the FIFO ptr. If we got a corrupt frame we need to enable
             // RX mode again.
-            lora_enable_continous_rx(input_air->lora);
+            lora_enable_continous_rx(input_air->lora.lora);
             return false;
         }
         return true;
@@ -295,13 +302,15 @@ static bool input_air_open(void *input, void *config)
     {
         return false;
     }
-    if (!air_lora_modes_unpack(input_air->air.pairing_info.modes, &input_air->air_mode_fastest, &input_air->air_mode_longest))
+    if (!air_lora_modes_intersect(&input_air->common_air_modes_mask, input_air->air.pairing_info.modes, input_air->lora.modes))
     {
-        // No info to retrieve the supported modes
+        LOG_W(TAG, "No common LoRa modules between TX and this RX");
         return false;
     }
     LOG_I(TAG, "Open with key %u", input_air->air.pairing.key);
+    input_air->air_mode_longest = air_lora_mode_longest(input_air->common_air_modes_mask);
     input_air->air_mode = input_air->air_mode_longest;
+
     input_air_lora_start(input_air);
     input_air->seq = 0;
     input_air->consecutive_lost_packets = 0;
@@ -339,7 +348,7 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
             input_air->rx_success++;
             input_air->tx_seq = in_pkt.seq;
 
-            rssi = lora_rssi(input_air->lora, &snr, &lq);
+            rssi = lora_rssi(input_air->lora.lora, &snr, &lq);
             air_io_update_rssi(&input_air->air, rssi, snr, lq, now);
             failsafe_reset_interval(&input_air->input.failsafe, now);
             air_io_on_frame(&input_air->air, now);
@@ -350,7 +359,7 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
             }
             else
             {
-                lora_sleep(input_air->lora);
+                lora_sleep(input_air->lora.lora);
                 input_air_prepare_next_receive(input_air);
             }
             updated = true;
@@ -386,8 +395,8 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
             // a packet. First priority now is recovering the control link.
             if (input_air_prepare_next_receive(input_air))
             {
-                lora_sleep(input_air->lora);
-                lora_enable_continous_rx(input_air->lora);
+                lora_sleep(input_air->lora.lora);
+                lora_enable_continous_rx(input_air->lora.lora);
             }
         }
         else if (failsafe_is_active(data->failsafe.input))
@@ -402,9 +411,9 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
         }
         break;
     case AIR_INPUT_STATE_TX:
-        if (lora_is_tx_done(input_air->lora))
+        if (lora_is_tx_done(input_air->lora.lora))
         {
-            lora_set_payload_size(input_air->lora, sizeof(air_tx_packet_t));
+            lora_set_payload_size(input_air->lora.lora, sizeof(air_tx_packet_t));
             input_air_prepare_next_receive(input_air);
             input_air->air_state = AIR_INPUT_STATE_RX;
         }
@@ -417,13 +426,12 @@ static void input_air_close(void *input, void *config)
 {
     LOG_I(TAG, "Close");
     input_air_t *input_air = input;
-    lora_sleep(input_air->lora);
+    lora_sleep(input_air->lora.lora);
 }
 
-void input_air_init(input_air_t *input, air_addr_t addr, lora_t *lora, air_lora_band_e band, rmp_t *rmp)
+void input_air_init(input_air_t *input, air_addr_t addr, air_lora_config_t *lora, rmp_t *rmp)
 {
-    input->lora = lora;
-    input->band = band;
+    input->lora = *lora;
     input->input.vtable = (input_vtable_t){
         .open = input_air_open,
         .update = input_air_update,

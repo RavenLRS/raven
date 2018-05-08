@@ -22,14 +22,14 @@ static bool input_air_bind_open(void *data, void *config)
 {
     LOG_I(TAG, "Open");
     input_air_bind_t *input = data;
-    air_lora_set_parameters_bind(input->lora, input->band);
+    air_lora_set_parameters_bind(input->lora.lora, input->lora.band);
     input->state = AIR_INPUT_BIND_STATE_RX;
     input->bind_packet_expires = 0;
     input->send_response_at = TIME_MICROS_MAX;
     input->bind_accepted = false;
     input->bind_confirmation_sent = false;
     input->bind_completed = false;
-    lora_enable_continous_rx(input->lora);
+    lora_enable_continous_rx(input->lora.lora);
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_BIND);
     return true;
 }
@@ -48,6 +48,7 @@ static void input_air_bind_send_response(void *data, time_micros_t now)
         .key = input->bind_packet.key,
         .role = role,
     };
+    bind_packet.info.modes = input->lora.modes;
     const char *name = rc_data_get_craft_name(input->input.rc_data);
     memset(bind_packet.name, 0, sizeof(bind_packet.name));
     if (name)
@@ -57,7 +58,7 @@ static void input_air_bind_send_response(void *data, time_micros_t now)
     air_bind_packet_prepare(&bind_packet);
     LOG_I(TAG, "Sending bind response");
     input->state = AIR_INPUT_BIND_STATE_TX;
-    lora_send(input->lora, &bind_packet, sizeof(bind_packet));
+    lora_send(input->lora.lora, &bind_packet, sizeof(bind_packet));
 }
 
 static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t now)
@@ -67,9 +68,9 @@ static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t 
     switch (input->state)
     {
     case AIR_INPUT_BIND_STATE_RX:
-        if (lora_is_rx_done(input->lora))
+        if (lora_is_rx_done(input->lora.lora))
         {
-            size_t n = lora_read(input->lora, &pkt, sizeof(pkt));
+            size_t n = lora_read(input->lora.lora, &pkt, sizeof(pkt));
             if (n == sizeof(pkt) && air_bind_packet_validate(&pkt) && pkt.role == AIR_ROLE_TX)
             {
                 LOG_I(TAG, "Got bind request");
@@ -82,7 +83,7 @@ static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t 
             // Not actually required since now we always send
             // a response, but if we change that in the future
             // we'd need to re-enable RX mode.
-            lora_enable_continous_rx(input->lora);
+            lora_enable_continous_rx(input->lora.lora);
         }
         else if (now > input->send_response_at)
         {
@@ -92,7 +93,7 @@ static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t 
         }
         break;
     case AIR_INPUT_BIND_STATE_TX:
-        if (lora_is_tx_done(input->lora))
+        if (lora_is_tx_done(input->lora.lora))
         {
             if (input->bind_accepted && input->bind_confirmation_sent)
             {
@@ -104,8 +105,8 @@ static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t 
             {
                 // Finished transmitting an informative packet to the TX,
                 // continue in bind mode.
-                lora_sleep(input->lora);
-                lora_enable_continous_rx(input->lora);
+                lora_sleep(input->lora.lora);
+                lora_enable_continous_rx(input->lora.lora);
                 input->state = AIR_INPUT_BIND_STATE_RX;
             }
         }
@@ -118,7 +119,7 @@ static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t 
 static void input_air_bind_close(void *data, void *config)
 {
     input_air_bind_t *input = data;
-    lora_sleep(input->lora);
+    lora_sleep(input->lora.lora);
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_NONE);
 }
 
@@ -142,10 +143,9 @@ static bool input_air_bind_accept_request(void *user_data)
     return input->bind_completed;
 }
 
-void input_air_bind_init(input_air_bind_t *input_air_bind, air_addr_t addr, lora_t *lora, air_lora_band_e band)
+void input_air_bind_init(input_air_bind_t *input_air_bind, air_addr_t addr, air_lora_config_t *lora)
 {
-    input_air_bind->lora = lora;
-    input_air_bind->band = band;
+    input_air_bind->lora = *lora;
     air_io_bind_t bind = {
         .has_request = input_air_bind_has_request,
         .accept_request = input_air_bind_accept_request,

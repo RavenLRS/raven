@@ -14,22 +14,19 @@
 
 #include "util/time.h"
 
-typedef struct lora_s lora_t;
-
 typedef struct input_air_s
 {
     input_t input;
     air_io_t air;
-    lora_t *lora;
-    air_lora_band_e band;
+    air_lora_config_t lora;
+    air_lora_mode_mask_t common_air_modes_mask;
+    air_lora_mode_e air_mode_longest;
     int rx_errors;
     int rx_success;
     unsigned seq : AIR_SEQ_BITS;
     unsigned tx_seq : AIR_SEQ_BITS;
     air_stream_t air_stream;
     air_lora_mode_e air_mode;
-    air_lora_mode_e air_mode_fastest;
-    air_lora_mode_e air_mode_longest;
     air_cmd_switch_mode_ack_t switch_air_mode;
     unsigned air_state;
     unsigned consecutive_lost_packets;
@@ -45,4 +42,4 @@ typedef struct input_air_s
     rmp_air_t rmp_air;
 } input_air_t;
 
-void input_air_init(input_air_t *input, air_addr_t addr, lora_t *lora, air_lora_band_e band, rmp_t *rmp);
+void input_air_init(input_air_t *input, air_addr_t addr, air_lora_config_t *lora, rmp_t *rmp);

@@ -18,7 +18,7 @@ static bool output_air_bind_open(void *data, void *config)
     output->binding_key = air_key_generate();
     output->has_bind_response = false;
     output->bind_packet_expires = 0;
-    air_lora_set_parameters_bind(output->lora, output->band);
+    air_lora_set_parameters_bind(output->lora.lora, output->lora.band);
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_BIND);
     return true;
 }
@@ -28,7 +28,7 @@ static bool output_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t
     output_air_bind_t *output = data;
     if (output->next_bind_offer < now)
     {
-        if (!lora_is_tx_done(output->lora))
+        if (!lora_is_tx_done(output->lora.lora))
         {
             LOG_W(TAG, "TX not finished before sending next bind packet");
         }
@@ -39,6 +39,7 @@ static bool output_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t
             .key = output->binding_key,
             .role = AIR_ROLE_TX,
         };
+        bind_packet.info.modes = output->lora.modes;
 
         const char *name = rc_data_get_pilot_name(output->output.rc_data);
         memset(bind_packet.name, 0, sizeof(bind_packet.name));
@@ -47,23 +48,23 @@ static bool output_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t
             strlcpy(bind_packet.name, name, sizeof(bind_packet.name));
         }
         air_bind_packet_prepare(&bind_packet);
-        LOG_D(TAG, "Sending bind packet");
-        lora_send(output->lora, &bind_packet, sizeof(bind_packet));
+        LOG_I(TAG, "Sending bind packet");
+        lora_send(output->lora.lora, &bind_packet, sizeof(bind_packet));
         output->next_bind_offer = now + AIR_BIND_PACKET_INTERVAL_MS * 1000;
     }
     else
     {
         // Check if TX was done
-        if (!output->is_listening && lora_is_tx_done(output->lora))
+        if (!output->is_listening && lora_is_tx_done(output->lora.lora))
         {
-            lora_sleep(output->lora);
-            lora_enable_continous_rx(output->lora);
+            lora_sleep(output->lora.lora);
+            lora_enable_continous_rx(output->lora.lora);
             output->is_listening = true;
         }
-        else if (output->is_listening && lora_is_rx_done(output->lora))
+        else if (output->is_listening && lora_is_rx_done(output->lora.lora))
         {
             air_bind_packet_t *bind_resp = &output->bind_resp;
-            if (lora_read(output->lora, bind_resp, sizeof(*bind_resp)) == sizeof(*bind_resp) &&
+            if (lora_read(output->lora.lora, bind_resp, sizeof(*bind_resp)) == sizeof(*bind_resp) &&
                 air_bind_packet_validate(bind_resp) && bind_resp->key == output->binding_key)
             {
                 // Got a response from the RX. It might be informing that the RX
@@ -80,7 +81,7 @@ static bool output_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t
 static void output_air_bind_close(void *data, void *config)
 {
     output_air_bind_t *output = data;
-    lora_sleep(output->lora);
+    lora_sleep(output->lora.lora);
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_NONE);
 }
 
@@ -102,10 +103,9 @@ static bool output_air_bind_accept_request(void *data)
     return true;
 }
 
-void output_air_bind_init(output_air_bind_t *output_air_bind, air_addr_t addr, lora_t *lora, air_lora_band_e band)
+void output_air_bind_init(output_air_bind_t *output_air_bind, air_addr_t addr, air_lora_config_t *lora)
 {
-    output_air_bind->lora = lora;
-    output_air_bind->band = band;
+    output_air_bind->lora = *lora;
     air_io_bind_t bind = {
         .has_request = output_air_bind_has_request,
         .accept_request = output_air_bind_accept_request,

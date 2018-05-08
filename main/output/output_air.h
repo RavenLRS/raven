@@ -14,8 +14,6 @@
 
 #include "msp/msp_air.h"
 
-typedef struct lora_s lora_t;
-
 typedef struct output_air_config_s
 {
     int tx_power; // dbm
@@ -25,17 +23,16 @@ typedef struct output_air_s
 {
     output_t output;
     air_io_t air;
-    air_lora_mode_e air_mode;
-    air_lora_mode_e air_mode_fastest;
+    air_lora_config_t lora;
+    air_lora_mode_mask_t common_air_modes_mask;
     air_lora_mode_e air_mode_longest;
+    air_lora_mode_e air_mode;
     air_lora_mode_e requested_air_mode;
-    time_micros_t start_switch_air_mode_up_at;
-    time_micros_t start_switch_air_mode_down_at;
+    time_micros_t start_switch_air_mode_faster_at;
+    time_micros_t start_switch_air_mode_longer_at;
     air_cmd_switch_mode_ack_t switch_air_mode;
     bool is_listening;
     bool force_stream_feed;
-    lora_t *lora;
-    air_lora_band_e band;
     time_micros_t last_downlink_packet_at;
     time_micros_t full_cycle_time;
     time_micros_t uplink_cycle_time;
@@ -53,6 +50,6 @@ typedef struct output_air_s
     rmp_air_t rmp_air;
 } output_air_t;
 
-void output_air_init(output_air_t *output, air_addr_t addr, lora_t *lora, air_lora_band_e band, rmp_t *rmp);
+void output_air_init(output_air_t *output, air_addr_t addr, air_lora_config_t *lora, rmp_t *rmp);
 
 void output_air_set_tx_power(output_air_t *output, int tx_power);

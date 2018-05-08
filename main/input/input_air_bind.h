@@ -9,14 +9,11 @@
 
 #include "util/time.h"
 
-typedef struct lora_s lora_t;
-
 typedef struct input_air_bind_s
 {
     input_t input;
     air_io_t air;
-    lora_t *lora;
-    air_lora_band_e band;
+    air_lora_config_t lora;
     int state;
     air_bind_packet_t bind_packet;
     time_micros_t bind_packet_expires;
@@ -26,4 +23,4 @@ typedef struct input_air_bind_s
     bool bind_completed;
 } input_air_bind_t;
 
-void input_air_bind_init(input_air_bind_t *input_air_bind, air_addr_t addr, lora_t *lora, air_lora_band_e band);
+void input_air_bind_init(input_air_bind_t *input_air_bind, air_addr_t addr, air_lora_config_t *lora);

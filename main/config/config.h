@@ -35,6 +35,20 @@ typedef enum {
     RX_OUTPUT_LAST = RX_OUTPUT_FPORT,
 } rx_output_type_e;
 
+// Used to store it as a setting, since settings need continuous
+// values starting at zero.
+typedef enum {
+    AIR_MODES_1_5,
+    AIR_MODES_2_5,
+    AIR_MODES_FIXED_1,
+    AIR_MODES_FIXED_2,
+    AIR_MODES_FIXED_3,
+    AIR_MODES_FIXED_4,
+    AIR_MODES_FIXED_5,
+
+    AIR_MODES_COUNT,
+} config_air_mode_e;
+
 void config_init(void);
 
 #if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
