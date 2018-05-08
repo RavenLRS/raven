@@ -172,7 +172,12 @@ void screen_set_brightness(screen_t *screen, screen_brightness_e brightness)
     switch (brightness)
     {
     case SCREEN_BRIGHTNESS_LOW:
-        contrast = 0;
+        /* XXX: Don't use 0 contrast here, since some screens will turn
+         * off completely with zero. Using 1 has no noticeable difference
+         * and let's us easily make the same code work in all supported
+         * boards. See #1 for discussion.
+         */
+        contrast = 1;
         break;
     case SCREEN_BRIGHTNESS_MEDIUM:
         contrast = 128;
