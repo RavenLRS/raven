@@ -511,14 +511,7 @@ static void screen_draw_main_rssi(screen_t *s, int16_t x, int16_t y)
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%uHz", rc_get_update_frequency(rc));
         screen_draw_label_value(s, "F:", buf, SCREEN_W(s), y + bar_y + 38, 3);
         float snr = rc_get_snr(rc);
-        if (snr < 10 && snr > -10)
-        {
-            snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%+.1fdB", snr);
-        }
-        else
-        {
-            snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%+.0fdB", snr);
-        }
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%+.2fdB", snr);
         screen_draw_label_value(s, "S:", buf, SCREEN_W(s), y + bar_y + 50, 3);
     }
 

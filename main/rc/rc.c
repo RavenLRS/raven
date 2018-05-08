@@ -439,20 +439,20 @@ static void rc_rssi_update(rc_t *rc)
     {
         rssi = 127;
     }
-    int8_t snr = lpf_value(&air_io->snr);
+    float snr = lpf_value(&air_io->snr);
     int8_t lq = lpf_value(&air_io->lq);
     time_micros_t now = time_micros_now();
     switch (config_get_rc_mode())
     {
     case RC_MODE_TX:
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RSSI_ANT1, rssi, now);
-        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_SNR, snr, now);
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_SNR, snr * TELEMETRY_SNR_MULTIPLIER, now);
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_LINK_QUALITY, lq, now);
         break;
     case RC_MODE_RX:
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RSSI_ANT1, rssi, now);
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RSSI_ANT2, rssi, now);
-        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_SNR, snr, now);
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_SNR, snr * TELEMETRY_SNR_MULTIPLIER, now);
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_LINK_QUALITY, lq, now);
         break;
     }
@@ -919,7 +919,7 @@ float rc_get_snr(rc_t *rc)
     {
     case RC_MODE_TX:
         // Return the RX SNR
-        return TELEMETRY_GET_I8(&rc->data, TELEMETRY_ID_RX_SNR);
+        return TELEMETRY_GET_I8(&rc->data, TELEMETRY_ID_RX_SNR) / TELEMETRY_SNR_MULTIPLIER;
     case RC_MODE_RX:
         // Return our own SNR
         return GET_AIR_IO_FILTERED_FIELD(rc, snr);

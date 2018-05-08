@@ -16,6 +16,8 @@
 
 #define TELEMETRY_STRING_MAX_SIZE 32
 
+#define TELEMETRY_SNR_MULTIPLIER 4.0f
+
 typedef enum {
     TELEMETRY_TYPE_UINT8 = 1,
     TELEMETRY_TYPE_INT8,
@@ -40,7 +42,7 @@ typedef enum {
     TELEMETRY_ID_PILOT_NAME = TELEMETRY_UPLINK_MASK, // string
     TELEMETRY_ID_TX_RSSI_ANT1,                       // int8_t: RSSI of the antenna 1 in the TX (dB)
     TELEMETRY_ID_TX_LINK_QUALITY,                    // int8_t: Link quality as seen in the TX (%)
-    TELEMETRY_ID_TX_SNR,                             // int8_t: SNR as seen by the TX (dBm*4)
+    TELEMETRY_ID_TX_SNR,                             // int8_t: SNR as seen by the TX (dB*TELEMETRY_SNR_MULTIPLIER)
     TELEMETRY_ID_TX_RF_POWER,                        // int8_t: TX power used by the TX (dBm)
 } telemetry_uplink_id_e;
 
@@ -81,7 +83,7 @@ typedef enum {
     TELEMETRY_ID_RX_RSSI_ANT1,     // int8_t: RSSI of the antenna 1 in the RX (dB)
     TELEMETRY_ID_RX_RSSI_ANT2,     // int8_t: RSSI of the antenna 2 (if any) in the RX (dB)
     TELEMETRY_ID_RX_LINK_QUALITY,  // int8_t: Link quality as seen in the RX (%)
-    TELEMETRY_ID_RX_SNR,           // int8_t: SNR as seen by the RX (dBm*4)
+    TELEMETRY_ID_RX_SNR,           // int8_t: SNR as seen by the RX (dB*TELEMETRY_SNR_MULTIPLIER)
     TELEMETRY_ID_RX_ACTIVE_ANT,    // uint8_t: Active antenna in the RX, starting at zero
     TELEMETRY_ID_RX_RF_POWER,      // int8_t: TX power used by the RX (dBm)
 } telemetry_downlink_id_e;
