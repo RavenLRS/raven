@@ -1,5 +1,7 @@
 # Raven Long Range System
 
+[![Build Status](https://travis-ci.com/RavenLRS/raven.svg?branch=master)](https://travis-ci.com/RavenLRS/raven)
+
 Raven is completely open source a long range system (LRS) based on LoRa
 which also supports peer to peer communications (so for example, 
 flight controllers in aircrafts can talk directly to each other).
