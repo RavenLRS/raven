@@ -1,4 +1,6 @@
 
+#include <hal/log.h>
+
 #include "platform.h"
 
 #include "config/settings.h"
@@ -12,6 +14,8 @@
 #include "ui/screen.h"
 
 #include "ui/ui.h"
+
+static const char *TAG = "UI";
 
 #ifdef USE_SCREEN
 
@@ -150,10 +154,15 @@ void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
 #ifdef USE_SCREEN
     if (screen_is_available(&ui->internal.screen))
     {
+        LOG_I(TAG, "Screen detected");
         system_add_flag(SYSTEM_FLAG_SCREEN);
         screen_set_orientation(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_ORIENTATION));
         screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
         ui_set_screen_set_autooff(ui, settings_get_key_u8(SETTING_KEY_SCREEN_AUTO_OFF));
+    }
+    else
+    {
+        LOG_I(TAG, "No screen detected");
     }
     menu_init(rc);
 #endif
