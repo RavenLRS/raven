@@ -112,6 +112,21 @@ static void rc_data_initialize(rc_t *rc)
     (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RF_POWER, 20, time_micros_now());
 }
 
+static void rc_invalidate_air(rc_t *rc)
+{
+    switch (config_get_rc_mode())
+    {
+    case RC_MODE_TX:
+        rc_invalidate_output(rc);
+        break;
+    case RC_MODE_RX:
+        rc_invalidate_input(rc);
+        break;
+    default:
+        UNREACHABLE();
+    }
+}
+
 static int rc_get_tx_rf_power(rc_t *rc)
 {
     return air_rf_power_to_dbm(settings_get_key_u8(SETTING_KEY_TX_RF_POWER));
@@ -152,6 +167,35 @@ static bool rc_get_pair_addr(rc_t *rc, air_addr_t *addr)
 {
     air_io_t *air_io = rc_get_air_io(rc);
     return air_io && air_io_get_bound_addr(air_io, addr);
+}
+
+static void rc_invalid_pair_air_config(rc_t *rc)
+{
+    rc->state.pair_air_config_next_req = time_ticks_now();
+}
+
+static bool rc_needs_pair_air_config(rc_t *rc)
+{
+    return rc->state.pair_air_config_next_req > 0;
+}
+
+static void rc_update_pair_air_config(rc_t *rc)
+{
+    time_ticks_t now = time_ticks_now();
+    if (now >= rc->state.pair_air_config_next_req)
+    {
+        air_addr_t pair_addr;
+        if (rc_get_pair_addr(rc, &pair_addr))
+        {
+            rc_rmp_request_air_lora_config(&rc->state.rc_rmp, &pair_addr);
+        }
+        rc->state.pair_air_config_next_req = now + MILLIS_TO_TICKS(150);
+    }
+}
+
+static void rc_pair_air_config_updated(rc_t *rc)
+{
+    rc->state.pair_air_config_next_req = 0;
 }
 
 void rc_get_air_lora_config(rc_t *rc, air_lora_config_t *lora)
@@ -214,20 +258,13 @@ void rc_set_peer_air_lora_config(rc_t *rc, air_addr_t *addr, air_lora_band_e ban
         changed = true;
     }
 
-    if (changed)
+    air_addr_t pair_addr;
+    if (rc_get_pair_addr(rc, &pair_addr) && air_addr_equals(addr, &pair_addr))
     {
-        air_addr_t pair_addr;
-        if (rc_get_pair_addr(rc, &pair_addr) && air_addr_equals(addr, &pair_addr))
+        rc_pair_air_config_updated(rc);
+        if (changed)
         {
-            switch (config_get_rc_mode())
-            {
-            case RC_MODE_TX:
-                rc_invalidate_output(rc);
-                break;
-            case RC_MODE_RX:
-                rc_invalidate_input(rc);
-                break;
-            }
+            rc_invalidate_air(rc);
         }
     }
 }
@@ -285,6 +322,8 @@ static void rc_reconfigure_input(rc_t *rc)
                 rmp_set_pairing(rc->rmp, &pairing);
             }
         }
+
+        rc_invalid_pair_air_config(rc);
         break;
     }
     }
@@ -352,6 +391,7 @@ static void rc_reconfigure_output(rc_t *rc)
         }
         rc->output_config = &output_config.air;
 
+        rc_invalid_pair_air_config(rc);
         break;
     }
     case RC_MODE_RX:
@@ -699,21 +739,6 @@ static void rc_msp_request_callback(msp_conn_t *conn, uint16_t cmd, const void *
         // Send the conn argument as the callback data so the response is routed back
         // to the sender.
         msp_conn_send(request_output, cmd, payload, size, rc_msp_response_callback, conn);
-    }
-}
-
-static void rc_invalidate_air(rc_t *rc)
-{
-    switch (config_get_rc_mode())
-    {
-    case RC_MODE_TX:
-        rc_invalidate_output(rc);
-        break;
-    case RC_MODE_RX:
-        rc_invalidate_input(rc);
-        break;
-    default:
-        UNREACHABLE();
     }
 }
 
@@ -1202,6 +1227,11 @@ void rc_update(rc_t *rc)
     if (UNLIKELY(rc->state.bind_active))
     {
         rc_update_binding(rc);
+    }
+
+    if (UNLIKELY(rc_needs_pair_air_config(rc)))
+    {
+        rc_update_pair_air_config(rc);
     }
 
     rc_rssi_update(rc);

@@ -81,6 +81,7 @@ typedef struct rc_s
         int dismissed_count;
         int dismissed_pairings;
         int tx_rf_power;
+        time_ticks_t pair_air_config_next_req; // 0 zero means the data is confirmed
         // RMP messages handled by rc_t
         rc_rmp_t rc_rmp;
         // MSP/RMP Transport fields

@@ -61,6 +61,14 @@ void rc_rmp_init(rc_rmp_t *rc_rmp, rc_t *rc, rmp_t *rmp)
     rc_rmp->port = rmp_open_port(rmp, RMP_PORT_RC, rc_rmp_port_handler, rc_rmp);
 }
 
+void rc_rmp_request_air_lora_config(rc_rmp_t *rc_rmp, air_addr_t *addr)
+{
+    rc_rmp_msg_t req = {
+        .code = RC_RMP_AIR_LORA_CONFIG_REQ,
+    };
+    rmp_send(rc_rmp->rmp, rc_rmp->port, *addr, RMP_PORT_RC, &req, 1);
+}
+
 void rc_rmp_send_air_lora_config(rc_rmp_t *rc_rmp, air_addr_t *addr, bool ack)
 {
     rc_rmp_send_air_lora_config_raw(rc_rmp, addr, RC_RMP_AIR_LORA_CONFIG_RESP, ack);
