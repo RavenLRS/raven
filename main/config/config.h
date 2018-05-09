@@ -37,10 +37,13 @@ typedef enum {
 
 // Used to store it as a setting, since settings need continuous
 // values starting at zero.
+
+// Mode 1 is disabled for now, since it looks like most modules
+// can't cope with it (too manu corrupt packets).
 typedef enum {
-    AIR_MODES_1_5,
+    //    AIR_MODES_1_5,
     AIR_MODES_2_5,
-    AIR_MODES_FIXED_1,
+    //    AIR_MODES_FIXED_1,
     AIR_MODES_FIXED_2,
     AIR_MODES_FIXED_3,
     AIR_MODES_FIXED_4,

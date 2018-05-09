@@ -130,13 +130,6 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
 
 static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
-    if (SETTING_IS(setting, SETTING_KEY_TX_SUPPORTED_MODES))
-    {
-        // TX Supports all parameters without restrictions for now, but
-        // we might find some boards in the future that need to be able
-        // to disable certain modes because they can't deal with them.
-        return SETTING_VISIBILITY_HIDE;
-    }
     if (SETTING_IS(setting, SETTING_KEY_TX_INPUT))
     {
         return SETTING_SHOW_IF(view_id != SETTINGS_VIEW_CRSF_INPUT);
@@ -235,7 +228,8 @@ static const char *lora_band_table[] = {
 static const char *tx_input_table[] = {"CRSF", "Test"};
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");
-static const char *air_modes_table[] = {"1-5 (10-100Hz)", "2-5 (10-50Hz)", "1 (100Hz)", "2 (50Hz)", "3 (30Hz)", "4 (18Hz)", "5 (9Hz)"};
+// Keep in sync with config_air_mode_e
+static const char *air_modes_table[] = {/*"1-5 (9-100Hz)",*/ "2-5 (9-50Hz)", /*"1 (100Hz)",*/ "2 (50Hz)", "3 (30Hz)", "4 (18Hz)", "5 (9Hz)"};
 _Static_assert(ARRAY_COUNT(air_modes_table) == AIR_MODES_COUNT, "AIR_MODES_COUNT is invalid");
 static const char *rx_output_table[] = {"SBUS/Smartport", "MSP", "CRSF", "FPort"};
 static const char *msp_baudrate_table[] = {"115200"};
@@ -270,7 +264,6 @@ static const setting_t settings[] = {
 
     FOLDER(SETTING_KEY_TX, "TX", FOLDER_ID_TX, FOLDER_ID_ROOT, setting_visibility_tx),
     U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),
-    U8_MAP_SETTING(SETTING_KEY_TX_SUPPORTED_MODES, "Modes", 0, FOLDER_ID_TX, air_modes_table, AIR_MODES_1_5),
     STRING_SETTING(SETTING_KEY_TX_PILOT_NAME, "Pilot Name", FOLDER_ID_TX),
     U8_MAP_SETTING(SETTING_KEY_TX_INPUT, "Input", 0, FOLDER_ID_TX, tx_input_table, TX_INPUT_FIRST),
     PIN_SETTING(SETTING_KEY_TX_CRSF_PIN, "CRSF Pin", FOLDER_ID_TX, PIN_DEFAULT_TX_IDX),

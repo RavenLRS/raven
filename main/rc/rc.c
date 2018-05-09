@@ -156,47 +156,40 @@ static bool rc_get_pair_addr(rc_t *rc, air_addr_t *addr)
 
 void rc_get_air_lora_config(rc_t *rc, air_lora_config_t *lora)
 {
-    const char *key;
+    air_lora_supported_modes_e supported_modes = 0;
     switch (config_get_rc_mode())
     {
     case RC_MODE_TX:
-        key = SETTING_KEY_TX_SUPPORTED_MODES;
-        break;
-    case RC_MODE_RX:
-        key = SETTING_KEY_RX_SUPPORTED_MODES;
-        break;
-    default:
-        UNREACHABLE();
-        key = NULL;
-        break;
-    }
-    config_air_mode_e mode = settings_get_key_u8(key);
-    air_lora_supported_modes_e supported_modes = 0;
-    switch (mode)
-    {
-    case AIR_MODES_1_5:
+        // TX Supports all modes for now
         supported_modes = AIR_LORA_SUPPORTED_MODES_1_TO_5;
         break;
-    case AIR_MODES_2_5:
-        supported_modes = AIR_LORA_SUPPORTED_MODES_2_TO_5;
+    case RC_MODE_RX:
+    {
+        // RX allows configurable modes
+        config_air_mode_e mode = settings_get_key_u8(SETTING_KEY_RX_SUPPORTED_MODES);
+        switch (mode)
+        {
+        case AIR_MODES_2_5:
+            supported_modes = AIR_LORA_SUPPORTED_MODES_2_TO_5;
+            break;
+        case AIR_MODES_FIXED_2:
+            supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_2;
+            break;
+        case AIR_MODES_FIXED_3:
+            supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_3;
+            break;
+        case AIR_MODES_FIXED_4:
+            supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_4;
+            break;
+        case AIR_MODES_FIXED_5:
+            supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_5;
+            break;
+        default:
+            UNREACHABLE();
+            break;
+        }
         break;
-    case AIR_MODES_FIXED_1:
-        supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_1;
-        break;
-    case AIR_MODES_FIXED_2:
-        supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_2;
-        break;
-    case AIR_MODES_FIXED_3:
-        supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_3;
-        break;
-    case AIR_MODES_FIXED_4:
-        supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_4;
-        break;
-    case AIR_MODES_FIXED_5:
-        supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_5;
-        break;
-    default:
-        UNREACHABLE();
+    }
     }
     lora->lora = rc->lora;
     lora->band = rc_get_air_lora_band(rc);
