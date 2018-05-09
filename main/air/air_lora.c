@@ -59,7 +59,7 @@ time_micros_t air_lora_full_cycle_time(air_lora_mode_e mode)
     case AIR_LORA_MODE_4:
         return MILLIS_TO_MICROS(55);
     case AIR_LORA_MODE_5:
-        return MILLIS_TO_MICROS(110);
+        return MILLIS_TO_MICROS(115);
     }
     UNREACHABLE();
     return 0;
