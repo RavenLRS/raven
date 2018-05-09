@@ -309,6 +309,11 @@ static bool input_air_open(void *input, void *config)
     }
     LOG_I(TAG, "Open with key %u", input_air->air.pairing.key);
     input_air->air_mode_longest = air_lora_mode_longest(input_air->common_air_modes_mask);
+    if (!air_lora_mode_is_valid(input_air->air_mode_longest))
+    {
+        LOG_W(TAG, "Could not determine a valid LoRa mode");
+        return false;
+    }
     input_air->air_mode = input_air->air_mode_longest;
 
     input_air_lora_start(input_air);
