@@ -44,9 +44,13 @@ typedef enum {
 // Mode 1 is disabled for now, since it looks like most modules
 // can't cope with it (too manu corrupt packets).
 typedef enum {
-    //    CONFIG_AIR_MODES_1_5,
+#if defined(USE_AIR_MODE_1)
+    CONFIG_AIR_MODES_1_5,
+#endif
     CONFIG_AIR_MODES_2_5,
-    //    CONFIG_AIR_MODES_FIXED_1,
+#if defined(USE_AIR_MODE_1)
+    CONFIG_AIR_MODES_FIXED_1,
+#endif
     CONFIG_AIR_MODES_FIXED_2,
     CONFIG_AIR_MODES_FIXED_3,
     CONFIG_AIR_MODES_FIXED_4,

@@ -500,8 +500,16 @@ air_lora_supported_modes_e config_get_air_lora_modes(config_air_mode_e modes)
 {
     switch (modes)
     {
+#if defined(USE_AIR_MODE_1)
+    case CONFIG_AIR_MODES_1_5:
+        return AIR_LORA_SUPPORTED_MODES_1_TO_5;
+#endif
     case CONFIG_AIR_MODES_2_5:
         return AIR_LORA_SUPPORTED_MODES_2_TO_5;
+#if defined(USE_AIR_MODE_1)
+    case CONFIG_AIR_MODES_FIXED_1:
+        return AIR_LORA_SUPPORTED_MODES_FIXED_1;
+#endif
     case CONFIG_AIR_MODES_FIXED_2:
         return AIR_LORA_SUPPORTED_MODES_FIXED_2;
     case CONFIG_AIR_MODES_FIXED_3:
