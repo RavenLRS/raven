@@ -354,9 +354,6 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
             input_air->tx_seq = in_pkt.seq;
 
             rssi = lora_rssi(input_air->lora.lora, &snr, &lq);
-            air_io_update_rssi(&input_air->air, rssi, snr, lq, now);
-            failsafe_reset_interval(&input_air->input.failsafe, now);
-            air_io_on_frame(&input_air->air, now);
 
             if (cycle_is_full)
             {
@@ -367,9 +364,12 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
                 lora_sleep(input_air->lora.lora);
                 input_air_prepare_next_receive(input_air);
             }
-            updated = true;
             // Do this after the response packet has been sent, otherwise the processing
             // could delay the response too much resulting on a lost cycle.
+            air_io_update_rssi(&input_air->air, rssi, snr, lq, now);
+            failsafe_reset_interval(&input_air->input.failsafe, now);
+            air_io_on_frame(&input_air->air, now);
+            updated = true;
             rc_data_update_channel(data, 0, AIR_TO_CHANNEL_INPUT(in_pkt.ch0), now);
             rc_data_update_channel(data, 1, AIR_TO_CHANNEL_INPUT(in_pkt.ch1), now);
             rc_data_update_channel(data, 2, AIR_TO_CHANNEL_INPUT(in_pkt.ch2), now);
