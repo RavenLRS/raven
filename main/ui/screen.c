@@ -84,7 +84,7 @@ void screen_splash(screen_t *screen)
 #define SPLASH_TOP_SUBTITLE "RX"
 #endif
 #define SPLASH_VERSION_LABEL "Version:"
-#define SPLASH_BOTTOM SPLASH_VERSION_LABEL " " SOFTWARE_VERSION
+#define SPLASH_BOTTOM_HORIZONTAL SOFTWARE_VERSION
 
     for (int ii = 0; ii < MAX(ANIMATION_REPEAT, 1); ii++)
     {
@@ -107,8 +107,8 @@ void screen_splash(screen_t *screen)
                 bw = u8g2_GetStrWidth(&u8g2, SPLASH_TOP_SUBTITLE);
                 u8g2_DrawStr(&u8g2, 0, 15, SPLASH_TOP_SUBTITLE);
 
-                bw = u8g2_GetStrWidth(&u8g2, SPLASH_BOTTOM);
-                u8g2_DrawStr(&u8g2, (w - bw) / 2, h, SPLASH_BOTTOM);
+                bw = u8g2_GetStrWidth(&u8g2, SPLASH_BOTTOM_HORIZONTAL);
+                u8g2_DrawStr(&u8g2, (w - bw) / 2, h, SPLASH_BOTTOM_HORIZONTAL);
             }
             else
             {
