@@ -22,10 +22,10 @@ static time_micros_t cycle_end;
 #define MODE_SWITCH_TELEMETRY_ID TELEMETRY_ID_RX_SNR
 #define MODE_SWITCH_TELEMETRY_TYPE int8_t
 #define MODE_SWITCH_TELEMETRY_GET_VALUE(x) telemetry_get_i8(x, MODE_SWITCH_TELEMETRY_ID)
-// Switch to faster mode if SNR is above 4dBm
-#define MODE_SWITCH_FASTER_VALUE (4 * 4)
-// Switch to a longer mode if the SNR is below 1.5dBm
-#define MODE_SWITCH_LONGER_VALUE (1.5 * 4)
+// Switch to faster mode if SNR is above 6dB
+#define MODE_SWITCH_FASTER_VALUE (6 * TELEMETRY_SNR_MULTIPLIER)
+// Switch to a longer mode if the SNR is below 3dB
+#define MODE_SWITCH_LONGER_VALUE (3 * TELEMETRY_SNR_MULTIPLIER)
 #define MODE_SWITCH_WAIT_INTERVAL_US MILLIS_TO_MICROS(1000)
 
 static void output_air_lora_callback(lora_t *lora, lora_callback_reason_e reason, void *data)
