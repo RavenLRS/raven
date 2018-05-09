@@ -18,7 +18,7 @@ OSD, automatically choosing a free VTX channel or automatically following
 another aircraft.
 - OLED screens, both on the TX and RX with channel monitor, telemetry 
 viewer and full configuration (requires at least one button on the board).
-- Bluetooh MSP bridge using the same serial port as the RC link (works with
+- Bluetooth MSP bridge using the same serial port as the RC link (works with
 all the existing Betaflight/iNAV configurators with support for Bluetooth).
 - Model ID with 64 memory slots.
 - Fully configurable from the radio using CRSF scripts (crossfire.lua
