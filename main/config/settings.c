@@ -235,7 +235,7 @@ static const char *lora_band_table[] = {
 static const char *tx_input_table[] = {"CRSF", "Test"};
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");
-static const char *air_modes_table[] = {"1-5 (10-100Hz)", "2-5 (10-50Hz)", "1 (100Hz)", "2 (50Hz)", "3 (40Hz)", "4 (20Hz)", "5 (10Hz)"};
+static const char *air_modes_table[] = {"1-5 (10-100Hz)", "2-5 (10-50Hz)", "1 (100Hz)", "2 (50Hz)", "3 (30Hz)", "4 (18Hz)", "5 (9Hz)"};
 _Static_assert(ARRAY_COUNT(air_modes_table) == AIR_MODES_COUNT, "AIR_MODES_COUNT is invalid");
 static const char *rx_output_table[] = {"SBUS/Smartport", "MSP", "CRSF", "FPort"};
 static const char *msp_baudrate_table[] = {"115200"};
