@@ -20,6 +20,7 @@
 
 #include "rc/failsafe.h"
 #include "rc/rc_data.h"
+#include "rc/rc_rmp.h"
 
 typedef struct air_bind_packet_s air_bind_packet_t;
 typedef struct lora_s lora_t;
@@ -80,6 +81,9 @@ typedef struct rc_s
         int dismissed_count;
         int dismissed_pairings;
         int tx_rf_power;
+        // RMP messages handled by rc_t
+        rc_rmp_t rc_rmp;
+        // MSP/RMP Transport fields
         rc_rmp_msp_port_t rmp_msp_port[3];  // Used for sending MSP requests
         const rmp_port_t *msp_recv_port;    // Used for receiving MSP requests
         rc_rmp_resp_ctx_t msp_resp_ctx[30]; // Used for keeping data to handlea sync MSP responses via RMP

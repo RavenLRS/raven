@@ -20,6 +20,7 @@ enum
     RMP_PORT_DEVICE = 0x22,
     RMP_PORT_MSP = 0x21,
     RMP_PORT_SETTINGS = 0x42,
+    RMP_PORT_RC = 0x43,
 };
 
 typedef struct rmp_s rmp_t;
