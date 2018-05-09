@@ -8,6 +8,7 @@
 #include "util/time.h"
 
 #define AIR_LORA_MODE_BIT(mode) (1 << mode)
+#define AIR_LORA_BAND_BIT(band) (1 << band)
 
 typedef struct lora_s lora_t;
 
@@ -36,23 +37,27 @@ typedef enum {
 } air_lora_supported_modes_e;
 
 typedef enum {
-#if defined(LORA_BAND_433)
+    AIR_LORA_BAND_147 = 1,
+    AIR_LORA_BAND_169,
+    AIR_LORA_BAND_315,
     AIR_LORA_BAND_433,
-#endif
-#if defined(LORA_BAND_868)
+    AIR_LORA_BAND_470,
     AIR_LORA_BAND_868,
-#endif
-#if defined(LORA_BAND_915)
     AIR_LORA_BAND_915,
-#endif
-    AIR_LORA_BAND_DEFAULT = 0,
 } air_lora_band_e;
+
+#define AIR_LORA_BAND_INVALID 0
+#define AIR_LORA_BAND_MIN AIR_LORA_BAND_147
+#define AIR_LORA_BAND_MAX AIR_LORA_BAND_915
+
+typedef uint16_t air_lora_band_mask_t;
 
 typedef struct air_lora_config_s
 {
     lora_t *lora;
     air_lora_band_e band;
     air_lora_supported_modes_e modes;
+    air_lora_band_mask_t bands;
 } air_lora_config_t;
 
 #define AIR_LORA_MODE_COUNT (AIR_LORA_MODE_LONGEST - AIR_LORA_MODE_FASTEST + 1)
@@ -202,21 +207,25 @@ inline bool air_lora_modes_intersect(air_lora_mode_mask_t *intersection,
 
 inline unsigned long air_lora_band_frequency(air_lora_band_e band)
 {
+#define MHZ(n) (n * 1000000)
     switch (band)
     {
-#if defined(LORA_BAND_433)
+    case AIR_LORA_BAND_147:
+        return MHZ(147);
+    case AIR_LORA_BAND_169:
+        return MHZ(169);
+    case AIR_LORA_BAND_315:
+        return MHZ(315);
     case AIR_LORA_BAND_433:
-        return 433e6;
-#endif
-#if defined(LORA_BAND_868)
+        return MHZ(433);
+    case AIR_LORA_BAND_470:
+        return MHZ(470);
     case AIR_LORA_BAND_868:
-        return 868e6;
-#endif
-#if defined(LORA_BAND_915)
+        return MHZ(868);
     case AIR_LORA_BAND_915:
-        return 915e6;
-#endif
+        return MHZ(915);
     }
+#undef MHZ
     UNREACHABLE();
     return 0;
 }
@@ -228,4 +237,6 @@ bool air_lora_cycle_is_full(air_lora_mode_e mode, unsigned seq);
 time_micros_t air_lora_tx_failsafe_interval(air_lora_mode_e mode);
 time_micros_t air_lora_rx_failsafe_interval(air_lora_mode_e mode);
 
-void air_lora_set_parameters_bind(lora_t *lora, air_lora_band_e band);
+void air_lora_set_parameters_bind(lora_t *lora);
+
+air_lora_band_e air_lora_band_mask_get_band(air_lora_band_mask_t mask, int index);

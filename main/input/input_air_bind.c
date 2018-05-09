@@ -12,23 +12,53 @@
 
 static const char *TAG = "Input.Air.Bind";
 
+// Switch band every 2 seconds unless we're seing a TX in bind mode
+#define BAND_SWITCH_INTERVAL_US MILLIS_TO_MICROS(2000)
+
 enum
 {
     AIR_INPUT_BIND_STATE_RX,
     AIR_INPUT_BIND_STATE_TX,
 };
 
+static bool input_air_bind_update_band(input_air_bind_t *input)
+{
+    air_lora_band_e band = air_lora_band_mask_get_band(input->lora.bands, input->band_index);
+    if (band == AIR_LORA_BAND_INVALID)
+    {
+        // No more bands, go back to first
+        if (input->band_index == 0)
+        {
+            // No valid bands
+            return false;
+        }
+        input->band_index = 0;
+        band = air_lora_band_mask_get_band(input->lora.bands, input->band_index);
+    }
+    input->lora.band = band;
+    printf("BIND FREQ %lu\n", air_lora_band_frequency(band));
+    lora_set_frequency(input->lora.lora, air_lora_band_frequency(band));
+    return true;
+}
+
 static bool input_air_bind_open(void *data, void *config)
 {
     LOG_I(TAG, "Open");
     input_air_bind_t *input = data;
-    air_lora_set_parameters_bind(input->lora.lora, input->lora.band);
+    air_lora_set_parameters_bind(input->lora.lora);
     input->state = AIR_INPUT_BIND_STATE_RX;
     input->bind_packet_expires = 0;
     input->send_response_at = TIME_MICROS_MAX;
     input->bind_accepted = false;
     input->bind_confirmation_sent = false;
     input->bind_completed = false;
+    input->band_index = 0;
+    input->switch_band_at = time_micros_now() + BAND_SWITCH_INTERVAL_US;
+    if (!input_air_bind_update_band(input))
+    {
+        LOG_W(TAG, "No LoRa bands supported");
+        return false;
+    }
     lora_enable_continous_rx(input->lora.lora);
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_BIND);
     return true;
@@ -91,6 +121,17 @@ static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t 
             input_air_bind_send_response(input, now);
             input->send_response_at = TIME_MICROS_MAX;
         }
+        else if (now > input->switch_band_at)
+        {
+            if (now > input->bind_packet_expires)
+            {
+                // Packet has expired, switch bands
+                input->band_index++;
+                input_air_bind_update_band(input);
+                lora_enable_continous_rx(input->lora.lora);
+            }
+            input->switch_band_at = now + BAND_SWITCH_INTERVAL_US;
+        }
         break;
     case AIR_INPUT_BIND_STATE_TX:
         if (lora_is_tx_done(input->lora.lora))
@@ -123,13 +164,14 @@ static void input_air_bind_close(void *data, void *config)
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_NONE);
 }
 
-static bool input_air_bind_has_request(void *user_data, air_bind_packet_t *packet, bool *needs_confirmation)
+static bool input_air_bind_has_request(void *user_data, air_bind_packet_t *packet, air_lora_band_e *band, bool *needs_confirmation)
 {
     input_air_bind_t *input = user_data;
     time_micros_t now = time_micros_now();
     if (now < input->bind_packet_expires)
     {
         air_bind_packet_cpy(packet, &input->bind_packet);
+        *band = input->lora.band;
         *needs_confirmation = true;
         return true;
     }

@@ -18,7 +18,8 @@ static bool output_air_bind_open(void *data, void *config)
     output->binding_key = air_key_generate();
     output->has_bind_response = false;
     output->bind_packet_expires = 0;
-    air_lora_set_parameters_bind(output->lora.lora, output->lora.band);
+    air_lora_set_parameters_bind(output->lora.lora);
+    lora_set_frequency(output->lora.lora, air_lora_band_frequency(output->lora.band));
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_BIND);
     return true;
 }
@@ -85,12 +86,13 @@ static void output_air_bind_close(void *data, void *config)
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_NONE);
 }
 
-static bool output_air_bind_has_request(void *data, air_bind_packet_t *packet, bool *needs_confirmation)
+static bool output_air_bind_has_request(void *data, air_bind_packet_t *packet, air_lora_band_e *band, bool *needs_confirmation)
 {
     output_air_bind_t *output = data;
     if (output->has_bind_response && time_micros_now() < output->bind_packet_expires)
     {
         air_bind_packet_cpy(packet, &output->bind_resp);
+        *band = output->lora.band;
         *needs_confirmation = output->bind_resp.role != AIR_ROLE_RX;
         return true;
     }

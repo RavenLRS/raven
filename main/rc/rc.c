@@ -64,7 +64,7 @@ static void rc_data_initialize(rc_t *rc)
             }
             (void)TELEMETRY_SET_STR(&rc->data, TELEMETRY_ID_CRAFT_NAME, buf, now);
 
-            if (config_get_air_info(&air_info, &addr))
+            if (config_get_air_info(&air_info, NULL, &addr))
             {
                 channels_num = air_info.channels;
             }
@@ -89,7 +89,7 @@ static void rc_data_initialize(rc_t *rc)
             }
             (void)TELEMETRY_SET_STR(&rc->data, TELEMETRY_ID_PILOT_NAME, buf, now);
 
-            if (config_get_air_info(&air_info, &addr))
+            if (config_get_air_info(&air_info, NULL, &addr))
             {
                 channels_num = air_info.channels;
             }
@@ -137,11 +137,6 @@ static bool rc_should_enable_power_test(rc_t *rc)
     return settings_get_key_u8(SETTING_KEY_RF_POWER_TEST);
 }
 
-static air_lora_band_e rc_get_air_lora_band(rc_t *rc)
-{
-    return settings_get_key_u8(SETTING_KEY_LORA_BAND);
-}
-
 static air_io_t *rc_get_air_io(rc_t *rc)
 {
     switch (config_get_rc_mode())
@@ -169,7 +164,33 @@ static bool rc_get_pair_addr(rc_t *rc, air_addr_t *addr)
     return air_io && air_io_get_bound_addr(air_io, addr);
 }
 
-static void rc_invalid_pair_air_config(rc_t *rc)
+static air_lora_band_e rc_get_air_lora_band(rc_t *rc)
+{
+    switch (config_get_rc_mode())
+    {
+    case RC_MODE_TX:
+    {
+        config_lora_band_e config_band = settings_get_key_u8(SETTING_KEY_LORA_BAND);
+        return config_get_lora_band(config_band);
+    }
+    case RC_MODE_RX:
+    {
+        air_pairing_t pairing;
+        if (config_get_paired_tx(&pairing))
+        {
+            air_lora_band_e band;
+            if (config_get_air_info(NULL, &band, &pairing.addr))
+            {
+                return band;
+            }
+        }
+        break;
+    }
+    }
+    return AIR_LORA_BAND_INVALID;
+}
+
+static void rc_invalidate_pair_air_config(rc_t *rc)
 {
     rc->state.pair_air_config_next_req = time_ticks_now();
 }
@@ -210,54 +231,28 @@ void rc_get_air_lora_config(rc_t *rc, air_lora_config_t *lora)
     case RC_MODE_RX:
     {
         // RX allows configurable modes
-        config_air_mode_e mode = settings_get_key_u8(SETTING_KEY_RX_SUPPORTED_MODES);
-        switch (mode)
-        {
-        case AIR_MODES_2_5:
-            supported_modes = AIR_LORA_SUPPORTED_MODES_2_TO_5;
-            break;
-        case AIR_MODES_FIXED_2:
-            supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_2;
-            break;
-        case AIR_MODES_FIXED_3:
-            supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_3;
-            break;
-        case AIR_MODES_FIXED_4:
-            supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_4;
-            break;
-        case AIR_MODES_FIXED_5:
-            supported_modes = AIR_LORA_SUPPORTED_MODES_FIXED_5;
-            break;
-        default:
-            UNREACHABLE();
-            break;
-        }
+        config_air_mode_e config_modes = settings_get_key_u8(SETTING_KEY_RX_SUPPORTED_MODES);
+        supported_modes = config_get_air_lora_modes(config_modes);
         break;
     }
     }
     lora->lora = rc->lora;
     lora->band = rc_get_air_lora_band(rc);
     lora->modes = supported_modes;
+    lora->bands = config_get_lora_band_mask();
 }
 
 void rc_set_peer_air_lora_config(rc_t *rc, air_addr_t *addr, air_lora_band_e band, air_lora_supported_modes_e modes)
 {
-    bool changed = false;
-
     // TODO: Use the band here for better multiband module support
     air_info_t info;
-    if (!config_get_air_info(&info, addr))
+    if (!config_get_air_info(&info, NULL, addr))
     {
         // No config for this peer, nothing to do
         return;
     }
-    if (info.modes != modes)
-    {
-        info.modes = modes;
-        config_set_air_info(addr, &info);
-        changed = true;
-    }
-
+    info.modes = modes;
+    bool changed = config_set_air_info(addr, &info, band);
     air_addr_t pair_addr;
     if (rc_get_pair_addr(rc, &pair_addr) && air_addr_equals(addr, &pair_addr))
     {
@@ -323,7 +318,7 @@ static void rc_reconfigure_input(rc_t *rc)
             }
         }
 
-        rc_invalid_pair_air_config(rc);
+        rc_invalidate_pair_air_config(rc);
         break;
     }
     }
@@ -391,7 +386,7 @@ static void rc_reconfigure_output(rc_t *rc)
         }
         rc->output_config = &output_config.air;
 
-        rc_invalid_pair_air_config(rc);
+        rc_invalidate_pair_air_config(rc);
         break;
     }
     case RC_MODE_RX:
@@ -464,9 +459,10 @@ static void rc_update_binding(rc_t *rc)
         return;
     }
     air_bind_packet_t packet;
+    air_lora_band_e band;
     air_pairing_t pairing;
     bool needs_confirmation = true;
-    if (air_io_has_bind_request(air_io, &packet, &needs_confirmation) &&
+    if (air_io_has_bind_request(air_io, &packet, &band, &needs_confirmation) &&
         (rc->state.accept_bind || !needs_confirmation))
     {
         LOG_I(TAG, "Bind accepted");
@@ -489,7 +485,7 @@ static void rc_update_binding(rc_t *rc)
             break;
         }
         // Store peer information
-        config_set_air_info(&pairing.addr, &packet.info);
+        config_set_air_info(&pairing.addr, &packet.info, band);
 
         // Ignore the current pairing alternatives, to avoid
         // popping a dialog just after pairing a new RX while
@@ -742,6 +738,17 @@ static void rc_msp_request_callback(msp_conn_t *conn, uint16_t cmd, const void *
     }
 }
 
+static void rc_send_air_lora_config_to_pair(rc_t *rc)
+{
+    // XXX: modes/band config was changed so we need to inform the other
+    // end. For now, assume they're available via P2P.
+    air_addr_t pair_addr;
+    if (rc_get_pair_addr(rc, &pair_addr))
+    {
+        rc_rmp_send_air_lora_config(&rc->state.rc_rmp, &pair_addr, true);
+    }
+}
+
 static void rc_setting_changed(const setting_t *setting, void *user_data)
 {
     rc_t *rc = user_data;
@@ -757,6 +764,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
     }
     else if (SETTING_IS(setting, SETTING_KEY_LORA_BAND))
     {
+        rc_send_air_lora_config_to_pair(rc);
         rc_invalidate_air(rc);
     }
     else if (SETTING_IS(setting, SETTING_KEY_RF_POWER_TEST))
@@ -827,13 +835,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
             }
             if (SETTING_IS(setting, SETTING_KEY_RX_SUPPORTED_MODES))
             {
-                // XXX: Config was changed, but we need to inform the other
-                // end. For now, assume they're available via P2P.
-                air_addr_t pair_addr;
-                if (rc_get_pair_addr(rc, &pair_addr))
-                {
-                    rc_rmp_send_air_lora_config(&rc->state.rc_rmp, &pair_addr, true);
-                }
+                rc_send_air_lora_config_to_pair(rc);
                 rc_invalidate_input(rc);
             }
             break;
@@ -932,7 +934,7 @@ bool rc_has_pending_bind_request(rc_t *rc, air_bind_packet_t *packet)
         if (air_io)
         {
             bool needs_confirmation = false;
-            return air_io_has_bind_request(air_io, packet, &needs_confirmation) && needs_confirmation;
+            return air_io_has_bind_request(air_io, packet, NULL, &needs_confirmation) && needs_confirmation;
         }
     }
     return false;

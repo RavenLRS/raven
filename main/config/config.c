@@ -35,6 +35,7 @@ typedef struct config_paired_rx_s
 typedef struct config_air_info_blob_s
 {
     char name[AIR_MAX_NAME_LENGTH + 1];
+    air_lora_band_e band; // Last band seen in this node
     air_info_t info;
 } PACKED config_air_info_blob_t;
 
@@ -331,7 +332,7 @@ bool config_set_air_name(const air_addr_t *addr, const char *name)
     return true;
 }
 
-bool config_get_air_info(air_info_t *info, const air_addr_t *addr)
+bool config_get_air_info(air_info_t *info, air_lora_band_e *band, const air_addr_t *addr)
 {
     char key[CONFIG_KEY_BUFSIZE];
     config_air_info_blob_t blob;
@@ -342,28 +343,31 @@ bool config_get_air_info(air_info_t *info, const air_addr_t *addr)
         {
             memcpy(info, &blob.info, sizeof(*info));
         }
+        if (band)
+        {
+            *band = blob.band;
+        }
         return true;
     }
     return false;
 }
 
-bool config_set_air_info(const air_addr_t *addr, const air_info_t *info)
+bool config_set_air_info(const air_addr_t *addr, const air_info_t *info, air_lora_band_e band)
 {
     char key[CONFIG_KEY_BUFSIZE];
     config_air_info_blob_t blob;
 
     config_get_air_info_blob(&blob, key, sizeof(key), addr);
-    if (info)
+    bool changed = memcmp(&blob.info, info, sizeof(*info));
+    memcpy(&blob.info, info, sizeof(*info));
+    changed |= blob.band != band;
+    blob.band = band;
+    if (changed)
     {
-        memcpy(&blob.info, info, sizeof(*info));
+        storage_set_blob(&storage, key, &blob, sizeof(blob));
+        storage_commit(&storage);
     }
-    else
-    {
-        memset(&blob.info, 0, sizeof(blob.info));
-    }
-    storage_set_blob(&storage, key, &blob, sizeof(blob));
-    storage_commit(&storage);
-    return true;
+    return changed;
 }
 
 bool config_get_paired_tx(air_pairing_t *pairing)
@@ -433,4 +437,81 @@ rx_output_type_e config_get_output_type(void)
 air_addr_t config_get_addr(void)
 {
     return config.addr;
+}
+
+air_lora_band_e config_get_lora_band(config_lora_band_e band)
+{
+    switch (band)
+    {
+#if defined(USE_LORA_BAND_147)
+    case CONFIG_LORA_BAND_147:
+        return AIR_LORA_BAND_147;
+#endif
+#if defined(USE_LORA_BAND_169)
+    case CONFIG_LORA_BAND_169:
+        return AIR_LORA_BAND_169;
+#endif
+#if defined(USE_LORA_BAND_315)
+    case CONFIG_LORA_BAND_315:
+        return AIR_LORA_BAND_315;
+#endif
+#if defined(USE_LORA_BAND_433)
+    case CONFIG_LORA_BAND_433:
+        return AIR_LORA_BAND_433;
+#endif
+#if defined(USE_LORA_BAND_470)
+    case CONFIG_LORA_BAND_470:
+        return AIR_LORA_BAND_470;
+#endif
+#if defined(USE_LORA_BAND_868)
+    case CONFIG_LORA_BAND_868:
+        return AIR_LORA_BAND_868;
+#endif
+#if defined(USE_LORA_BAND_915)
+    case CONFIG_LORA_BAND_915:
+        return AIR_LORA_BAND_915;
+#endif
+    case CONFIG_LORA_BAND_COUNT:
+        break;
+    }
+    return 0;
+}
+
+air_lora_band_mask_t config_get_lora_band_mask(void)
+{
+    air_lora_band_mask_t mask = 0;
+    for (int ii = 0; ii < CONFIG_LORA_BAND_COUNT; ii++)
+    {
+        air_lora_band_e band = config_get_lora_band(ii);
+        if (band != 0)
+        {
+            mask |= AIR_LORA_BAND_BIT(band);
+        }
+    }
+    return mask;
+}
+
+bool config_supports_lora_band(air_lora_band_e band)
+{
+    return config_get_lora_band_mask() & AIR_LORA_BAND_BIT(band);
+}
+
+air_lora_supported_modes_e config_get_air_lora_modes(config_air_mode_e modes)
+{
+    switch (modes)
+    {
+    case CONFIG_AIR_MODES_2_5:
+        return AIR_LORA_SUPPORTED_MODES_2_TO_5;
+    case CONFIG_AIR_MODES_FIXED_2:
+        return AIR_LORA_SUPPORTED_MODES_FIXED_2;
+    case CONFIG_AIR_MODES_FIXED_3:
+        return AIR_LORA_SUPPORTED_MODES_FIXED_3;
+    case CONFIG_AIR_MODES_FIXED_4:
+        return AIR_LORA_SUPPORTED_MODES_FIXED_4;
+    case CONFIG_AIR_MODES_FIXED_5:
+        return AIR_LORA_SUPPORTED_MODES_FIXED_5;
+    case CONFIG_AIR_MODES_COUNT:
+        break;
+    }
+    return 0;
 }

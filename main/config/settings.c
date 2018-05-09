@@ -101,13 +101,19 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
         return SETTING_VISIBILITY_HIDE;
 #endif
     }
+    if (SETTING_IS(setting, SETTING_KEY_LORA_BAND))
+    {
+        // LoRa band is only selectable in the TX, the RX
+        // switches to whatever LoRa band the TX is using.
+        return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_TX);
+    }
     if (SETTING_IS(setting, SETTING_KEY_TX))
     {
-        return config_get_rc_mode() == RC_MODE_TX ? SETTING_VISIBILITY_SHOW : SETTING_VISIBILITY_HIDE;
+        return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_TX);
     }
     if (SETTING_IS(setting, SETTING_KEY_RX))
     {
-        return config_get_rc_mode() == RC_MODE_RX ? SETTING_VISIBILITY_SHOW : SETTING_VISIBILITY_HIDE;
+        return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_RX);
     }
     if (SETTING_IS(setting, SETTING_KEY_SCREEN))
     {
@@ -214,23 +220,37 @@ static int setting_format_rx_addr(char *buf, size_t size, const setting_t *setti
 static const char *mode_table[] = {"TX", "RX"};
 #endif
 
+// Keep in sync with config_lora_band_e
 static const char *lora_band_table[] = {
-#if defined(LORA_BAND_433)
+#if defined(USE_LORA_BAND_147)
+    "147MHz",
+#endif
+#if defined(USE_LORA_BAND_169)
+    "169MHz",
+#endif
+#if defined(USE_LORA_BAND_315)
+    "315MHz",
+#endif
+#if defined(USE_LORA_BAND_433)
     "433MHz",
 #endif
-#if defined(LORA_BAND_868)
+#if defined(USE_LORA_BAND_470)
+    "470MHz",
+#endif
+#if defined(USE_LORA_BAND_868)
     "868MHz",
 #endif
-#if defined(LORA_BAND_915)
+#if defined(USE_LORA_BAND_915)
     "915MHz",
 #endif
 };
+_Static_assert(ARRAY_COUNT(lora_band_table) == CONFIG_LORA_BAND_COUNT, "Invalid LoRa band names table");
 static const char *tx_input_table[] = {"CRSF", "Test"};
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");
 // Keep in sync with config_air_mode_e
-static const char *air_modes_table[] = {/*"1-5 (9-100Hz)",*/ "2-5 (9-50Hz)", /*"1 (100Hz)",*/ "2 (50Hz)", "3 (30Hz)", "4 (18Hz)", "5 (9Hz)"};
-_Static_assert(ARRAY_COUNT(air_modes_table) == AIR_MODES_COUNT, "AIR_MODES_COUNT is invalid");
+static const char *config_air_modes_table[] = {/*"1-5 (9-100Hz)",*/ "2-5 (9-50Hz)", /*"1 (100Hz)",*/ "2 (50Hz)", "3 (30Hz)", "4 (18Hz)", "5 (9Hz)"};
+_Static_assert(ARRAY_COUNT(config_air_modes_table) == CONFIG_AIR_MODES_COUNT, "CONFIG_AIR_MODES_COUNT is invalid");
 static const char *rx_output_table[] = {"SBUS/Smartport", "MSP", "CRSF", "FPort"};
 static const char *msp_baudrate_table[] = {"115200"};
 static const char *screen_orientation_table[] = {"Horizontal", "Horizontal (buttons at the right)", "Vertical", "Vertical (buttons on top)"};
@@ -260,7 +280,7 @@ static const setting_t settings[] = {
     U8_SETTING(SETTING_KEY_RC_MODE, NULL, SETTING_FLAG_READONLY, FOLDER_ID_ROOT, RC_MODE_TX, RC_MODE_TX, RC_MODE_TX),
 #endif
     BOOL_SETTING(SETTING_KEY_BIND, "Bind", SETTING_FLAG_EPHEMERAL, FOLDER_ID_ROOT, false),
-    U8_MAP_SETTING(SETTING_KEY_LORA_BAND, "LoRa Band", 0, FOLDER_ID_ROOT, lora_band_table, AIR_LORA_BAND_DEFAULT),
+    U8_MAP_SETTING(SETTING_KEY_LORA_BAND, "LoRa Band", 0, FOLDER_ID_ROOT, lora_band_table, CONFIG_LORA_BAND_DEFAULT),
 
     FOLDER(SETTING_KEY_TX, "TX", FOLDER_ID_TX, FOLDER_ID_ROOT, setting_visibility_tx),
     U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),
@@ -269,7 +289,7 @@ static const setting_t settings[] = {
     PIN_SETTING(SETTING_KEY_TX_CRSF_PIN, "CRSF Pin", FOLDER_ID_TX, PIN_DEFAULT_TX_IDX),
 
     FOLDER(SETTING_KEY_RX, "RX", FOLDER_ID_RX, FOLDER_ID_ROOT, setting_visibility_rx),
-    U8_MAP_SETTING(SETTING_KEY_RX_SUPPORTED_MODES, "Modes", 0, FOLDER_ID_RX, air_modes_table, AIR_MODES_2_5),
+    U8_MAP_SETTING(SETTING_KEY_RX_SUPPORTED_MODES, "Modes", 0, FOLDER_ID_RX, config_air_modes_table, CONFIG_AIR_MODES_2_5),
     BOOL_YN_SETTING(SETTING_KEY_RX_AUTO_CRAFT_NAME, "Auto Craft Name", 0, FOLDER_ID_RX, true),
     STRING_SETTING(SETTING_KEY_RX_CRAFT_NAME, "Craft Name", FOLDER_ID_RX),
     U8_MAP_SETTING(SETTING_KEY_RX_OUTPUT, "Output", 0, FOLDER_ID_RX, rx_output_table, RX_OUTPUT_MSP),

@@ -21,6 +21,8 @@ typedef struct input_air_bind_s
     bool bind_accepted;
     bool bind_confirmation_sent; // Wether the user has accepted the bind in this node
     bool bind_completed;
+    int band_index; // for multiple band support
+    time_micros_t switch_band_at;
 } input_air_bind_t;
 
 void input_air_bind_init(input_air_bind_t *input_air_bind, air_addr_t addr, air_lora_config_t *lora);

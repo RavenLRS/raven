@@ -26,21 +26,26 @@ void air_io_init(air_io_t *io, air_addr_t addr, air_io_bind_t *bind, rmp_air_t *
     lpf_init(&io->average_frame_interval, 1);
 }
 
-bool air_io_has_bind_request(air_io_t *io, air_bind_packet_t *packet, bool *needs_confirmation)
+bool air_io_has_bind_request(air_io_t *io, air_bind_packet_t *packet, air_lora_band_e *band, bool *needs_confirmation)
 {
     air_bind_packet_t p;
     bool nc;
+    air_lora_band_e nb;
     if (io->bind.has_request)
     {
         if (!packet)
         {
             packet = &p;
         }
+        if (!band)
+        {
+            band = &nb;
+        }
         if (!needs_confirmation)
         {
             needs_confirmation = &nc;
         }
-        return io->bind.has_request(io->bind.user_data, packet, needs_confirmation);
+        return io->bind.has_request(io->bind.user_data, packet, band, needs_confirmation);
     }
     return false;
 }
@@ -57,7 +62,7 @@ bool air_io_accept_bind_request(air_io_t *io)
 void air_io_bind(air_io_t *io, air_pairing_t *pairing)
 {
     io->pairing = *pairing;
-    if (!config_get_air_info(&io->pairing_info, &pairing->addr))
+    if (!config_get_air_info(&io->pairing_info, NULL, &pairing->addr))
     {
         memset(&io->pairing_info, 0, sizeof(io->pairing_info));
     }

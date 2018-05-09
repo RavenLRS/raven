@@ -120,13 +120,28 @@ time_micros_t air_lora_rx_failsafe_interval(air_lora_mode_e mode)
     return 0;
 }
 
-void air_lora_set_parameters_bind(lora_t *lora, air_lora_band_e band)
+void air_lora_set_parameters_bind(lora_t *lora)
 {
-    // TODO: Low power TX
-
-    lora_set_frequency(lora, air_lora_band_frequency(band));
+    lora_set_tx_power(lora, 1);
     lora_set_sync_word(lora, LORA_DEFAULT_SYNC_WORD);
     // Same as fast parameters as short range mode
     air_lora_set_parameters(lora, AIR_LORA_MODE_FASTEST);
     lora_set_payload_size(lora, sizeof(air_bind_packet_t));
+}
+
+air_lora_band_e air_lora_band_mask_get_band(air_lora_band_mask_t mask, int index)
+{
+    int count = 0;
+    for (int ii = AIR_LORA_BAND_MIN; ii <= AIR_LORA_BAND_MAX; ii++)
+    {
+        if (mask & AIR_LORA_BAND_BIT(ii))
+        {
+            if (count == index)
+            {
+                return ii;
+            }
+            count++;
+        }
+    }
+    return AIR_LORA_BAND_INVALID;
 }

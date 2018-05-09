@@ -26,13 +26,17 @@ typedef enum {
 } air_role_e;
 
 typedef enum {
-    AIR_CAP_FREQUENCY_433MHZ = 1 << 0,
-    AIR_CAP_FREQUENCY_868MHZ = 1 << 1,
-    AIR_CAP_FREQUENCY_915MHZ = 1 << 2,
+    AIR_CAP_FREQUENCY_147MHZ = 1 << 0,
+    AIR_CAP_FREQUENCY_169MHZ = 1 << 1,
+    AIR_CAP_FREQUENCY_315MHZ = 1 << 2,
+    AIR_CAP_FREQUENCY_433MHZ = 1 << 3,
+    AIR_CAP_FREQUENCY_470MHZ = 1 << 4,
+    AIR_CAP_FREQUENCY_868MHZ = 1 << 5,
+    AIR_CAP_FREQUENCY_915MHZ = 1 << 6,
 
-    AIR_CAP_P2P_2_4GHZ = 1 << 9,       // 2.4ghz unrestricted
-    AIR_CAP_P2P_2_4GHZ_WIFI = 1 << 10, // 2.4ghz but restricted to valid raw WiFi packets
-    AIR_CAP_P2P_FLARM = 1 << 11,       // flarm support
+    AIR_CAP_P2P_2_4GHZ = 1 << 15,      // 2.4ghz unrestricted
+    AIR_CAP_P2P_2_4GHZ_WIFI = 1 << 16, // 2.4ghz but restricted to valid raw WiFi packets
+    AIR_CAP_P2P_FLARM = 1 << 17,       // flarm support
 
     // Hardware
     AIR_CAP_BATTERY = 1 << 24,           // Node has an on-board battery
