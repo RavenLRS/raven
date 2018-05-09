@@ -10,6 +10,7 @@ flight controllers in aircrafts can talk directly to each other).
 
 - Long Range support using LoRa for the main RC link between TX and RX.
 - Full telemetry, integrated with the radio (voice alerts with OpenTX, etc...).
+- Supports 7 different bands: 147Mhz, 169Mhz, 315Mhz, 433Mhz, 470Mhz, 868Mhz and 915Mhz.
 - Up to 20 channels.
 - Support for P2P for aircraft to aircraft communication (either direct 
 or via pilots on the ground). Allows, for example, displaying a radar in the
