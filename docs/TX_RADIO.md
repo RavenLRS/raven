@@ -40,6 +40,9 @@ Which means:
 - Connect the output of the 5V regulator to the diode anode (the side without the mark).
 - Connect the diode cathode (the side with the mark) to the 5V pin in the board.
 
+## Print a case
+
+Cases for TX modules are available in the [cases/tx] directory.
 
 TODO: Add link to the general configuration/usage once we write that document.
 
@@ -48,4 +51,5 @@ TODO: Add link to the general configuration/usage once we write that document.
 [1N4148]: https://www.aliexpress.com/item/Free-Shipping-100-PCS-1N4148-DO-35-IN4148-Silicon-Switching-Diode/2025724181.html
 [dupont]: https://www.aliexpress.com/item/Free-Shipping-100set-2-54mm-1P-1Pin-Dupont-Connector-Dupont-Plastic-Shell-Plug-Dupont-Jumper-Wire/32262038907.html
 [breadboards]: https://www.aliexpress.com/item/20pcs-5x7-4x6-3x7-2x8-cm-double-Side-Copper-prototype-pcb-Universal-Board-for-Arduino-Free/765383366.html
+[cases/tx]: ../cases/tx
 

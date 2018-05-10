@@ -1,0 +1,1 @@
+TX case made by Helio Teixeira. Fits boards with PCB antenna (no coil nor 3D antennas).
