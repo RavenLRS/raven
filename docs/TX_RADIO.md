@@ -24,7 +24,12 @@ For example, [L7805CV].
 
 Wire the the components according to the following schematic.
 
-[IMAGE WIP]
+**Pay attention to your specific board pinout, the 5V, GND and 13 pins might be in another location**
+
+(click for a bigger version)
+
+[![TX Schematic](schematic_tx.jpg?raw=true "TX Schematic")](schematic_tx.jpg?raw=true)
+
 
 Which means:
 
