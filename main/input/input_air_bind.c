@@ -36,7 +36,6 @@ static bool input_air_bind_update_band(input_air_bind_t *input)
         band = air_lora_band_mask_get_band(input->lora.bands, input->band_index);
     }
     input->lora.band = band;
-    printf("BIND FREQ %lu\n", air_lora_band_frequency(band));
     lora_set_frequency(input->lora.lora, air_lora_band_frequency(band));
     return true;
 }
