@@ -1,8 +1,8 @@
 #pragma once
 
 #include "air/air_cmd.h"
-#include "air/air_io.h"
 #include "air/air_freq.h"
+#include "air/air_io.h"
 #include "air/air_lora.h"
 #include "air/air_stream.h"
 

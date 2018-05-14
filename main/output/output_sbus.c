@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "protocols/smartport.h"
 #include "protocols/sbus.h"
+#include "protocols/smartport.h"
 
 #include "rc/rc_data.h"
 

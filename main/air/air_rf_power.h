@@ -2,7 +2,8 @@
 
 #include "util/macros.h"
 
-typedef enum {
+typedef enum
+{
     AIR_RF_POWER_AUTO = 0,
     AIR_RF_POWER_1mw,
     AIR_RF_POWER_10mw,

@@ -11,8 +11,8 @@
 
 #include "io/lora.h"
 
-#include "rc/rc_data.h"
 #include "rc/rc-private.h"
+#include "rc/rc_data.h"
 
 #include "rmp/rmp.h"
 #include "rmp/rmp_air.h"

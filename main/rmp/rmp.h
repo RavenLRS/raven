@@ -26,13 +26,15 @@ enum
 typedef struct rmp_s rmp_t;
 typedef struct rmp_msg_s rmp_msg_t;
 
-typedef enum {
+typedef enum
+{
     RMP_SEND_FLAG_NONE = 0,
     RMP_SEND_FLAG_BROADCAST_SELF = 1 << 0,
     RMP_SEND_FLAG_BROADCAST_RC = 1 << 1,
 } rmp_send_flags_e;
 
-typedef enum {
+typedef enum
+{
     RMP_TRANSPORT_P2P = 0,
     RMP_TRANSPORT_RC,
     RMP_TRANSPORT_COUNT,
@@ -40,7 +42,8 @@ typedef enum {
 
 typedef bool (*rmp_transport_send_f)(rmp_t *rmp, rmp_msg_t *msg, void *user_data);
 
-typedef enum {
+typedef enum
+{
     RMP_PEER_FLAG_CAN_AUTHENTICATE = 1 << 0, // We have some means to authenticate this peer
 } rmp_peer_flag_e;
 

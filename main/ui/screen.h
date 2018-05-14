@@ -7,13 +7,15 @@
 
 typedef struct rc_s rc_t;
 
-typedef enum {
+typedef enum
+{
     SCREEN_MODE_MAIN,
     SCREEN_MODE_CHANNELS,
     SCREEN_MODE_TELEMETRY,
 } screen_mode_e;
 
-typedef enum {
+typedef enum
+{
     SCREEN_ORIENTATION_HORIZONTAL_LEFT = 0,
     SCREEN_ORIENTATION_HORIZONTAL_RIGHT,
     SCREEN_ORIENTATION_VERTICAL,
@@ -26,7 +28,8 @@ typedef enum {
 #endif
 } screen_orientation_e;
 
-typedef enum {
+typedef enum
+{
     SCREEN_BRIGHTNESS_LOW,
     SCREEN_BRIGHTNESS_MEDIUM,
     SCREEN_BRIGHTNESS_HIGH,

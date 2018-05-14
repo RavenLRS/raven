@@ -8,7 +8,8 @@
 
 static const char *TAG = "RMP.Air";
 
-typedef enum {
+typedef enum
+{
     RMP_AIR_MSG_SADDR = 1 << 0,
     RMP_AIR_MSG_SPORT = 1 << 1,
     RMP_AIR_MSG_DADDR = 1 << 2,

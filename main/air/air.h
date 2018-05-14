@@ -19,13 +19,15 @@
 #define AIR_DATA_BYTE_STUFF 0x7D
 #define AIR_DATA_XOR 0x20
 
-typedef enum {
+typedef enum
+{
     AIR_ROLE_TX = 1,
     AIR_ROLE_RX,
     AIR_ROLE_RX_AWAITING_CONFIRMATION, // Used by RX without screen to tell the TX it's ready to pair
 } air_role_e;
 
-typedef enum {
+typedef enum
+{
     AIR_CAP_FREQUENCY_147MHZ = 1 << 0,
     AIR_CAP_FREQUENCY_169MHZ = 1 << 1,
     AIR_CAP_FREQUENCY_315MHZ = 1 << 2,

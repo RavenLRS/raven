@@ -15,7 +15,8 @@
 typedef struct rmp_s rmp_t;
 typedef struct rmp_msg_s rmp_msg_t;
 
-typedef enum {
+typedef enum
+{
     SETTINGS_RMP_HELO = 0,
     SETTINGS_RMP_EHLO,
     SETTINGS_RMP_READ_REQ,

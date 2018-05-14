@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#include <esp_system.h>
 #include <esp_log.h>
+#include <esp_system.h>
 #include <nvs_flash.h>
 
 #include "bluetooth/bluetooth_hal.h"

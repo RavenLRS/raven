@@ -39,7 +39,8 @@ static uint16_t msp_value_from_channel(unsigned value)
     return (0.62477120195241f * value) + 881;
 }
 
-typedef enum {
+typedef enum
+{
     GPS_NO_FIX = 0,
     GPS_FIX_2D,
     GPS_FIX_3D

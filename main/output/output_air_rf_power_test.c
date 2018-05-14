@@ -18,7 +18,8 @@
 
 #define RF_TEST_LED LED_ID_1
 
-typedef enum {
+typedef enum
+{
     RF_POWER_TEST_STATE_IDLE,
     RF_POWER_TEST_STATE_BLINK,
     RF_POWER_TEST_STATE_TX,

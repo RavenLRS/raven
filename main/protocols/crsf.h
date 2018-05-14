@@ -40,7 +40,8 @@
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
 
-typedef enum {
+typedef enum
+{
     CRSF_FRAMETYPE_GPS = 0x02,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
@@ -60,7 +61,8 @@ typedef enum {
     CRSF_FRAMETYPE_MSP_WRITE = 0x7C, // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
 } crsf_frame_type_e;
 
-typedef enum {
+typedef enum
+{
     CRSF_ADDRESS_BROADCAST = 0x00,
     CRSF_ADDRESS_USB = 0x10,
     CRSF_ADDRESS_TBS_CORE_PNP_PRO = 0x80,
@@ -76,7 +78,8 @@ typedef enum {
     CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE,
 } crsf_addr_e;
 
-typedef enum {
+typedef enum
+{
     CRSF_UINT8 = 0,
     CRSF_INT8 = 1,
     CRSF_UINT16 = 2,
@@ -136,18 +139,21 @@ typedef struct crsf_channels_s
 
 _Static_assert(sizeof(crsf_channels_t) == 22, "invalid crsf_channels_t size");
 
-typedef enum {
+typedef enum
+{
     CRSF_ACTIVE_ANTENNA1 = 0,
     CRSF_ACTIVE_ANTENNA2 = 1
 } crsf_active_antenna_e;
 
-typedef enum {
+typedef enum
+{
     CRSF_RF_FREQ_4_HZ = 0,
     CRSF_RF_FREQ_50_HZ = 1,
     CRSF_RF_FREQ_150_HZ = 2
 } crsf_rf_freq_e;
 
-typedef enum {
+typedef enum
+{
     CRSF_RF_POWER_0_mW = 0,
     CRSF_RF_POWER_10_mW = 1,
     CRSF_RF_POWER_25_mW = 2,

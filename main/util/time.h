@@ -1,8 +1,8 @@
 #pragma once
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <limits.h>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>

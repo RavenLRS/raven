@@ -73,7 +73,8 @@
 
 #define SETTING_IS(setting, k) STR_EQUAL(setting->key, k)
 
-typedef enum {
+typedef enum
+{
     FOLDER_ID_ROOT = 1,
     FOLDER_ID_TX,
     FOLDER_ID_RX,
@@ -83,12 +84,14 @@ typedef enum {
     FOLDER_ID_ABOUT,
 } folder_id_e;
 
-typedef enum {
+typedef enum
+{
     SETTING_CMD_FLAG_WARNING,
     SETTING_CMD_FLAG_CONFIRM,
 } setting_cmd_flag_e;
 
-typedef enum {
+typedef enum
+{
     SETTING_CMD_STATUS_NONE = 0,
     SETTING_CMD_STATUS_CHANGE = 1,
     SETTING_CMD_STATUS_SHOW_WARNING = 2,
@@ -98,7 +101,8 @@ typedef enum {
     SETTING_CMD_STATUS_PING = 0xFF,
 } setting_cmd_status_e;
 
-typedef enum {
+typedef enum
+{
     SETTING_TYPE_U8 = 0,
 
     /* Unused, reserved
@@ -112,7 +116,8 @@ typedef enum {
     SETTING_TYPE_FOLDER = 7,
 } setting_type_e;
 
-typedef enum {
+typedef enum
+{
     SETTING_FLAG_NAME_MAP = 1 << 0,
     SETTING_FLAG_EPHEMERAL = 1 << 1,
     SETTING_FLAG_READONLY = 1 << 2,
@@ -147,7 +152,8 @@ typedef struct setting_s
     const void *data;
 } setting_t;
 
-typedef enum {
+typedef enum
+{
     SETTINGS_VIEW_CRSF_INPUT,
     SETTINGS_VIEW_MENU,   // On-device menu
     SETTINGS_VIEW_REMOTE, // Remote settings (other device)

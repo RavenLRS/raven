@@ -18,7 +18,8 @@
 
 #define TELEMETRY_SNR_MULTIPLIER 4.0f
 
-typedef enum {
+typedef enum
+{
     TELEMETRY_TYPE_UINT8 = 1,
     TELEMETRY_TYPE_INT8,
     TELEMETRY_TYPE_UINT16,
@@ -38,7 +39,8 @@ typedef enum {
 
 #define TELEMETRY_ASSERT_TYPE(id, typ) assert(telemetry_get_type(id) == typ)
 
-typedef enum {
+typedef enum
+{
     TELEMETRY_ID_PILOT_NAME = TELEMETRY_UPLINK_MASK, // string
     TELEMETRY_ID_TX_RSSI_ANT1,                       // int8_t: RSSI of the antenna 1 in the TX (dB)
     TELEMETRY_ID_TX_LINK_QUALITY,                    // int8_t: Link quality as seen in the TX (%)
@@ -48,13 +50,15 @@ typedef enum {
 
 #define TELEMETRY_UPLINK_COUNT 5
 
-typedef enum {
+typedef enum
+{
     TELEMETRY_GPS_FIX_NONE = 0,
     TELEMETRY_GPS_FIX_2D,
     TELEMETRY_GPS_FIX_3D,
 } telemetry_gps_fix_type_e;
 
-typedef enum {
+typedef enum
+{
     TELEMETRY_ID_CRAFT_NAME = 0,   // string
     TELEMETRY_ID_FLIGHT_MODE_NAME, // string
     TELEMETRY_ID_BAT_VOLTAGE,      // uint16_t: 0.01V

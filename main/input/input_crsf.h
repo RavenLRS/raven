@@ -18,7 +18,8 @@
 
 typedef struct rmp_port_s rmp_port_t;
 
-typedef enum {
+typedef enum
+{
     CRSF_INPUT_BPS_DETECT,
     CRSF_INPUT_BPS_400K,
     CRSF_INPUT_BPS_115K,

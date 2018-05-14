@@ -2,7 +2,8 @@
 
 #include "util/time.h"
 
-typedef enum {
+typedef enum
+{
     FAILSAFE_REASON_TX_LOST = 1, // RX doesn't see TX
     FAILSAFE_REASON_RX_LOST,     // TX doesn't see RX
     FAILSAFE_REASON_RADIO_LOST,  // TX doesn't see signal from radio

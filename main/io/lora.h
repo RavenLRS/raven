@@ -12,17 +12,20 @@
 
 #define LORA_DEFAULT_SYNC_WORD 0x12 // 6.4 LoRa register mode map, RegSyncWord
 
-typedef enum {
+typedef enum
+{
     LORA_HEADER_IMPLICIT,
     LORA_HEADER_EXPLICIT,
 } lora_header_e;
 
-typedef enum {
+typedef enum
+{
     LORA_OUTPUT_RFO = 1,
     LORA_OUTPUT_PA_BOOST,
 } lora_output_type_e;
 
-typedef enum {
+typedef enum
+{
     LORA_SIGNAL_BW_7_8 = 0,
     LORA_SIGNAL_BW_10_4 = 1,
     LORA_SIGNAL_BW_15_6 = 2,
@@ -34,7 +37,8 @@ typedef enum {
     LORA_SIGNAL_BW_500 = 9, // Not supported on lower band (169MHz)
 } lora_signal_bw_e;
 
-typedef enum {
+typedef enum
+{
     LORA_CODING_RATE_4_5 = 1,
     LORA_CODING_RATE_4_6 = 2,
     LORA_CODING_RATE_4_7 = 3,
@@ -50,7 +54,8 @@ typedef enum {
 } lora_band_e;
 #endif
 
-typedef enum {
+typedef enum
+{
     LORA_CALLBACK_REASON_TX_DONE,
     LORA_CALLBACK_REASON_RX_DONE,
 } lora_callback_reason_e;

@@ -9,7 +9,8 @@
 #include "util/macros.h"
 
 // air_cmd_e max possible value is 63, see air_stream_feed_output_cmd
-typedef enum {
+typedef enum
+{
     AIR_CMD_SWITCH_MODE_ACK = 0,
     AIR_CMD_SWITCH_MODE_1 = 1,
     AIR_CMD_SWITCH_MODE_2 = 2,

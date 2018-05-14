@@ -25,7 +25,8 @@ static telemetry_downlink_id_e telemetry_fed_before_msp[] = {
 
 static const char *TAG = "Input.Air";
 
-typedef enum {
+typedef enum
+{
     AIR_INPUT_STATE_RX, // Listening
     AIR_INPUT_STATE_TX, // Transmitting
 } air_input_state_e;

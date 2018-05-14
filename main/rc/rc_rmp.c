@@ -1,5 +1,5 @@
-#include "rc/rc.h"
 #include "rc/rc-private.h"
+#include "rc/rc.h"
 
 #include "rmp/rmp.h"
 

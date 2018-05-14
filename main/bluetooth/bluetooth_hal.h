@@ -1,11 +1,11 @@
 #pragma once
 
 #include <esp_bt.h>
-#include <esp_gap_ble_api.h>
 #include <esp_bt_defs.h>
 #include <esp_bt_main.h>
-#include <esp_gatts_api.h>
+#include <esp_gap_ble_api.h>
 #include <esp_gatt_common_api.h>
+#include <esp_gatts_api.h>
 
 #define GATT_SERVER_PREPARE_WRITE_BUFSIZE 1024
 
@@ -26,7 +26,8 @@ typedef esp_gatt_status_t (*gatt_char_read_f)(struct gatt_server_s *server, stru
 typedef esp_gatt_status_t (*gatt_char_write_f)(struct gatt_server_s *server, struct gatt_server_char_s *chr, gatt_server_write_info_t *write_info, void *user_data);
 
 // According to https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.characteristic_presentation_format.xml
-typedef enum {
+typedef enum
+{
     BT_FORMAT_BOOL = 1,
     BT_FORMAT_UINT2 = 2,
     BT_FORMAT_UINT4 = 3,
@@ -57,7 +58,8 @@ typedef enum {
 } bt_format_e;
 
 // https://www.bluetooth.com/specifications/assigned-numbers/units
-typedef enum {
+typedef enum
+{
     BT_UNIT_UNITLESS = 0x2700,
     BT_UNIT_METRE = 0x2701, // length (metre)
     BT_UNIT_KG = 0x2702,    // mass (kilogram)

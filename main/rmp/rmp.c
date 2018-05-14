@@ -16,7 +16,8 @@ static const char *TAG = "RMP";
 
 #define RMP_TRANSPORT_LOOPBACK 0xFF
 
-typedef enum {
+typedef enum
+{
     RMP_DEVICE_CODE_REQ_INFO = 1,
     RMP_DEVICE_CODE_INFO,
 } rmp_device_code_e;

@@ -12,13 +12,15 @@
 
 typedef struct serial_port_s serial_port_t;
 
-typedef enum {
+typedef enum
+{
     SERIAL_PARITY_DISABLE,
     SERIAL_PARITY_EVEN,
     SERIAL_PARITY_ODD,
 } serial_parity_e;
 
-typedef enum {
+typedef enum
+{
     SERIAL_STOP_BITS_1,
     SERIAL_STOP_BITS_2,
 } serial_stop_bits_e;

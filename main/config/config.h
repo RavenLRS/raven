@@ -12,12 +12,14 @@
 typedef struct air_pairing_s air_pairing_t;
 typedef struct air_addr_s air_addr_t;
 
-typedef enum {
+typedef enum
+{
     RC_MODE_TX,
     RC_MODE_RX,
 } rc_mode_e;
 
-typedef enum {
+typedef enum
+{
     TX_INPUT_CRSF,
     TX_INPUT_FAKE,
     TX_INPUT_FIRST = TX_INPUT_CRSF,
@@ -28,7 +30,8 @@ typedef enum {
 #endif
 } tx_input_type_e;
 
-typedef enum {
+typedef enum
+{
     RX_OUTPUT_SBUS_SPORT,
     RX_OUTPUT_MSP,
     RX_OUTPUT_CRSF,
@@ -43,7 +46,8 @@ typedef enum {
 
 // Mode 1 is disabled for now, since it looks like most modules
 // can't cope with it (too manu corrupt packets).
-typedef enum {
+typedef enum
+{
 #if defined(USE_AIR_MODE_1)
     CONFIG_AIR_MODES_1_5,
 #endif
@@ -59,7 +63,8 @@ typedef enum {
     CONFIG_AIR_MODES_COUNT,
 } config_air_mode_e;
 
-typedef enum {
+typedef enum
+{
 #if defined(USE_LORA_BAND_147)
     CONFIG_LORA_BAND_147,
 #endif

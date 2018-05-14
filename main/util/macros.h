@@ -6,14 +6,14 @@
 
 #ifndef MAX
 #define MAX(a, b) \
-  ({ __typeof__ (a) _a = (a); \
+    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 #endif
 
 #ifndef MIN
 #define MIN(a, b) \
-  ({ __typeof__ (a) _a = (a); \
+    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a > _b ? _b : _a; })
 #endif
@@ -21,14 +21,14 @@
 #define STR_EQUAL(s1, s2) (strcmp(s1, s2) == 0)
 #define STR_HAS_PREFIX(s, p) (strstr(s, p) == s)
 
-#define ASSERT(x)      \
-  do                   \
-  {                    \
-    if (!(x))          \
-    {                  \
-      assert(0 && #x); \
-    }                  \
-  } while (0)
+#define ASSERT(x)            \
+    do                       \
+    {                        \
+        if (!(x))            \
+        {                    \
+            assert(0 && #x); \
+        }                    \
+    } while (0)
 
 #define UNREACHABLE() (assert(0 && "unreachable"))
 

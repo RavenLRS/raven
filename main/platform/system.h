@@ -4,7 +4,8 @@
 
 #include <driver/gpio.h>
 
-typedef enum {
+typedef enum
+{
     SYSTEM_FLAG_SCREEN = 1 << 0,  // Screen support is available and screen is detected
     SYSTEM_FLAG_BUTTON = 1 << 1,  // Button is available,
     SYSTEM_FLAG_BATTERY = 1 << 2, // Battery circuitry is available

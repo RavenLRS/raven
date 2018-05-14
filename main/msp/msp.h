@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "util/ringbuffer.h"
@@ -27,7 +27,8 @@
 // an upper boundary on payload sizes.
 #define MSP_MAX_PAYLOAD_SIZE 512
 
-typedef enum {
+typedef enum
+{
     MSP_DIRECTION_TO_MWC,
     MSP_DIRECTION_FROM_MWC,
 } msp_direction_e;

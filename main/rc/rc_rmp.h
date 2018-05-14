@@ -11,7 +11,8 @@ typedef struct rc_s rc_t;
 typedef struct rmp_s rmp_t;
 typedef struct rmp_port_s rmp_port_t;
 
-typedef enum {
+typedef enum
+{
     RC_RMP_AIR_LORA_CONFIG_REQ = 0,
     RC_RMP_AIR_LORA_CONFIG_RESP,
     RC_RMP_AIR_LORA_CONFIG_ACK,

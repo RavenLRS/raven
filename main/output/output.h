@@ -13,7 +13,8 @@
 
 #include "util/time.h"
 
-typedef enum {
+typedef enum
+{
     OUTPUT_FLAG_LOCAL = 0,           // Connected by cable to the FC/servos
     OUTPUT_FLAG_REMOTE = 1 << 0,     // Sends data over the air
     OUTPUT_FLAG_SENDS_RSSI = 1 << 1, // Output sends RSSI to the FC

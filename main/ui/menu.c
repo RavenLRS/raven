@@ -38,7 +38,8 @@ typedef struct menu_entry_s
     void *data;
 } menu_entry_t;
 
-typedef enum {
+typedef enum
+{
     MENU_DYN_NONE,
     MENU_DYN_LOCAL_FOLDER,
     MENU_DYN_REMOTE_FOLDER,

@@ -4,11 +4,13 @@
 
 #include "util/time.h"
 
-typedef enum {
+typedef enum
+{
     LED_ID_1,
 } led_id_e;
 
-typedef enum {
+typedef enum
+{
     LED_BLINK_MODE_NONE,
     LED_BLINK_MODE_BIND,
 } led_blink_mode_e;

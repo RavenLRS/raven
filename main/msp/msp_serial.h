@@ -7,7 +7,8 @@
 
 #include "msp/msp_transport.h"
 
-typedef enum {
+typedef enum
+{
     MSP_SERIAL_BAUDRATE_115200 = 0,
 
     MSP_SERIAL_BAUDRATE_COUNT,

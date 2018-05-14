@@ -8,7 +8,8 @@
 #include "ui/screen.h"
 #include "ui/screen_i2c.h"
 
-typedef enum {
+typedef enum
+{
     UI_SCREEN_AUTOOFF_DISABLED,
     UI_SCREEN_AUTOOFF_30_SEC,
     UI_SCREEN_AUTOOFF_1_MIN,

@@ -29,7 +29,8 @@ typedef struct smartport_payload_s
     uint32_t data;
 } PACKED smartport_payload_t;
 
-typedef enum {
+typedef enum
+{
     SMARTPORT_PAYLOAD_FRAME_STATE_INCOMPLETE,
     SMARTPORT_PAYLOAD_FRAME_STATE_BYTESTUFF,
     SMARTPORT_PAYLOAD_FRAME_STATE_CHECKSUM,

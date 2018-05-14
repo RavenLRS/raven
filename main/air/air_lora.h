@@ -12,7 +12,8 @@
 
 typedef struct lora_s lora_t;
 
-typedef enum {
+typedef enum
+{
     AIR_LORA_MODE_1 = 1, // SF6, BW500 - 10ms cycle
     AIR_LORA_MODE_2,     // SF7, BW500 - 17ms cycle
     AIR_LORA_MODE_3,     // SF8, BW500 - 31ms cycle
@@ -26,7 +27,8 @@ typedef enum {
 
 typedef uint16_t air_lora_mode_mask_t;
 
-typedef enum {
+typedef enum
+{
     AIR_LORA_SUPPORTED_MODES_FIXED_1 = 1,
     AIR_LORA_SUPPORTED_MODES_FIXED_2 = 2,
     AIR_LORA_SUPPORTED_MODES_FIXED_3 = 3,
@@ -36,7 +38,8 @@ typedef enum {
     AIR_LORA_SUPPORTED_MODES_2_TO_5 = 33,
 } air_lora_supported_modes_e;
 
-typedef enum {
+typedef enum
+{
     AIR_LORA_BAND_147 = 1,
     AIR_LORA_BAND_169,
     AIR_LORA_BAND_315,

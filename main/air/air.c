@@ -15,7 +15,8 @@
 
 #include "air.h"
 
-typedef enum {
+typedef enum
+{
     PACKET_TYPE_BIND_REQ,
     PACKET_TYPE_BIND_ACCEPT,
 } packet_type_e;

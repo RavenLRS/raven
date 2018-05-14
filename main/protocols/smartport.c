@@ -98,7 +98,8 @@ typedef struct smartport_msp_reply_chunk_s
 
 _Static_assert(sizeof(smartport_msp_reply_chunk_t) == sizeof(smartport_payload_t), "invalid smartport_msp_reply_chunk_t size");
 
-typedef enum {
+typedef enum
+{
     FSSP_DATAID_SPEED = 0x0830,    // BF, INAV: GPS speed in knots/1000 (1cm/s = 0.0194384449 knots) (uint32_t)
     FSSP_DATAID_VFAS = 0x0210,     // BF, INAV: might be total voltage or cell voltage. 0.1V per unit (uint16_t)
     FSSP_DATAID_CURRENT = 0x0200,  // BF, INAV: Current amp draw given in 10mA steps (int32_t)
