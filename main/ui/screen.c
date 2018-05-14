@@ -25,7 +25,8 @@
 #define ANIMATION_FRAME_DURATION_MS 66
 #define ANIMATION_TOTAL_DURATION_MS (ANIMATION_REPEAT * ANIMATION_COUNT * ANIMATION_FRAME_DURATION_MS)
 
-typedef enum {
+typedef enum
+{
     SCREEN_DIRECTION_HORIZONTAL,
     SCREEN_DIRECTION_VERTICAL,
 } screen_direction_e;
@@ -35,7 +36,8 @@ typedef enum {
 #define SCREEN_H(s) (s->internal.h)
 #define SCREEN_BUF(s) (s->internal.buf)
 
-typedef enum {
+typedef enum
+{
     SCREEN_MULTILINEOPT_NONE = 0,
     SCREEN_MULTILINEOPT_BORDER = 1,
     SCREEN_MULTILINEOPT_BOX = 2,

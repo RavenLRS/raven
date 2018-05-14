@@ -11,11 +11,11 @@
 #include "msp/msp_serial.h"
 
 #include "platform/pins.h"
-#include "platform/system.h"
 #include "platform/storage.h"
+#include "platform/system.h"
 
-#include "ui/ui.h"
 #include "ui/screen.h"
+#include "ui/ui.h"
 
 #include "util/macros.h"
 #include "util/version.h"
@@ -77,13 +77,15 @@ static const char *pin_names[PIN_USABLE_COUNT];
 
 #define SETTINGS_STORAGE_KEY "settings"
 
-typedef enum {
+typedef enum
+{
     SETTING_VISIBILITY_SHOW,
     SETTING_VISIBILITY_HIDE,
     SETTING_VISIBILITY_MOVE_CONTENTS_TO_PARENT,
 } setting_visibility_e;
 
-typedef enum {
+typedef enum
+{
     SETTING_DYNAMIC_FORMAT_NAME,
     SETTING_DYNAMIC_FORMAT_VALUE,
 } setting_dynamic_format_e;
@@ -280,6 +282,9 @@ static const char *view_crsf_input_tx_settings[] = {
 };
 
 static setting_value_t setting_values[SETTING_COUNT];
+
+#define PIN_DEFAULT_TX_IDX PIN_USABLE_GET_IDX(PIN_DEFAULT_TX)
+#define PIN_DEFAULT_RX_IDX PIN_USABLE_GET_IDX(PIN_DEFAULT_RX)
 
 static const setting_t settings[] = {
     FOLDER("", "Settings", FOLDER_ID_ROOT, 0, setting_visibility_root),
@@ -517,7 +522,8 @@ void settings_init(void)
     // Initialize the pin names
     for (int ii = 0; ii < PIN_USABLE_COUNT; ii++)
     {
-        snprintf(pin_number_names[ii], sizeof(pin_number_names[ii]), "%02d", usable_pin_at(ii));
+        int n = pin_usable_at(ii);
+        snprintf(pin_number_names[ii], sizeof(pin_number_names[ii]), "%2d", n);
         pin_names[ii] = pin_number_names[ii];
     }
 
@@ -825,7 +831,7 @@ void setting_set_u8(const setting_t *setting, uint8_t v)
 int setting_get_pin_num(const setting_t *setting)
 {
     assert(setting->val_names == pin_names);
-    return usable_pin_at(setting_get_val_ptr(setting)->u8);
+    return pin_usable_at(setting_get_val_ptr(setting)->u8);
 }
 
 bool setting_get_bool(const setting_t *setting)
