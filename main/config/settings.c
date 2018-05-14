@@ -262,7 +262,8 @@ static const char *config_air_modes_table[] = {
     "2 (50Hz)",
     "3 (30Hz)",
     "4 (18Hz)",
-    "5 (9Hz)"};
+    "5 (9Hz)",
+};
 _Static_assert(ARRAY_COUNT(config_air_modes_table) == CONFIG_AIR_MODES_COUNT, "CONFIG_AIR_MODES_COUNT is invalid");
 static const char *rx_output_table[] = {"SBUS/Smartport", "MSP", "CRSF", "FPort"};
 static const char *msp_baudrate_table[] = {"115200"};

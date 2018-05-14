@@ -4,6 +4,8 @@
 #include <hal/log.h>
 #include <hal/rand.h>
 
+#include "platform.h"
+
 #include "config/settings.h"
 
 #include "platform/storage.h"
