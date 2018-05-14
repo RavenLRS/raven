@@ -637,6 +637,7 @@ static void screen_draw_main(screen_t *s)
 
 static void screen_draw_channels(screen_t *s)
 {
+    u8g2_SetDrawColor(&u8g2, 1);
     u8g2_SetFont(&u8g2, u8g2_font_micro_tr);
     u8g2_SetFontPosTop(&u8g2);
 
