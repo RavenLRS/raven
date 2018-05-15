@@ -54,6 +54,7 @@ typedef struct screen_s
         unsigned h;
         unsigned direction;
         char *buf;
+        bool splashing;
     } internal;
 } screen_t;
 

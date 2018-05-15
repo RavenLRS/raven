@@ -69,8 +69,10 @@ void screen_power_on(screen_t *screen)
     screen_i2c_power_on(&screen->internal.cfg, &u8g2);
 }
 
-void screen_splash(screen_t *screen)
+static void screen_splash_task(void *arg)
 {
+    screen_t *screen = arg;
+    screen->internal.splashing = true;
     uint16_t w = u8g2_GetDisplayWidth(&u8g2);
     uint16_t h = u8g2_GetDisplayHeight(&u8g2);
 
@@ -143,6 +145,13 @@ void screen_splash(screen_t *screen)
             time_millis_delay(ANIMATION_FRAME_DURATION_MS);
         }
     }
+    screen->internal.splashing = false;
+    vTaskDelete(NULL);
+}
+
+void screen_splash(screen_t *screen)
+{
+    xTaskCreatePinnedToCore(screen_splash_task, "SCREEN-SPLASH", 4096, screen, 2, NULL, xPortGetCoreID());
 }
 
 void screen_set_orientation(screen_t *screen, screen_orientation_e orientation)
@@ -945,6 +954,11 @@ static void screen_draw_bind_request_info_from_rx(screen_t *s, air_bind_packet_t
 
 void screen_update(screen_t *screen)
 {
+    if (screen->internal.splashing)
+    {
+        return;
+    }
+
     char buf[SCREEN_DRAW_BUF_SIZE];
     air_bind_packet_t packet;
     air_pairing_t alt_pairings[MENU_ALT_PAIRINGS_MAX];
