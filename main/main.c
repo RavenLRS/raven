@@ -35,12 +35,12 @@
 #include "util/time.h"
 
 static lora_t lora = {
-    .mosi = LORA_MOSI,
-    .miso = LORA_MISO,
-    .sck = LORA_SCK,
-    .cs = LORA_CS,
-    .rst = LORA_RST,
-    .dio0 = LORA_DIO0,
+    .mosi = PIN_LORA_MOSI,
+    .miso = PIN_LORA_MISO,
+    .sck = PIN_LORA_SCK,
+    .cs = PIN_LORA_CS,
+    .rst = PIN_LORA_RST,
+    .dio0 = PIN_LORA_DIO0,
     .output_type = LORA_OUTPUT_TYPE,
 };
 
@@ -67,11 +67,11 @@ static void setting_changed(const setting_t *setting, void *user_data)
 void task_ui(void *arg)
 {
     ui_config_t cfg = {
-        .button = BUTTON_1,
+        .button = PIN_BUTTON_1,
 #ifdef USE_SCREEN
-        .screen.sda = SCREEN_SDA,
-        .screen.scl = SCREEN_SCL,
-        .screen.rst = SCREEN_RST,
+        .screen.sda = PIN_SCREEN_SDA,
+        .screen.scl = PIN_SCREEN_SCL,
+        .screen.rst = PIN_SCREEN_RST,
         .screen.addr = SCREEN_I2C_ADDR,
 #endif
     };

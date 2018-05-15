@@ -61,7 +61,7 @@ static void serial_half_duplex_enable_tx(serial_port_t *port)
     // Enable TX
     // Map the RX pin to something else, so the data we transmit
     // doesn't get into the RX fifo.
-    gpio_matrix_in(UNUSED_RX_PIN, port->rx_sig, false);
+    gpio_matrix_in(PIN_UNUSED_RX, port->rx_sig, false);
     gpio_matrix_out(port->config.tx_pin, port->tx_sig, false, false);
 
     port->dev->int_clr.tx_done = 1;
@@ -141,12 +141,12 @@ void serial_port_do_open(serial_port_t *port)
     int tx_pin = port->config.tx_pin;
     if (tx_pin < 0)
     {
-        tx_pin = UNUSED_TX_PIN;
+        tx_pin = PIN_UNUSED_TX;
     }
     int rx_pin = port->config.rx_pin;
     if (rx_pin < 0)
     {
-        rx_pin = UNUSED_RX_PIN;
+        rx_pin = PIN_UNUSED_RX;
     }
     int rx_buffer_size = port->config.rx_buffer_size;
     // Must be 129 at least

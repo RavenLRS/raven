@@ -13,9 +13,9 @@ typedef struct led_s
     int next_level;
 } led_t;
 
-#ifdef LED_1
+#ifdef PIN_LED_1
 static led_t led1 = {
-    .pin = LED_1,
+    .pin = PIN_LED_1,
 };
 #endif
 
@@ -71,14 +71,14 @@ static void led_set_blink_period_led(led_t *led, time_ticks_t period)
 
 void led_init(void)
 {
-#ifdef LED_1
+#ifdef PIN_LED_1
     led_init_led(&led1);
 #endif
 }
 
 void led_update(void)
 {
-#ifdef LED_1
+#ifdef PIN_LED_1
     led_update_led(&led1);
 #endif
 }
@@ -87,7 +87,7 @@ void led_on(led_id_e led_id)
 {
     switch (led_id)
     {
-#ifdef LED_1
+#ifdef PIN_LED_1
     case LED_ID_1:
         led_on_led(&led1);
         break;
@@ -101,7 +101,7 @@ void led_off(led_id_e led_id)
 {
     switch (led_id)
     {
-#ifdef LED_1
+#ifdef PIN_LED_1
     case LED_ID_1:
         led_off_led(&led1);
         break;
@@ -134,7 +134,7 @@ void led_set_blink_period(led_id_e led_id, time_ticks_t period)
 {
     switch (led_id)
     {
-#ifdef LED_1
+#ifdef PIN_LED_1
     case LED_ID_1:
         led_set_blink_period_led(&led1, period);
         break;

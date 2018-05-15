@@ -43,7 +43,7 @@ bool system_awake_from_deep_sleep(void)
 void system_shutdown(void)
 {
     // Wait until the button is released if it's now low
-    while (gpio_get_level(BUTTON_1) == 0)
+    while (gpio_get_level(PIN_BUTTON_1) == 0)
     {
     };
 
@@ -51,9 +51,9 @@ void system_shutdown(void)
     // TODO: This might increase sleep current consumption
     // by a lot, measure it.
     ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON));
-    ESP_ERROR_CHECK(gpio_pulldown_dis(BUTTON_1));
-    ESP_ERROR_CHECK(gpio_pullup_en(BUTTON_1));
-    ESP_ERROR_CHECK(esp_sleep_enable_ext1_wakeup(1 << BUTTON_1, ESP_EXT1_WAKEUP_ALL_LOW));
+    ESP_ERROR_CHECK(gpio_pulldown_dis(PIN_BUTTON_1));
+    ESP_ERROR_CHECK(gpio_pullup_en(PIN_BUTTON_1));
+    ESP_ERROR_CHECK(esp_sleep_enable_ext1_wakeup(1 << PIN_BUTTON_1, ESP_EXT1_WAKEUP_ALL_LOW));
 
     // TODO: Wake up if the 5V power is connected.
     // If battery power doesn't enable the 5V line
