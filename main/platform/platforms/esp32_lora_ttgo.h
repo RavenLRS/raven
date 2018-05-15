@@ -3,6 +3,9 @@
 // User button
 #define PIN_BUTTON_1 0
 
+// Buzzer
+#define PIN_BEEPER 12 // This seems appropriate for v1 boards, since it can't be pulled low during boot
+
 // LoRa connection
 // GPIO5  -- SX1278's SCK
 // GPIO19 -- SX1278's MISO

@@ -4,6 +4,7 @@
 
 #include "platform.h"
 
+#include "ui/beeper.h"
 #include "ui/button.h"
 #include "ui/screen.h"
 #include "ui/screen_i2c.h"
@@ -24,6 +25,7 @@ typedef struct rc_s rc_t;
 typedef struct ui_config_s
 {
     uint8_t button;
+    uint8_t beeper;
 #ifdef USE_SCREEN
     screen_i2c_config_t screen;
 #endif
@@ -35,6 +37,7 @@ typedef struct ui_s
     {
         rc_t *rc;
         ui_config_t cfg;
+        beeper_t beeper;
         button_t button;
 #ifdef USE_SCREEN
         time_ticks_t screen_autooff_interval;

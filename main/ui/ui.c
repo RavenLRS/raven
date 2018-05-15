@@ -47,9 +47,14 @@ static void ui_handle_screen_button_press(void *user_data)
     {
         return;
     }
-    if (!menu_press())
+    bool handled = menu_press();
+    if (!handled)
     {
-        screen_handle_press(&ui->internal.screen);
+        handled |= screen_handle_press(&ui->internal.screen);
+    }
+    if (handled)
+    {
+        beeper_beep(&ui->internal.beeper);
     }
 }
 
@@ -61,7 +66,11 @@ static void ui_handle_screen_button_long_press(void *user_data)
     {
         return;
     }
-    menu_long_press();
+    bool handled = menu_long_press();
+    if (handled)
+    {
+        beeper_beep(&ui->internal.beeper);
+    }
 }
 
 static void ui_handle_screen_button_really_long_press(void *user_data)
@@ -72,7 +81,11 @@ static void ui_handle_screen_button_really_long_press(void *user_data)
     {
         return;
     }
-    menu_really_long_press();
+    bool handled = menu_really_long_press();
+    if (handled)
+    {
+        beeper_beep(&ui->internal.beeper);
+    }
 }
 #endif
 
@@ -82,6 +95,7 @@ static void ui_handle_noscreen_button_press(void *user_data)
     if (rc_has_pending_bind_request(ui->internal.rc, NULL))
     {
         rc_accept_bind(ui->internal.rc);
+        beeper_beep(&ui->internal.beeper);
     }
 }
 
@@ -91,15 +105,18 @@ static void ui_handle_noscreen_button_long_press(void *user_data)
 
 static void ui_handle_noscreen_button_really_long_press(void *user_data)
 {
+    ui_t *ui = user_data;
     const setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
     bool is_binding = setting_get_bool(bind_setting);
     if (time_micros_now() < SECS_TO_MICROS(15) && !is_binding)
     {
         setting_set_bool(bind_setting, true);
+        beeper_beep(&ui->internal.beeper);
     }
     else if (is_binding)
     {
         setting_set_bool(bind_setting, false);
+        beeper_beep(&ui->internal.beeper);
     }
 }
 
@@ -127,6 +144,23 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
 #endif
 }
 
+static void ui_update_beeper(ui_t *ui)
+{
+    if (rc_is_failsafe_active(ui->internal.rc, NULL))
+    {
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_FAILSAFE);
+    }
+    else if (rc_is_binding(ui->internal.rc))
+    {
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_BIND);
+    }
+    else if (ui->internal.beeper.mode != BEEPER_MODE_STARTUP)
+    {
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_NONE);
+    }
+    beeper_update(&ui->internal.beeper);
+}
+
 void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
 {
     led_init();
@@ -149,6 +183,8 @@ void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
     ui->internal.rc = rc;
     ui->internal.button.user_data = ui;
     ui->internal.button.pin = cfg->button;
+    beeper_init(&ui->internal.beeper, cfg->beeper);
+    beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
     button_init(&ui->internal.button);
     system_add_flag(SYSTEM_FLAG_BUTTON);
 #ifdef USE_SCREEN
@@ -196,6 +232,7 @@ bool ui_is_animating(const ui_t *ui)
 
 void ui_update(ui_t *ui)
 {
+    ui_update_beeper(ui);
     button_update(&ui->internal.button);
     led_update();
 #ifdef USE_SCREEN

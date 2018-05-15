@@ -68,6 +68,7 @@ void task_ui(void *arg)
 {
     ui_config_t cfg = {
         .button = PIN_BUTTON_1,
+        .beeper = PIN_BEEPER,
 #ifdef USE_SCREEN
         .screen.sda = PIN_SCREEN_SDA,
         .screen.scl = PIN_SCREEN_SCL,
