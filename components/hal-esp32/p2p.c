@@ -89,6 +89,9 @@ void p2p_hal_init(p2p_hal_t *hal, p2p_hal_callback_f callback, void *user_data)
     active_hal = hal;
     ESP_ERROR_CHECK(esp_event_loop_init(NULL, NULL));
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    // Disable WPA support, saves ~5K of flash, since LTO
+    // is able to strip the related functions.
+    memset(&cfg.wpa_crypto_funcs, 0, sizeof(cfg.wpa_crypto_funcs));
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     wifi_country_t cc = {
         .cc = "XXX",
