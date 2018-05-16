@@ -957,9 +957,18 @@ bool rc_has_pending_bind_request(rc_t *rc, air_bind_packet_t *packet)
     return false;
 }
 
-bool rc_is_failsafe_active(const rc_t *rc, failsafe_reason_e *reason)
+static bool rc_is_input_failsafe_active(const rc_t *rc, failsafe_reason_e *reason)
 {
-    if (failsafe_is_active(rc->data.failsafe.input))
+    if (rc->state.invalidate_input)
+    {
+        return false;
+    }
+    const failsafe_t *fs = rc->data.failsafe.input;
+    if (!fs)
+    {
+        return false;
+    }
+    if (failsafe_is_active(fs))
     {
         if (reason)
         {
@@ -977,22 +986,44 @@ bool rc_is_failsafe_active(const rc_t *rc, failsafe_reason_e *reason)
         }
         return true;
     }
-    if (failsafe_is_active(rc->data.failsafe.output))
+    return false;
+}
+
+static bool rc_is_output_failsafe_active(const rc_t *rc, failsafe_reason_e *reason)
+{
+    if (rc->state.invalidate_output)
     {
-        switch (config_get_rc_mode())
+        return false;
+    }
+    const failsafe_t *fs = rc->data.failsafe.output;
+    if (!fs)
+    {
+        return false;
+    }
+    if (failsafe_is_active(fs))
+    {
+        if (reason)
         {
-        case RC_MODE_TX:
-            // Can't see RX telemetry on air
-            *reason = FAILSAFE_REASON_RX_LOST;
-            break;
-        case RC_MODE_RX:
-            // FC was disconnected
-            *reason = FAILSAFE_REASON_FC_LOST;
-            break;
+            switch (config_get_rc_mode())
+            {
+            case RC_MODE_TX:
+                // Can't see RX telemetry on air
+                *reason = FAILSAFE_REASON_RX_LOST;
+                break;
+            case RC_MODE_RX:
+                // FC was disconnected
+                *reason = FAILSAFE_REASON_FC_LOST;
+                break;
+            }
         }
         return true;
     }
     return false;
+}
+
+bool rc_is_failsafe_active(const rc_t *rc, failsafe_reason_e *reason)
+{
+    return rc_is_input_failsafe_active(rc, reason) || rc_is_output_failsafe_active(rc, reason);
 }
 
 int rc_get_rssi_db(rc_t *rc)
