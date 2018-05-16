@@ -8,9 +8,10 @@
 
 #include "config/config.h"
 
+#include "io/pwm.h"
+
 #include "msp/msp_serial.h"
 
-#include "platform/pins.h"
 #include "platform/storage.h"
 #include "platform/system.h"
 
@@ -59,6 +60,10 @@ static const char *pin_names[PIN_USABLE_COUNT];
 #define CMD_SETTING(k, n, p, f, c_fl) U8_SETTING(k, n, f | SETTING_FLAG_EPHEMERAL | SETTING_FLAG_CMD, p, 0, 0, c_fl)
 
 #define PIN_SETTING(k, n, p, def) U8_MAP_SETTING(k, n, 0, p, pin_names, def)
+
+#define RX_CHANNEL_OUTPUT_PIN_SETTING_KEY(p) (SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX #p)
+#define RX_CHANNEL_OUTPUT_PIN_SETTING(p) \
+    (setting_t) { .key = RX_CHANNEL_OUTPUT_PIN_SETTING_KEY(p), .name = NULL, .type = SETTING_TYPE_U8, .flags = SETTING_FLAG_NAME_MAP | SETTING_FLAG_DYNAMIC, .val_names = pwm_channel_names, .unit = NULL, .folder = FOLDER_ID_RX_CHANNEL_OUTPUTS, .min = U8(0), .max = U8(PWM_CHANNEL_COUNT - 1), .def_val = U8(0), .data = setting_format_rx_channel_output }
 
 #define RX_FOLDER_ID(n) (0xFF - n)
 
@@ -142,35 +147,40 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
     {
         return SETTING_SHOW_IF(view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
-    if (SETTING_IS(setting, SETTING_KEY_TX_CRSF_PIN))
+    if (SETTING_IS(setting, SETTING_KEY_TX_TX_PIN))
     {
-        return SETTING_SHOW_IF(view_id != SETTINGS_VIEW_CRSF_INPUT && config_get_input_type() == TX_INPUT_CRSF);
+        return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_CRSF);
+    }
+    if (SETTING_IS(setting, SETTING_KEY_TX_RX_PIN))
+    {
+        return SETTING_VISIBILITY_HIDE;
     }
     return SETTING_VISIBILITY_SHOW;
 }
 
 static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
-    if (SETTING_IS(setting, SETTING_KEY_RX_SBUS_PIN) || SETTING_IS(setting, SETTING_KEY_RX_SBUS_INVERTED) ||
-        SETTING_IS(setting, SETTING_KEY_RX_SPORT_PIN) || SETTING_IS(setting, SETTING_KEY_RX_SPORT_INVERTED))
+    if (SETTING_IS(setting, SETTING_KEY_RX_TX_PIN))
+    {
+        return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_RX_RX_PIN))
+    {
+        return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_RX_SBUS_INVERTED) || SETTING_IS(setting, SETTING_KEY_RX_SPORT_INVERTED))
     {
         return SETTING_SHOW_IF(config_get_output_type() == RX_OUTPUT_SBUS_SPORT);
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_RX_MSP_TX_PIN) || SETTING_IS(setting, SETTING_KEY_RX_MSP_RX_PIN) ||
-        SETTING_IS(setting, SETTING_KEY_RX_MSP_BAUDRATE))
+    if (SETTING_IS(setting, SETTING_KEY_RX_MSP_BAUDRATE))
     {
         return SETTING_SHOW_IF(config_get_output_type() == RX_OUTPUT_MSP);
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_RX_CRSF_TX_PIN) || SETTING_IS(setting, SETTING_KEY_RX_CRSF_RX_PIN))
-    {
-        return SETTING_SHOW_IF(config_get_output_type() == RX_OUTPUT_CRSF);
-    }
-
-    if (SETTING_IS(setting, SETTING_KEY_RX_FPORT_TX_PIN) ||
-        SETTING_IS(setting, SETTING_KEY_RX_FPORT_RX_PIN) ||
-        SETTING_IS(setting, SETTING_KEY_RX_FPORT_INVERTED))
+    if (SETTING_IS(setting, SETTING_KEY_RX_FPORT_INVERTED))
     {
         return SETTING_SHOW_IF(config_get_output_type() == RX_OUTPUT_FPORT);
     }
@@ -178,10 +188,41 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
     return SETTING_VISIBILITY_SHOW;
 }
 
+static setting_visibility_e setting_visibility_rx_channel_outputs(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
+{
+    int index = setting_rx_channel_output_get_pos(setting);
+    if (index >= 0)
+    {
+        int pin = pin_usable_at(index);
+        if (pin >= 0 && pwm_output_can_use_pin(pin))
+        {
+            return SETTING_VISIBILITY_SHOW;
+        }
+    }
+    return SETTING_VISIBILITY_HIDE;
+}
+
 static setting_visibility_e setting_visibility_receivers(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     int rx_num = setting_receiver_get_rx_num(setting);
     return SETTING_SHOW_IF(config_get_paired_rx_at(NULL, rx_num));
+}
+
+static int setting_format_rx_channel_output(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
+{
+    int index = setting_rx_channel_output_get_pos(setting);
+    if (index >= 0)
+    {
+        int pin = pin_usable_at(index);
+        switch (fmt)
+        {
+        case SETTING_DYNAMIC_FORMAT_NAME:
+            return snprintf(buf, size, "Pin %-2d", pin);
+        case SETTING_DYNAMIC_FORMAT_VALUE:
+            break;
+        }
+    }
+    return 0;
 }
 
 static int setting_format_rx_name(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
@@ -265,7 +306,7 @@ static const char *config_air_modes_table[] = {
     "5 (9Hz)",
 };
 _Static_assert(ARRAY_COUNT(config_air_modes_table) == CONFIG_AIR_MODES_COUNT, "CONFIG_AIR_MODES_COUNT is invalid");
-static const char *rx_output_table[] = {"SBUS/Smartport", "MSP", "CRSF", "FPort"};
+static const char *rx_output_table[] = {"MSP", "CRSF", "FPort", "SBUS/Smartport", "Channels"};
 static const char *msp_baudrate_table[] = {"115200"};
 static const char *screen_orientation_table[] = {"Horizontal", "Horizontal (buttons at the right)", "Vertical", "Vertical (buttons on top)"};
 static const char *screen_brightness_table[] = {"Low", "Medium", "High"};
@@ -303,29 +344,38 @@ static const setting_t settings[] = {
     U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),
     STRING_SETTING(SETTING_KEY_TX_PILOT_NAME, "Pilot Name", FOLDER_ID_TX),
     U8_MAP_SETTING(SETTING_KEY_TX_INPUT, "Input", 0, FOLDER_ID_TX, tx_input_table, TX_INPUT_FIRST),
-    PIN_SETTING(SETTING_KEY_TX_CRSF_PIN, "CRSF Pin", FOLDER_ID_TX, PIN_DEFAULT_TX_IDX),
+    PIN_SETTING(SETTING_KEY_TX_TX_PIN, "TX Pin", FOLDER_ID_TX, PIN_DEFAULT_TX_IDX),
+    PIN_SETTING(SETTING_KEY_TX_RX_PIN, "RX Pin", FOLDER_ID_TX, PIN_DEFAULT_RX_IDX),
 
     FOLDER(SETTING_KEY_RX, "RX", FOLDER_ID_RX, FOLDER_ID_ROOT, setting_visibility_rx),
     U8_MAP_SETTING(SETTING_KEY_RX_SUPPORTED_MODES, "Modes", 0, FOLDER_ID_RX, config_air_modes_table, CONFIG_AIR_MODES_2_5),
     BOOL_YN_SETTING(SETTING_KEY_RX_AUTO_CRAFT_NAME, "Auto Craft Name", 0, FOLDER_ID_RX, true),
     STRING_SETTING(SETTING_KEY_RX_CRAFT_NAME, "Craft Name", FOLDER_ID_RX),
     U8_MAP_SETTING(SETTING_KEY_RX_OUTPUT, "Output", 0, FOLDER_ID_RX, rx_output_table, RX_OUTPUT_MSP),
-
-    PIN_SETTING(SETTING_KEY_RX_SBUS_PIN, "SBUS Pin", FOLDER_ID_RX, PIN_DEFAULT_TX_IDX),
-    BOOL_YN_SETTING(SETTING_KEY_RX_SBUS_INVERTED, "SBUS Inverted", 0, FOLDER_ID_RX, false),
-    PIN_SETTING(SETTING_KEY_RX_SPORT_PIN, "S.Port Pin", FOLDER_ID_RX, PIN_DEFAULT_RX_IDX),
-    BOOL_YN_SETTING(SETTING_KEY_RX_SPORT_INVERTED, "S.Port Inverted", 0, FOLDER_ID_RX, false),
-
-    PIN_SETTING(SETTING_KEY_RX_MSP_TX_PIN, "MSP TX Pin", FOLDER_ID_RX, PIN_DEFAULT_TX_IDX),
-    PIN_SETTING(SETTING_KEY_RX_MSP_RX_PIN, "MSP RX Pin", FOLDER_ID_RX, PIN_DEFAULT_RX_IDX),
+    PIN_SETTING(SETTING_KEY_RX_TX_PIN, "TX Pin", FOLDER_ID_RX, PIN_DEFAULT_TX_IDX),
+    PIN_SETTING(SETTING_KEY_RX_RX_PIN, "RX Pin", FOLDER_ID_RX, PIN_DEFAULT_RX_IDX),
+    BOOL_YN_SETTING(SETTING_KEY_RX_SBUS_INVERTED, "SBUS Inverted", 0, FOLDER_ID_RX, true),
+    BOOL_YN_SETTING(SETTING_KEY_RX_SPORT_INVERTED, "S.Port Inverted", 0, FOLDER_ID_RX, true),
     U8_MAP_SETTING(SETTING_KEY_RX_MSP_BAUDRATE, "MSP Baudrate", 0, FOLDER_ID_RX, msp_baudrate_table, MSP_SERIAL_BAUDRATE_FIRST),
-
-    PIN_SETTING(SETTING_KEY_RX_CRSF_TX_PIN, "CRSF TX Pin", FOLDER_ID_RX, PIN_DEFAULT_TX_IDX),
-    PIN_SETTING(SETTING_KEY_RX_CRSF_RX_PIN, "CRSF RX Pin", FOLDER_ID_RX, PIN_DEFAULT_RX_IDX),
-
-    PIN_SETTING(SETTING_KEY_RX_FPORT_TX_PIN, "FPort TX Pin", FOLDER_ID_RX, PIN_DEFAULT_TX_IDX),
-    PIN_SETTING(SETTING_KEY_RX_FPORT_RX_PIN, "FPort RX Pin", FOLDER_ID_RX, PIN_DEFAULT_RX_IDX),
     BOOL_YN_SETTING(SETTING_KEY_RX_FPORT_INVERTED, "FPort Inverted", 0, FOLDER_ID_RX, false),
+
+    FOLDER(SETTING_KEY_RX_CHANNEL_OUTPUTS, "Channel Outputs", FOLDER_ID_RX_CHANNEL_OUTPUTS, FOLDER_ID_RX, setting_visibility_rx_channel_outputs),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(0),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(1),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(2),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(3),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(4),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(5),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(6),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(7),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(8),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(9),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(10),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(11),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(12),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(13),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(14),
+    RX_CHANNEL_OUTPUT_PIN_SETTING(15),
 
     FOLDER(SETTING_KEY_SCREEN, "Screen", FOLDER_ID_SCREEN, FOLDER_ID_ROOT, NULL),
     U8_MAP_SETTING(SETTING_KEY_SCREEN_ORIENTATION, "Orientation", 0, FOLDER_ID_SCREEN, screen_orientation_table, SCREEN_ORIENTATION_DEFAULT),
@@ -888,6 +938,14 @@ const char *setting_map_name(const setting_t *setting, uint8_t val)
 
 void setting_format_name(char *buf, size_t size, const setting_t *setting)
 {
+    if ((setting->flags & SETTING_FLAG_DYNAMIC) && setting->data)
+    {
+        setting_dynamic_format_f format_f = setting->data;
+        if (format_f(buf, size, setting, SETTING_DYNAMIC_FORMAT_NAME) > 0)
+        {
+            return;
+        }
+    }
     if (setting->name)
     {
         strncpy(buf, setting->name, size);
@@ -993,6 +1051,24 @@ bool setting_cmd_exec(const setting_t *setting)
 {
     setting_changed(setting);
     return true;
+}
+
+int setting_rx_channel_output_get_pos(const setting_t *setting)
+{
+    static const setting_t *folder = NULL;
+    if (!folder)
+    {
+        folder = settings_get_key(SETTING_KEY_RX_CHANNEL_OUTPUTS);
+    }
+    if (setting > folder)
+    {
+        int index = (setting - folder) - 1;
+        if (index <= PIN_USABLE_COUNT)
+        {
+            return index;
+        }
+    }
+    return -1;
 }
 
 int setting_receiver_get_rx_num(const setting_t *setting)

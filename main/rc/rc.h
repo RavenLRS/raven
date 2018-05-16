@@ -16,6 +16,7 @@
 #include "output/output_crsf.h"
 #include "output/output_fport.h"
 #include "output/output_msp.h"
+#include "output/output_none.h"
 #include "output/output_sbus.h"
 
 #include "rc/failsafe.h"
@@ -62,6 +63,7 @@ typedef struct rc_s
         output_crsf_t crsf;
         output_fport_t fport;
         output_msp_t msp;
+        output_none_t none;
         output_sbus_t sbus;
     } outputs;
 

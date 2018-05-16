@@ -32,13 +32,14 @@ typedef enum
 
 typedef enum
 {
-    RX_OUTPUT_SBUS_SPORT,
     RX_OUTPUT_MSP,
     RX_OUTPUT_CRSF,
     RX_OUTPUT_FPORT,
+    RX_OUTPUT_SBUS_SPORT,
+    RX_OUTPUT_NONE,
 
-    RX_OUTPUT_FIRST = RX_OUTPUT_SBUS_SPORT,
-    RX_OUTPUT_LAST = RX_OUTPUT_FPORT,
+    RX_OUTPUT_FIRST = RX_OUTPUT_MSP,
+    RX_OUTPUT_LAST = RX_OUTPUT_NONE,
 } rx_output_type_e;
 
 // Used to store it as a setting, since settings need continuous

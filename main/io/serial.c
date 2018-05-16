@@ -3,7 +3,7 @@
 
 #include <driver/uart.h>
 
-#include "platform/pins.h"
+#include "io/pins.h"
 
 #include "util/macros.h"
 

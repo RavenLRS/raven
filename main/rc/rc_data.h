@@ -119,7 +119,7 @@ inline bool rc_data_is_ready(rc_data_t *data)
         for (int ii = 0; ii < data->channels_num; ii++)
         {
             control_channel_t *ch = &data->channels[ii];
-            if (data_state_get_last_update(&ch->data_state) == 0)
+            if (!data_state_has_value(&ch->data_state))
             {
                 // Channel has no valid value yet
                 return false;

@@ -3,14 +3,17 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "config.h"
+#include "config/config.h"
+
+#include "io/pins.h"
 
 #define SETTING_STRING_MAX_LENGTH 32
 #define SETTING_STRING_BUFFER_SIZE (SETTING_STRING_MAX_LENGTH + 1)
 #define SETTING_NAME_BUFFER_SIZE SETTING_STRING_BUFFER_SIZE
-#define SETTING_STATIC_COUNT 38
+#define SETTING_STATIC_COUNT 34
 #define SETTING_RX_COUNT (5 * CONFIG_MAX_PAIRED_RX)
-#define SETTING_COUNT (SETTING_STATIC_COUNT + SETTING_RX_COUNT)
+// Use PIN_USABLE_MAX to make sure we have a setting for every possible PWM output.
+#define SETTING_COUNT (SETTING_STATIC_COUNT + SETTING_RX_COUNT + PIN_USABLE_MAX)
 
 #define SETTING_KEY_RC_MODE "rc_mode"
 #define SETTING_KEY_BIND "bind"
@@ -21,8 +24,9 @@
 #define SETTING_KEY_TX_PREFIX SETTING_KEY_TX "."
 #define SETTING_KEY_TX_RF_POWER SETTING_KEY_TX_PREFIX "rf_power"
 #define SETTING_KEY_TX_INPUT SETTING_KEY_TX_PREFIX "input"
-#define SETTING_KEY_TX_CRSF_PIN SETTING_KEY_TX_PREFIX "crsf_pin"
 #define SETTING_KEY_TX_PILOT_NAME SETTING_KEY_TX_PREFIX "pilot_name"
+#define SETTING_KEY_TX_TX_PIN SETTING_KEY_TX_PREFIX "tx"
+#define SETTING_KEY_TX_RX_PIN SETTING_KEY_TX_PREFIX "rx"
 
 #define SETTING_KEY_RX "rx"
 #define SETTING_KEY_RX_PREFIX SETTING_KEY_RX "."
@@ -30,22 +34,15 @@
 #define SETTING_KEY_RX_OUTPUT SETTING_KEY_RX_PREFIX "output"
 #define SETTING_KEY_RX_AUTO_CRAFT_NAME SETTING_KEY_RX_PREFIX "auto_craft_name"
 #define SETTING_KEY_RX_CRAFT_NAME SETTING_KEY_RX_PREFIX "craft_name"
-
-#define SETTING_KEY_RX_SBUS_PIN SETTING_KEY_RX_PREFIX "sbus_pin"
+#define SETTING_KEY_RX_TX_PIN SETTING_KEY_RX_PREFIX "tx"
+#define SETTING_KEY_RX_RX_PIN SETTING_KEY_RX_PREFIX "rx"
 #define SETTING_KEY_RX_SBUS_INVERTED SETTING_KEY_RX_PREFIX "sbus_inverted"
-#define SETTING_KEY_RX_SPORT_PIN SETTING_KEY_RX_PREFIX "sport_pin"
 #define SETTING_KEY_RX_SPORT_INVERTED SETTING_KEY_RX_PREFIX "sport_inverted"
-
-#define SETTING_KEY_RX_MSP_TX_PIN SETTING_KEY_RX_PREFIX "msp_tx_pin"
-#define SETTING_KEY_RX_MSP_RX_PIN SETTING_KEY_RX_PREFIX "msp_rx_pin"
 #define SETTING_KEY_RX_MSP_BAUDRATE SETTING_KEY_RX_PREFIX "msp_baudrate"
-
-#define SETTING_KEY_RX_CRSF_TX_PIN SETTING_KEY_RX_PREFIX "crsf_tx_pin"
-#define SETTING_KEY_RX_CRSF_RX_PIN SETTING_KEY_RX_PREFIX "crsf_rx_pin"
-
-#define SETTING_KEY_RX_FPORT_TX_PIN SETTING_KEY_RX_PREFIX "fport_tx_pin"
-#define SETTING_KEY_RX_FPORT_RX_PIN SETTING_KEY_RX_PREFIX "fport_rx_pin"
 #define SETTING_KEY_RX_FPORT_INVERTED SETTING_KEY_RX_PREFIX "fport_inverted"
+
+#define SETTING_KEY_RX_CHANNEL_OUTPUTS "rx-chs"
+#define SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX SETTING_KEY_RX_CHANNEL_OUTPUTS "."
 
 #define SETTING_KEY_SCREEN "scr" // Using screen here makes esp32 NVS return "key-too-long"
 #define SETTING_KEY_SCREEN_PREFIX SETTING_KEY_SCREEN "."
@@ -78,6 +75,7 @@ typedef enum
     FOLDER_ID_ROOT = 1,
     FOLDER_ID_TX,
     FOLDER_ID_RX,
+    FOLDER_ID_RX_CHANNEL_OUTPUTS,
     FOLDER_ID_SCREEN,
     FOLDER_ID_RECEIVERS,
     FOLDER_ID_DEVICES,
@@ -207,6 +205,7 @@ void setting_format_value(char *buf, size_t size, const setting_t *setting);
 setting_cmd_flag_e setting_cmd_get_flags(const setting_t *setting);
 bool setting_cmd_exec(const setting_t *setting);
 
+int setting_rx_channel_output_get_pos(const setting_t *setting);
 int setting_receiver_get_rx_num(const setting_t *setting);
 
 void setting_increment(const setting_t *setting);
