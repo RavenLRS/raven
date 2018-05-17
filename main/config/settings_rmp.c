@@ -267,6 +267,7 @@ bool settings_rmp_setting_set_str_value(settings_rmp_setting_t *s, const char *v
     if (s->type == SETTING_TYPE_STRING)
     {
         strlcpy((char *)s->payload, val, sizeof(s->payload));
+        return true;
     }
     return false;
 }
