@@ -37,26 +37,46 @@ typedef struct rc_rmp_msp_s
     uint8_t payload[512];
 } PACKED rc_rmp_msp_t;
 
+static void rc_update_tx_pilot_name(rc_t *rc, time_micros_t now)
+{
+    char buf[AIR_MAX_NAME_LENGTH + 1];
+    air_addr_t addr;
+    const char *name = settings_get_key_string(SETTING_KEY_TX_PILOT_NAME);
+    if (!name || !name[0])
+    {
+        addr = config_get_addr();
+        air_addr_format(&addr, buf, sizeof(buf));
+        name = buf;
+    }
+    (void)TELEMETRY_SET_STR(&rc->data, TELEMETRY_ID_PILOT_NAME, name, now);
+}
+
+static void rc_update_rx_craft_name(rc_t *rc, time_micros_t now)
+{
+    char buf[AIR_MAX_NAME_LENGTH + 1];
+    air_addr_t addr;
+    const char *name = settings_get_key_string(SETTING_KEY_RX_CRAFT_NAME);
+    if (!name || !name[0])
+    {
+        addr = config_get_addr();
+        air_addr_format(&addr, buf, sizeof(buf));
+        name = buf;
+    }
+    (void)TELEMETRY_SET_STR(&rc->data, TELEMETRY_ID_CRAFT_NAME, name, now);
+}
+
 // Initialize local telemetry values
 static void rc_data_initialize(rc_t *rc)
 {
     char buf[AIR_MAX_NAME_LENGTH + 1];
     air_addr_t addr;
     air_info_t air_info;
-    const char *name;
     time_micros_t now = time_micros_now();
     int channels_num = RC_CHANNELS_NUM;
     switch (config_get_rc_mode())
     {
     case RC_MODE_TX:
-        name = settings_get_key_string(SETTING_KEY_TX_PILOT_NAME);
-        if (!name || !name[0])
-        {
-            addr = config_get_addr();
-            air_addr_format(&addr, buf, sizeof(buf));
-            name = buf;
-        }
-        (void)TELEMETRY_SET_STR(&rc->data, TELEMETRY_ID_PILOT_NAME, name, now);
+        rc_update_tx_pilot_name(rc, now);
         if (air_io_get_bound_addr(&rc->outputs.air.air, &addr))
         {
             if (!config_get_air_name(buf, sizeof(buf), &addr))
@@ -74,14 +94,7 @@ static void rc_data_initialize(rc_t *rc)
         rmp_set_name(rc->rmp, telemetry_get_str(rc_data_get_uplink_telemetry(&rc->data, TELEMETRY_ID_PILOT_NAME), TELEMETRY_ID_PILOT_NAME));
         break;
     case RC_MODE_RX:
-        name = settings_get_key_string(SETTING_KEY_RX_CRAFT_NAME);
-        if (!name || !name[0])
-        {
-            addr = config_get_addr();
-            air_addr_format(&addr, buf, sizeof(buf));
-            name = buf;
-        }
-        (void)TELEMETRY_SET_STR(&rc->data, TELEMETRY_ID_CRAFT_NAME, name, now);
+        rc_update_rx_craft_name(rc, now);
         if (air_io_get_bound_addr(&rc->inputs.air.air, &addr))
         {
             if (!config_get_air_name(buf, sizeof(buf), &addr))
@@ -835,6 +848,11 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
                 rc_invalidate_input(rc);
                 break;
             }
+
+            if (SETTING_IS(setting, SETTING_KEY_TX_PILOT_NAME))
+            {
+                rc_update_tx_pilot_name(rc, time_micros_now());
+            }
             break;
         case RC_MODE_RX:
             if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RX_PREFIX) &&
@@ -852,6 +870,10 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
             if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX))
             {
                 pwm_update_config();
+            }
+            if (SETTING_IS(setting, SETTING_KEY_RX_CRAFT_NAME))
+            {
+                rc_update_rx_craft_name(rc, time_micros_now());
             }
             break;
         }
