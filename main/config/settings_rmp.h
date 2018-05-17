@@ -51,7 +51,9 @@ typedef struct settings_rmp_read_req_s
     uint16_t setting_index; // zero indexed
 } PACKED settings_rmp_read_req_t;
 
-#define SETTING_RMP_SETTING_MAX_PAYLOAD_SIZE 64
+// XXX: 104 is the biggest payload we need to send the PWM
+// output names for 16 channels.
+#define SETTING_RMP_SETTING_MAX_PAYLOAD_SIZE 104
 
 typedef struct settings_rmp_write_req_s
 {

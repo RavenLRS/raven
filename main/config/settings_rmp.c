@@ -63,6 +63,13 @@ static void settings_rmp_send_setting(rmp_t *rmp, rmp_req_t *req, settings_rmp_m
         }
         resp->setting.payload[payload_pos] = '\0';
     }
+#if !defined(NDEBUG)
+    if (payload_pos >= SETTING_RMP_SETTING_MAX_PAYLOAD_SIZE)
+    {
+        LOG_E(TAG, "SETTING_RMP_SETTING_MAX_PAYLOAD_SIZE needs to be increased to %d", payload_pos + 1);
+        ASSERT(payload_pos < SETTING_RMP_SETTING_MAX_PAYLOAD_SIZE);
+    }
+#endif
     req->resp(req->resp_data, resp, settings_rmp_msg_size(resp));
 }
 
