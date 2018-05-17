@@ -30,6 +30,18 @@ static const char *TAG = "CRSF.Input";
 
 #define CRSF_INPUT_CMD_PING 48 // Sent by CRSF to "ping" a CMD setting that's being manipulated
 
+// XXX: OpenTX 2.2.1 doesn't consider -1dBm a valid value and ignores it.
+// To workaround the problem we send -1 as 0.
+// TODO: Check if OpenTX 2.2.2 fixes it.
+#define CRSF_RSSI_DBM(d) ({ \
+    int8_t __rssi = d;      \
+    if (__rssi == -1)       \
+    {                       \
+        __rssi = 0;         \
+    }                       \
+    __rssi;                 \
+})
+
 // These are the CRSF telemetry frames understood by OpenTX. We send
 // a frame every cycle after the radio has finished transmitting.
 static const crsf_frame_type_e radio_telemetry_frames[] = {
@@ -360,10 +372,8 @@ static void input_crsf_send_telemetry_frame(input_crsf_t *input, crsf_frame_type
             return;
         }
         frame.header.frame_size = CRSF_FRAME_SIZE(sizeof(crsf_link_stats_t));
-        // TODO: OpenTX 2.2 doesn't consider -1db a valid value and ignores it. See if
-        // 2.2.1 fixes it or if we need to send -1 as -2 or 0.
-        frame.stats.uplink_rssi_ant1 = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_RSSI_ANT1);
-        frame.stats.uplink_rssi_ant2 = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_RSSI_ANT2);
+        frame.stats.uplink_rssi_ant1 = CRSF_RSSI_DBM(TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_RSSI_ANT1));
+        frame.stats.uplink_rssi_ant2 = CRSF_RSSI_DBM(TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_RSSI_ANT2));
         frame.stats.uplink_lq = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_LINK_QUALITY);
         frame.stats.uplink_snr = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_SNR);
         // TODO: Values > 127 won't be correctly displayed. Should we make it an
@@ -371,7 +381,7 @@ static void input_crsf_send_telemetry_frame(input_crsf_t *input, crsf_frame_type
         frame.stats.active_antenna = TELEMETRY_GET_U8(rc_data, TELEMETRY_ID_RX_ACTIVE_ANT);
         frame.stats.rf_mode = 0; // TODO
         frame.stats.uplink_tx_power = input_crsf_get_tx_power(input);
-        frame.stats.downlink_rssi = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_TX_RSSI_ANT1);
+        frame.stats.downlink_rssi = CRSF_RSSI_DBM(TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_TX_RSSI_ANT1));
         frame.stats.downlink_lq = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_TX_LINK_QUALITY);
         frame.stats.downlink_snr = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_TX_SNR);
         break;
