@@ -914,10 +914,9 @@ static bool input_crsf_update(void *input, rc_data_t *data, time_micros_t now)
             // in the radio.
             input_crsf->next_resp_frame = now + RESPONSE_WAIT_INTERVAL_US;
         }
-        else
-        {
-            crsf_port_reset(&input_crsf->crsf);
-        }
+        // XXX: For now, we always reset the CRSF decoder since sometimes
+        // when using RMP we might end up with several frames in the queue.
+        crsf_port_reset(&input_crsf->crsf);
 
         input_crsf->last_isr = 0;
     }
