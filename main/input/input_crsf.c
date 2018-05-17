@@ -510,9 +510,16 @@ static void input_crsf_send_setting_frame(input_crsf_t *input_crsf, const settin
         // and default values (all uint8_t), the followed by a string
         // indicating the unit (or suffix).
         unsigned name_count = settings_rmp_setting_get_mapped_names_count(setting);
+        char val_name_buf[16];
         for (unsigned ii = 0; ii < name_count; ii++)
         {
             const char *val_name = settings_rmp_setting_get_mapped_name(setting, ii);
+            if (!val_name)
+            {
+                // Make sure malformed packets make us don't crash
+                snprintf(val_name_buf, sizeof(val_name_buf), "%u", ii);
+                val_name = val_name_buf;
+            }
             const char *c;
             for (c = val_name; *c; c++)
             {
