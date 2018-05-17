@@ -217,7 +217,7 @@ static int setting_format_rx_channel_output(char *buf, size_t size, const settin
         switch (fmt)
         {
         case SETTING_DYNAMIC_FORMAT_NAME:
-            return snprintf(buf, size, "Pin %-2d", pin);
+            return snprintf(buf, size, "Pin %2d", pin);
         case SETTING_DYNAMIC_FORMAT_VALUE:
             break;
         }
