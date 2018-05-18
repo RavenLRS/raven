@@ -375,7 +375,7 @@ static void input_crsf_send_telemetry_frame(input_crsf_t *input, crsf_frame_type
         frame.stats.uplink_rssi_ant1 = CRSF_RSSI_DBM(TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_RSSI_ANT1));
         frame.stats.uplink_rssi_ant2 = CRSF_RSSI_DBM(TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_RSSI_ANT2));
         frame.stats.uplink_lq = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_LINK_QUALITY);
-        frame.stats.uplink_snr = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_SNR);
+        frame.stats.uplink_snr = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_RX_SNR) / TELEMETRY_SNR_MULTIPLIER;
         // TODO: Values > 127 won't be correctly displayed. Should we make it an
         // int8_t telemetry value?
         frame.stats.active_antenna = TELEMETRY_GET_U8(rc_data, TELEMETRY_ID_RX_ACTIVE_ANT);
@@ -383,7 +383,7 @@ static void input_crsf_send_telemetry_frame(input_crsf_t *input, crsf_frame_type
         frame.stats.uplink_tx_power = input_crsf_get_tx_power(input);
         frame.stats.downlink_rssi = CRSF_RSSI_DBM(TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_TX_RSSI_ANT1));
         frame.stats.downlink_lq = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_TX_LINK_QUALITY);
-        frame.stats.downlink_snr = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_TX_SNR);
+        frame.stats.downlink_snr = TELEMETRY_GET_I8(rc_data, TELEMETRY_ID_TX_SNR) / TELEMETRY_SNR_MULTIPLIER;
         break;
     case CRSF_FRAMETYPE_ATTITUDE:
         frame.header.frame_size = CRSF_FRAME_SIZE(sizeof(crsf_attitude_t));
