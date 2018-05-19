@@ -7,6 +7,8 @@
 #include "air/air.h"
 #include "air/air_lora.h"
 
+#include "rc/rc_data.h"
+
 #define CONFIG_MAX_PAIRED_RX 32 // Max RX paired to a TX
 
 typedef struct air_pairing_s air_pairing_t;
@@ -41,6 +43,47 @@ typedef enum
     RX_OUTPUT_FIRST = RX_OUTPUT_MSP,
     RX_OUTPUT_LAST = RX_OUTPUT_NONE,
 } rx_output_type_e;
+
+typedef enum
+{
+    RX_RSSI_CHANNEL_AUTO,
+    RX_RSSI_CHANNEL_NONE,
+    RX_RSSI_CHANNEL_1,
+    RX_RSSI_CHANNEL_2,
+    RX_RSSI_CHANNEL_3,
+    RX_RSSI_CHANNEL_4,
+    RX_RSSI_CHANNEL_5,
+    RX_RSSI_CHANNEL_6,
+    RX_RSSI_CHANNEL_7,
+    RX_RSSI_CHANNEL_8,
+    RX_RSSI_CHANNEL_9,
+    RX_RSSI_CHANNEL_10,
+    RX_RSSI_CHANNEL_11,
+    RX_RSSI_CHANNEL_12,
+#if RC_CHANNELS_NUM > 12
+    RX_RSSI_CHANNEL_13,
+    RX_RSSI_CHANNEL_14,
+    RX_RSSI_CHANNEL_15,
+    RX_RSSI_CHANNEL_16,
+#if RC_CHANNELS_NUM > 16
+    RX_RSSI_CHANNEL_17,
+    RX_RSSI_CHANNEL_18,
+#if RC_CHANNELS_NUM > 18
+    RX_RSSI_CHANNEL_19,
+    RX_RSSI_CHANNEL_20,
+#endif
+#endif
+#endif
+    RX_RSSI_CHANNEL_COUNT,
+} rx_rssi_channel_e;
+
+inline int rx_rssi_channel_index(rx_rssi_channel_e ch)
+{
+    return ch > RX_RSSI_CHANNEL_NONE ? ch - 2 : -1;
+}
+
+_Static_assert(RC_CHANNELS_NUM == 12 || RC_CHANNELS_NUM == 16 || RC_CHANNELS_NUM == 18 || RC_CHANNELS_NUM == 20, "Adjust rx_rssi_channel_e to support RC_CHANNELS_NUM");
+_Static_assert(RX_RSSI_CHANNEL_COUNT == RC_CHANNELS_NUM + 2, "RX_RSSI_CHANNEL_COUNT is not valid for the number of channels");
 
 // Used to store it as a setting, since settings need continuous
 // values starting at zero.

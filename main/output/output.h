@@ -111,7 +111,8 @@ typedef struct output_fc_s
     char fw_variant[4]; // 4-char code
     uint8_t fw_version[3];
     time_micros_t next_fw_update;
-    uint8_t rssi_channel;
+    int8_t rssi_channel;
+    bool rssi_channel_auto;
     output_msp_poll_t polls[OUTPUT_FC_MAX_NUM_POLLS];
 } output_fc_t;
 

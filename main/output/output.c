@@ -103,7 +103,7 @@ static void output_msp_configure_polling_common(output_t *output)
     {
         output->craft_name_setting = NULL;
     }
-    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI))
+    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI) && output->fc.rssi_channel_auto)
     {
         output_msp_configure_poll(output, MSP_RSSI_CONFIG, SECS_TO_MICROS(10));
     }
@@ -170,7 +170,10 @@ static void output_msp_callback(msp_conn_t *conn, uint16_t cmd, const void *payl
     case MSP_RSSI_CONFIG:
         if (size == 1)
         {
-            output->fc.rssi_channel = *((const uint8_t *)payload);
+            // MSP based FCs return 0 to mean disabled, non-zero to indicate
+            // that the channel number (from 1) is the RSSI channel.
+            uint8_t fc_rssi_channel = *((const uint8_t *)payload);
+            output->fc.rssi_channel = fc_rssi_channel > 0 ? fc_rssi_channel - 1 : 0;
         }
         break;
     }
@@ -209,6 +212,22 @@ bool output_open(rc_data_t *data, output_t *output, void *config)
         rc_data_reset_output(data);
         output->rc_data = data;
         memset(&output->fc, 0, sizeof(output_fc_t));
+        rx_rssi_channel_e rssi_channel = settings_get_key_u8(SETTING_KEY_RX_RSSI_CHANNEL);
+        switch (rssi_channel)
+        {
+        case RX_RSSI_CHANNEL_AUTO:
+            output->fc.rssi_channel_auto = true;
+            output->fc.rssi_channel = -1;
+            break;
+        case RX_RSSI_CHANNEL_NONE:
+            output->fc.rssi_channel_auto = false;
+            output->fc.rssi_channel = -1;
+            break;
+        default:
+            output->fc.rssi_channel_auto = false;
+            output->fc.rssi_channel = rx_rssi_channel_index(rssi_channel);
+            break;
+        }
         output->telemetry_updated = telemetry_updated_callback;
         output->telemetry_calculate = telemetry_calculate_callback;
         output->craft_name_setting = NULL;
@@ -242,9 +261,9 @@ bool output_update(output_t *output, time_micros_t now)
             {
                 uint16_t channel_value;
                 control_channel_t *rssi_channel = NULL;
-                if (output->fc.rssi_channel > 0)
+                if (output->fc.rssi_channel >= 0 && output->fc.rssi_channel < RC_CHANNELS_NUM)
                 {
-                    rssi_channel = &output->rc_data->channels[output->fc.rssi_channel - 1];
+                    rssi_channel = &output->rc_data->channels[output->fc.rssi_channel];
                     uint8_t lq = TELEMETRY_GET_I8(output->rc_data, TELEMETRY_ID_RX_LINK_QUALITY);
                     lq = MIN(MAX(0, lq), 100);
                     channel_value = rssi_channel->value;

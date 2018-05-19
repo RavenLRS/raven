@@ -170,6 +170,11 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
         return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
     }
 
+    if (SETTING_IS(setting, SETTING_KEY_RX_RSSI_CHANNEL))
+    {
+        return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
+    }
+
     if (SETTING_IS(setting, SETTING_KEY_RX_SBUS_INVERTED) || SETTING_IS(setting, SETTING_KEY_RX_SPORT_INVERTED))
     {
         return SETTING_SHOW_IF(config_get_output_type() == RX_OUTPUT_SBUS_SPORT);
@@ -308,6 +313,36 @@ static const char *config_air_modes_table[] = {
 _Static_assert(ARRAY_COUNT(config_air_modes_table) == CONFIG_AIR_MODES_COUNT, "CONFIG_AIR_MODES_COUNT is invalid");
 static const char *rx_output_table[] = {"MSP", "CRSF", "FPort", "SBUS/Smartport", "Channels"};
 static const char *msp_baudrate_table[] = {"115200"};
+static const char *rssi_channel_table[] = {
+    "Auto",
+    "None",
+    "CH 1",
+    "CH 2",
+    "CH 3",
+    "CH 4",
+    "CH 5",
+    "CH 6",
+    "CH 7",
+    "CH 8",
+    "CH 9",
+    "CH 10",
+    "CH 11",
+    "CH 12",
+#if RC_CHANNELS_NUM > 12
+    "CH 13",
+    "CH 14",
+    "CH 15",
+    "CH 16",
+#if RC_CHANNELS_NUM > 16
+    "CH 17",
+    "CH 18",
+#if RC_CHANNELS_NUM > 18
+    "CH 19",
+    "CH 20",
+#endif
+#endif
+#endif
+};
 static const char *screen_orientation_table[] = {"Horizontal", "Horizontal (buttons at the right)", "Vertical", "Vertical (buttons on top)"};
 static const char *screen_brightness_table[] = {"Low", "Medium", "High"};
 static const char *screen_autopoweroff_table[] = {"Disabled", "30 sec", "1 min", "5 min", "10 min"};
@@ -354,6 +389,7 @@ static const setting_t settings[] = {
     U8_MAP_SETTING(SETTING_KEY_RX_OUTPUT, "Output", 0, FOLDER_ID_RX, rx_output_table, RX_OUTPUT_MSP),
     PIN_SETTING(SETTING_KEY_RX_TX_PIN, "TX Pin", FOLDER_ID_RX, PIN_DEFAULT_TX_IDX),
     PIN_SETTING(SETTING_KEY_RX_RX_PIN, "RX Pin", FOLDER_ID_RX, PIN_DEFAULT_RX_IDX),
+    U8_MAP_SETTING(SETTING_KEY_RX_RSSI_CHANNEL, "RSSI Channel", 0, FOLDER_ID_RX, rssi_channel_table, RX_RSSI_CHANNEL_AUTO),
     BOOL_YN_SETTING(SETTING_KEY_RX_SBUS_INVERTED, "SBUS Inverted", 0, FOLDER_ID_RX, true),
     BOOL_YN_SETTING(SETTING_KEY_RX_SPORT_INVERTED, "S.Port Inverted", 0, FOLDER_ID_RX, true),
     U8_MAP_SETTING(SETTING_KEY_RX_MSP_BAUDRATE, "MSP Baudrate", 0, FOLDER_ID_RX, msp_baudrate_table, MSP_SERIAL_BAUDRATE_FIRST),
