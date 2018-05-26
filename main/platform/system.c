@@ -40,6 +40,11 @@ bool system_awake_from_deep_sleep(void)
     return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED;
 }
 
+void system_reboot(void)
+{
+    esp_restart();
+}
+
 void system_shutdown(void)
 {
     // Wait until the button is released if it's now low

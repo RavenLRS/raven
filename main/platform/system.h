@@ -17,4 +17,5 @@ system_flag_e system_remove_flag(system_flag_e flag);
 bool system_has_flag(system_flag_e flag);
 
 bool system_awake_from_deep_sleep(void);
+void system_reboot(void);
 void system_shutdown(void);

@@ -12,6 +12,7 @@
 #define MILLIS_PER_SEC (1000)
 
 typedef TickType_t time_ticks_t;
+typedef uint32_t time_millis_t;
 typedef uint64_t time_micros_t;
 
 #define TIME_MICROS_MAX UINT64_MAX
@@ -29,6 +30,11 @@ typedef uint64_t time_micros_t;
 inline time_ticks_t time_ticks_now(void)
 {
     return xTaskGetTickCount();
+}
+
+inline time_millis_t time_millis_now(void)
+{
+    return xTaskGetTickCount() * portTICK_PERIOD_MS;
 }
 
 inline void time_millis_delay(unsigned ms)

@@ -74,6 +74,7 @@ typedef struct rc_s
 
     struct
     {
+        rc_mode_e rc_mode;
         bool invalidate_input;
         bool invalidate_output;
         bool bind_requested;

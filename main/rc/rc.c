@@ -12,6 +12,9 @@
 #include "io/lora.h"
 #include "io/pwm.h"
 
+#include "platform/dispatch.h"
+#include "platform/system.h"
+
 #include "rc/rc-private.h"
 #include "rc/rc_data.h"
 
@@ -73,7 +76,7 @@ static void rc_data_initialize(rc_t *rc)
     air_info_t air_info;
     time_micros_t now = time_micros_now();
     int channels_num = RC_CHANNELS_NUM;
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         rc_update_tx_pilot_name(rc, now);
@@ -128,7 +131,7 @@ static void rc_data_initialize(rc_t *rc)
 
 static void rc_invalidate_air(rc_t *rc)
 {
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         rc_invalidate_output(rc);
@@ -153,7 +156,7 @@ static bool rc_should_enable_power_test(rc_t *rc)
 
 static air_io_t *rc_get_air_io(rc_t *rc)
 {
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         if (rc->state.bind_active)
@@ -180,7 +183,7 @@ static bool rc_get_pair_addr(rc_t *rc, air_addr_t *addr)
 
 static air_lora_band_e rc_get_air_lora_band(rc_t *rc)
 {
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
     {
@@ -236,7 +239,7 @@ static void rc_pair_air_config_updated(rc_t *rc)
 void rc_get_air_lora_config(rc_t *rc, air_lora_config_t *lora)
 {
     air_lora_supported_modes_e supported_modes = 0;
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         // TX Supports all modes for now
@@ -294,7 +297,7 @@ static void rc_reconfigure_input(rc_t *rc)
     memset(&rc->inputs, 0, sizeof(rc->inputs));
     air_pairing_t pairing;
     air_lora_config_t lora;
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         switch (config_get_input_type())
@@ -372,7 +375,7 @@ static void rc_reconfigure_output(rc_t *rc)
     memset(&rc->outputs, 0, sizeof(rc->outputs));
     air_pairing_t pairing;
     air_lora_config_t lora;
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
     {
@@ -499,7 +502,7 @@ static void rc_update_binding(rc_t *rc)
         LOG_I(TAG, "Bind done");
         air_bind_packet_get_pairing(&packet, &pairing);
         air_io_bind(air_io, &pairing);
-        switch (config_get_rc_mode())
+        switch (rc_get_mode(rc))
         {
         case RC_MODE_TX:
             config_add_paired_rx(&pairing);
@@ -542,7 +545,7 @@ static void rc_rssi_update(rc_t *rc)
     float snr = lpf_value(&air_io->snr);
     int8_t lq = lpf_value(&air_io->lq);
     time_micros_t now = time_micros_now();
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RSSI_ANT1, rssi, now);
@@ -642,13 +645,13 @@ static void rc_rmp_msp_request_handler(rmp_t *rmp, rmp_req_t *req, void *user_da
 {
     // Note that typically this will be run on core 0, while the RC
     // pipeline runs on core 1. TODO: Add locking
+    rc_t *rc = user_data;
 
     // Got an MSP request from the TX via RMP
-    if (config_get_rc_mode() != RC_MODE_RX || !rc_rmp_msp_validate(req))
+    if (rc_get_mode(rc) != RC_MODE_RX || !rc_rmp_msp_validate(req))
     {
         return;
     }
-    rc_t *rc = user_data;
     msp_conn_t *request_output = msp_io_get_conn(&rc->output->msp);
     if (request_output)
     {
@@ -670,7 +673,8 @@ static void rc_rmp_msp_request_handler(rmp_t *rmp, rmp_req_t *req, void *user_da
 static void rc_rmp_msp_response_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
 {
     // Got an MSP response from RX via RMP
-    if (config_get_rc_mode() != RC_MODE_TX || !rc_rmp_msp_validate(req))
+    // TODO: Make sure we're in TX mode
+    if (!rc_rmp_msp_validate(req))
     {
         return;
     }
@@ -729,7 +733,7 @@ static void rc_msp_request_callback(msp_conn_t *conn, uint16_t cmd, const void *
 {
     // Request coming from input's MSP has been decoded. Sent it to the output's MSP.
     rc_t *rc = callback_data;
-    if (config_get_rc_mode() == RC_MODE_TX)
+    if (rc_get_mode(rc) == RC_MODE_TX)
     {
         // If we're a TX, try to send it via RMP
         air_io_t *air_io = rc_get_air_io(rc);
@@ -779,8 +783,8 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
 
     if (STR_EQUAL(setting->key, SETTING_KEY_RC_MODE))
     {
-        rc_invalidate_input(rc);
-        rc_invalidate_output(rc);
+        // Reboot after 500ms to allow the setting to be written
+        dispatch_after((dispatch_fn)system_reboot, NULL, 500);
     }
     else if (STR_EQUAL(setting->key, SETTING_KEY_BIND))
     {
@@ -797,7 +801,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
     }
     else
     {
-        switch (config_get_rc_mode())
+        switch (rc_get_mode(rc))
         {
         case RC_MODE_TX:
             if (STR_EQUAL(setting->key, SETTING_KEY_TX_RF_POWER))
@@ -883,7 +887,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
 static bool rc_should_autostart_bind(rc_t *rc)
 {
     air_pairing_t pairing;
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         return !config_get_paired_rx(&pairing, NULL);
@@ -911,6 +915,7 @@ static inline bool rc_should_update_output(rc_t *rc)
 void rc_init(rc_t *rc, lora_t *lora, rmp_t *rmp)
 {
     memset(rc, 0, sizeof(*rc));
+    rc->state.rc_mode = config_get_rc_mode();
 
     rc->lora = lora;
     rc->rmp = rmp;
@@ -952,7 +957,10 @@ void rc_init(rc_t *rc, lora_t *lora, rmp_t *rmp)
 
 rc_mode_e rc_get_mode(const rc_t *rc)
 {
-    return config_get_rc_mode();
+    // TODO: This prevents the linker from doing dead code
+    // elimination when not using both TX and RX support,
+    // wasting ~30K of flash.
+    return rc->state.rc_mode;
 }
 
 bool rc_is_binding(const rc_t *rc)
@@ -994,7 +1002,7 @@ static bool rc_is_input_failsafe_active(const rc_t *rc, failsafe_reason_e *reaso
     {
         if (reason)
         {
-            switch (config_get_rc_mode())
+            switch (rc_get_mode(rc))
             {
             case RC_MODE_TX:
                 // Radio not responding
@@ -1026,7 +1034,7 @@ static bool rc_is_output_failsafe_active(const rc_t *rc, failsafe_reason_e *reas
     {
         if (reason)
         {
-            switch (config_get_rc_mode())
+            switch (rc_get_mode(rc))
             {
             case RC_MODE_TX:
                 // Can't see RX telemetry on air
@@ -1050,7 +1058,7 @@ bool rc_is_failsafe_active(const rc_t *rc, failsafe_reason_e *reason)
 
 int rc_get_rssi_db(rc_t *rc)
 {
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         // Return the RX RSSI
@@ -1065,7 +1073,7 @@ int rc_get_rssi_db(rc_t *rc)
 
 float rc_get_snr(rc_t *rc)
 {
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         // Return the RX SNR
@@ -1080,7 +1088,7 @@ float rc_get_snr(rc_t *rc)
 
 int rc_get_rssi_percentage(rc_t *rc)
 {
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         // Return the RX LQ
@@ -1191,7 +1199,7 @@ void rc_switch_pairing(rc_t *rc, air_pairing_t *pairing)
 {
     rc_dismiss_alternative_pairings(rc);
 
-    switch (config_get_rc_mode())
+    switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         if (pairing)
@@ -1266,7 +1274,7 @@ void rc_update(rc_t *rc)
         // so the previously or new (if any) bound endpoint
         // is configured when stopping bind without binding
         // with a new device.
-        switch (config_get_rc_mode())
+        switch (rc_get_mode(rc))
         {
         case RC_MODE_TX:
             rc_invalidate_output(rc);
