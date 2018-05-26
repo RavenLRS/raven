@@ -33,13 +33,15 @@ to 150hz with telemetry or 200hz without telemetry in the near future.
 
 ## Building Raven
 
-Raven is built on top of [esp-idf V3.0](https://github.com/espressif/esp-idf), so as a first step to build raven you should install and configure it.
+Raven is built on top of [esp-idf V3.0](https://github.com/espressif/esp-idf), so as a first step to build raven you should install and configure it. Make sure to install version 3.0 by running
+`git checkout v3.0` (their instructions will give you the development version, not a stable one).
+Download the required submodules by running `git submodule init` followed by `git submodule update -r` in the same directory that you have cloned the esp-idf repository.
 
-Make sure all the requires submodules have been checked out by running `git submodule init` followed by `git submodule update`.
+Clone the Raven repository by running `git clone --recursive https://github.com/RavenLRS/raven.git`. Don't
+forget the `--recursive` option, since Raven uses submodules.
 
-Then, use `make menuconfig` to configure how you want to build Raven. Raven specific options (board, frequencies, TX or RX support, etc...)
-are found under `Components -> Raven LRS`. Note that there ESP related options that you might want to adjust (for example, the serial port
-used to communicate with the board).
+From the directory where you've cloned Raven, use `make menuconfig` to configure how you want to build Raven. Raven specific options (board, frequencies, TX or RX support, etc...) are found under 
+`Components -> Raven LRS`. Note that there ESP related options that you might want to adjust (for example, the serial port used to communicate with the board).
 
 Finally, type `make flash` to flash and reboot the board. If you want to see the debug logs, you can use the builtin esp-idf monitor by
 running `make monitor`.
