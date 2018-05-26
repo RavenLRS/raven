@@ -33,8 +33,11 @@
 #define CRSF_FRAME_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
 
 // Macros for big-endian (assume little endian host for now)
-#define CRSF_U16(x) ((((uint16_t)x) << 8 & 0xFF) | ((uint16_t)x) >> 8)
-#define CRSF_I16(x) ((int16_t)CRSF_U16(x))
+#define CRSF_DEC_U16(x) ((uint16_t)__builtin_bswap16(x))
+#define CRSF_DEC_I16(x) ((int16_t)CRSF_DEC_U16(x))
+#define CRSF_DEC_U24(x) (CRSF_DEC_U32((uint32_t)x << 8))
+#define CRSF_DEC_U32(x) ((uint32_t)__builtin_bswap32(x))
+#define CRSF_DEC_I32(x) ((int32_t)CRSF_DEC_U32(x))
 
 #define CRSF_MSP_REQ_PAYLOAD_SIZE 8
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58

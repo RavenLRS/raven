@@ -10,12 +10,28 @@
 
 #define CRSF_SERIAL_BUFFER_SIZE 256
 #define CRSF_PING_INTERVAL SECS_TO_MICROS(10)
+#define DECIKMH_TO_CMS(x) (x * (10.0f / 3.6f))
 
 static const char *TAG = "CRSF.Output";
 
-static int16_t crsf_angle(int16_t val)
+static int16_t crsf_dec_att_angle(int16_t val)
 {
-    return val / (1000.0f * (M_PI / 180.0f));
+    return CRSF_DEC_I16(val) * (100 / (10000.0f * (M_PI / 180.0f)));
+}
+
+static uint16_t crsf_dec_att_heading(uint16_t val)
+{
+    return CRSF_DEC_U16(val) * (100 / (10000.0f * (M_PI / 180.0f)));
+}
+
+static int16_t crsf_dec_att_z(int16_t val)
+{
+    int32_t v = crsf_dec_att_heading(val);
+    if (v > 180 * 100)
+    {
+        v -= 360 * 100;
+    }
+    return v;
 }
 
 static void output_crsf_frame_callback(void *data, crsf_frame_t *frame)
@@ -23,16 +39,28 @@ static void output_crsf_frame_callback(void *data, crsf_frame_t *frame)
     output_crsf_t *output = data;
     switch (frame->header.type)
     {
+    case CRSF_FRAMETYPE_GPS:
+        OUTPUT_TELEMETRY_UPDATE_I32(output, TELEMETRY_ID_GPS_LAT, CRSF_DEC_I32(frame->gps.lat));
+        OUTPUT_TELEMETRY_UPDATE_I32(output, TELEMETRY_ID_GPS_LON, CRSF_DEC_I32(frame->gps.lon));
+        OUTPUT_TELEMETRY_UPDATE_U16(output, TELEMETRY_ID_GPS_SPEED, DECIKMH_TO_CMS(CRSF_DEC_U16(frame->gps.ground_speed)));
+        OUTPUT_TELEMETRY_UPDATE_U16(output, TELEMETRY_ID_GPS_HEADING, CRSF_DEC_U16(frame->gps.heading));
+        OUTPUT_TELEMETRY_UPDATE_I32(output, TELEMETRY_ID_ALTITUDE, (CRSF_DEC_U16(frame->gps.altitude) - 1000) * 100);
+        OUTPUT_TELEMETRY_UPDATE_U8(output, TELEMETRY_ID_GPS_NUM_SATS, frame->gps.sats);
+        break;
     case CRSF_FRAMETYPE_ATTITUDE:
-        OUTPUT_TELEMETRY_UPDATE_I16(output, TELEMETRY_ID_ATTITUDE_X, crsf_angle(frame->attitude.pitch));
-        OUTPUT_TELEMETRY_UPDATE_I16(output, TELEMETRY_ID_ATTITUDE_Y, crsf_angle(frame->attitude.roll));
-        OUTPUT_TELEMETRY_UPDATE_I16(output, TELEMETRY_ID_ATTITUDE_Z, crsf_angle(frame->attitude.yaw));
+        OUTPUT_TELEMETRY_UPDATE_I16(output, TELEMETRY_ID_ATTITUDE_X, crsf_dec_att_angle(frame->attitude.pitch));
+        OUTPUT_TELEMETRY_UPDATE_I16(output, TELEMETRY_ID_ATTITUDE_Y, crsf_dec_att_angle(frame->attitude.roll));
+        // Note that INAV/BF/CF send yaw as [0, 360), so we use that as TELEMETRY_ID_HEADING
+        // and convert it to (-180, 180) for TELEMETRY_ID_ATTITUDE_Z. Be careful with overflow,
+        // since yaw might be bigger than 2^15 - 1 and won't fit in an int16_t, causing wrapping.
+        OUTPUT_TELEMETRY_UPDATE_I16(output, TELEMETRY_ID_ATTITUDE_Z, crsf_dec_att_z(frame->attitude.yaw));
+        OUTPUT_TELEMETRY_UPDATE_U16(output, TELEMETRY_ID_HEADING, crsf_dec_att_heading(frame->attitude.yaw));
         break;
     case CRSF_FRAMETYPE_BATTERY_SENSOR:
-        OUTPUT_TELEMETRY_UPDATE_U16(output, TELEMETRY_ID_BAT_VOLTAGE, CRSF_U16(frame->battery_sensor.voltage) * 10);
-        OUTPUT_TELEMETRY_UPDATE_I16(output, TELEMETRY_ID_CURRENT, CRSF_U16(frame->battery_sensor.current) * 10);
-#warning implement fuel
-        //        ESP_LOG_BUFFER_HEX(TAG, &frame->battery_sensor.fuel, 4);
+        OUTPUT_TELEMETRY_UPDATE_U16(output, TELEMETRY_ID_BAT_VOLTAGE, CRSF_DEC_U16(frame->battery_sensor.voltage) * 10);
+        OUTPUT_TELEMETRY_UPDATE_I16(output, TELEMETRY_ID_CURRENT, CRSF_DEC_U16(frame->battery_sensor.current) * 10);
+        OUTPUT_TELEMETRY_UPDATE_I32(output, TELEMETRY_ID_CURRENT_DRAWN, CRSF_DEC_U24(frame->battery_sensor.mah_drawn));
+        OUTPUT_TELEMETRY_UPDATE_U8(output, TELEMETRY_ID_BAT_REMAINING_P, frame->battery_sensor.percentage_remaining);
         break;
     case CRSF_FRAMETYPE_FLIGHT_MODE:
         OUTPUT_TELEMETRY_UPDATE_STRING(output, TELEMETRY_ID_FLIGHT_MODE_NAME, crsf_frame_str(frame), -1);

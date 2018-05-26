@@ -69,13 +69,13 @@ typedef enum
     TELEMETRY_ID_BAT_REMAINING_P,  // uint8_t: Battery remaining percentage
     TELEMETRY_ID_ALTITUDE,         // int32_t: altitude (positive or negative) in cm (might come from baro)
     TELEMETRY_ID_VERTICAL_SPEED,   // int16_t: Vertical speed in cm/s
-    TELEMETRY_ID_HEADING,          // uint16_t: Heading in 0.01deg [0, 360] - TODO: Would [-180,180] be better?
+    TELEMETRY_ID_HEADING,          // uint16_t: Heading in 0.01deg [0, 360)
     TELEMETRY_ID_ACC_X,            // int32_t: Acceleration on X axis 0.01G
     TELEMETRY_ID_ACC_Y,            // int32_t: Acceleration on Y axis 0.01G
     TELEMETRY_ID_ACC_Z,            // int32_t: Acceleration on Z axis 0.01G
-    TELEMETRY_ID_ATTITUDE_X,       // int16_t: Attitude on X (pitch) 0.1 degree. Range [-180, 180].
-    TELEMETRY_ID_ATTITUDE_Y,       // int16_t: Attitude on Y (roll) 0.1 degree. Range [-180, 180].
-    TELEMETRY_ID_ATTITUDE_Z,       // int16_t: Attitude on Z (yaw) 0.1 degree. Range [-180, 180].
+    TELEMETRY_ID_ATTITUDE_X,       // int16_t: Attitude on X (pitch) 0.01 degree. Range (-180, 180).
+    TELEMETRY_ID_ATTITUDE_Y,       // int16_t: Attitude on Y (roll) 0.01 degree. Range (-180, 180).
+    TELEMETRY_ID_ATTITUDE_Z,       // int16_t: Attitude on Z (yaw) 0.01 degree. Range (-180, 180).
     TELEMETRY_ID_GPS_FIX,          // uint8_t: telemetry_gps_fix_type_e
     TELEMETRY_ID_GPS_NUM_SATS,     // uint8_t: num of sats
     TELEMETRY_ID_GPS_LAT,          // int32_t: degree / 10`000`000
