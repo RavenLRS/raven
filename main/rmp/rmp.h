@@ -119,15 +119,15 @@ void rmp_set_name(rmp_t *rmp, const char *name);
 int rmp_get_name(rmp_t *rmp, char *name, size_t size);
 void rmp_set_role(rmp_t *rmp, air_role_e role);
 void rmp_set_pairing(rmp_t *rmp, air_pairing_t *pairing);
-bool rmp_can_authenticate_peer(rmp_t *rmp, air_addr_t *addr);
-bool rmp_has_p2p_peer(rmp_t *rmp, air_addr_t *addr);
+bool rmp_can_authenticate_peer(rmp_t *rmp, const air_addr_t *addr);
+bool rmp_has_p2p_peer(rmp_t *rmp, const air_addr_t *addr);
 void rmp_get_p2p_counts(rmp_t *rmp, int *tx_count, int *rx_count, bool *has_pairing_as_peer);
 
 // Open/close ports and send
 const rmp_port_t *rmp_open_port(rmp_t *rmp, uint8_t number, rmp_port_f handler, void *user_data);
 void rmp_close_port(rmp_t *rmp, const rmp_port_t *port);
-bool rmp_send(rmp_t *rmp, const rmp_port_t *port, air_addr_t dst, int dst_port, const void *payload, size_t size);
-bool rmp_send_flags(rmp_t *rmp, const rmp_port_t *port, air_addr_t dst, int dst_port, const void *payload, size_t size, rmp_send_flags_e flags);
+bool rmp_send(rmp_t *rmp, const rmp_port_t *port, const air_addr_t *dst, int dst_port, const void *payload, size_t size);
+bool rmp_send_flags(rmp_t *rmp, const rmp_port_t *port, const air_addr_t *dst, int dst_port, const void *payload, size_t size, rmp_send_flags_e flags);
 bool rmp_send_loopback(rmp_t *rmp, const rmp_port_t *port, int dst_port, const void *payload, size_t size);
 
 // Transports

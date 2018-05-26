@@ -34,7 +34,7 @@ void rmp_air_set_bound_addr(rmp_air_t *rmp_air, air_addr_t *bound_addr)
     }
     else
     {
-        rmp_air->bound_addr = AIR_ADDR_INVALID;
+        rmp_air->bound_addr = *AIR_ADDR_INVALID;
     }
 }
 
@@ -151,7 +151,7 @@ void rmp_air_decode(rmp_air_t *rmp_air, const void *data, size_t size)
     {
         if (flags & RMP_AIR_MSG_BROADCAST)
         {
-            msg.dst = AIR_ADDR_BROADCAST;
+            msg.dst = *AIR_ADDR_BROADCAST;
         }
         else
         {

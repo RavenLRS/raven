@@ -45,7 +45,7 @@ typedef struct rmp_resp_data_s
     uint8_t dst_port;
 } rmp_resp_data_t;
 
-static rmp_peer_t *rmp_get_peer(rmp_t *rmp, air_addr_t *addr)
+static rmp_peer_t *rmp_get_peer(rmp_t *rmp, const air_addr_t *addr)
 {
     for (int ii = 0; ii < RMP_MAX_PEERS; ii++)
     {
@@ -88,7 +88,7 @@ static rmp_peer_t *rmp_add_peer(rmp_t *rmp, air_addr_t *addr)
     return NULL;
 }
 
-static bool rmp_get_peer_key(rmp_t *rmp, air_key_t *key, air_addr_t *addr)
+static bool rmp_get_peer_key(rmp_t *rmp, air_key_t *key, const air_addr_t *addr)
 {
     air_pairing_t pairing;
     if (config_get_pairing(&pairing, addr))
@@ -142,7 +142,7 @@ static bool rmp_port_number_is_free(rmp_t *rmp, uint8_t n)
 static void rmp_send_response(const void *data, const void *payload, size_t size)
 {
     const rmp_resp_data_t *resp_data = data;
-    rmp_send(resp_data->rmp, resp_data->src_port, resp_data->dst, resp_data->dst_port, payload, size);
+    rmp_send(resp_data->rmp, resp_data->src_port, &resp_data->dst, resp_data->dst_port, payload, size);
 }
 
 static void rmp_remove_stale_peers(rmp_t *rmp, time_ticks_t now)
@@ -177,7 +177,7 @@ static void rmp_update_peers_info(rmp_t *rmp, time_ticks_t now)
         rmp_peer_t *peer = &rmp->internal.peers[ii];
         if (peer->last_seen > 0 && peer->last_info_update < threshold && peer->last_info_req < now - SECS_TO_TICKS(10))
         {
-            rmp_send(rmp, NULL, peer->addr, RMP_PORT_DEVICE, &code, sizeof(code));
+            rmp_send(rmp, NULL, &peer->addr, RMP_PORT_DEVICE, &code, sizeof(code));
             peer->last_info_req = now;
         }
     }
@@ -189,7 +189,7 @@ static void rmp_update_peers(rmp_t *rmp, time_ticks_t now)
     rmp_update_peers_info(rmp, now);
 }
 
-static void rmp_send_device_info(rmp_t *rmp, air_addr_t dst)
+static void rmp_send_device_info(rmp_t *rmp, const air_addr_t *dst)
 {
     rmp_device_frame_t frame = {
         .code = RMP_DEVICE_CODE_INFO,
@@ -222,7 +222,7 @@ static void rmp_device_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
     switch ((rmp_device_code_e)frame->code)
     {
     case RMP_DEVICE_CODE_REQ_INFO:
-        rmp_send_device_info(rmp, req->msg->src);
+        rmp_send_device_info(rmp, &req->msg->src);
         break;
     case RMP_DEVICE_CODE_INFO:
         peer->role = frame->device_info.role;
@@ -349,7 +349,7 @@ void rmp_set_pairing(rmp_t *rmp, air_pairing_t *pairing)
     }
 }
 
-bool rmp_can_authenticate_peer(rmp_t *rmp, air_addr_t *addr)
+bool rmp_can_authenticate_peer(rmp_t *rmp, const air_addr_t *addr)
 {
     if (air_addr_equals(&rmp->internal.addr, addr))
     {
@@ -363,7 +363,7 @@ bool rmp_can_authenticate_peer(rmp_t *rmp, air_addr_t *addr)
     return false;
 }
 
-bool rmp_has_p2p_peer(rmp_t *rmp, air_addr_t *addr)
+bool rmp_has_p2p_peer(rmp_t *rmp, const air_addr_t *addr)
 {
     rmp_peer_t *peer = rmp_get_peer(rmp, addr);
     return peer && peer->last_seen > 0; // RC peers have last_seen == 0
@@ -445,30 +445,30 @@ void rmp_close_port(rmp_t *rmp, const rmp_port_t *port)
     }
 }
 
-bool rmp_send(rmp_t *rmp, const rmp_port_t *port, air_addr_t dst, int dst_port, const void *payload, size_t size)
+bool rmp_send(rmp_t *rmp, const rmp_port_t *port, const air_addr_t *dst, int dst_port, const void *payload, size_t size)
 {
     return rmp_send_flags(rmp, port, dst, dst_port, payload, size, RMP_SEND_FLAG_NONE);
 }
 
-bool rmp_send_flags(rmp_t *rmp, const rmp_port_t *port, air_addr_t dst, int dst_port, const void *payload, size_t size, rmp_send_flags_e flags)
+bool rmp_send_flags(rmp_t *rmp, const rmp_port_t *port, const air_addr_t *dst, int dst_port, const void *payload, size_t size, rmp_send_flags_e flags)
 {
     rmp_msg_t msg = {
         .src = rmp->internal.addr,
         .src_port = port ? port->port : 0,
-        .dst = dst,
+        .dst = dst ? *dst : *AIR_ADDR_BROADCAST,
         .dst_port = dst_port,
         .payload = payload,
         .payload_size = size,
         .has_signature = false,
     };
     // Check if it's a loopback message
-    if (air_addr_equals(&rmp->internal.addr, &dst))
+    if (air_addr_equals(&rmp->internal.addr, dst))
     {
         rmp_process_message(rmp, &msg, RMP_TRANSPORT_LOOPBACK);
         return true;
     }
     time_ticks_t now = time_ticks_now();
-    bool is_broadcast = air_addr_is_broadcast(&dst);
+    bool is_broadcast = air_addr_is_broadcast(dst);
     if (is_broadcast)
     {
         if (flags & RMP_SEND_FLAG_BROADCAST_SELF)
@@ -486,11 +486,11 @@ bool rmp_send_flags(rmp_t *rmp, const rmp_port_t *port, air_addr_t dst, int dst_
     }
     // Not a broadcast message. Check if we should sign it.
     air_key_t key;
-    if (rmp_get_peer_key(rmp, &key, &dst))
+    if (rmp_get_peer_key(rmp, &key, dst))
     {
         rmp_sign_message(rmp, &msg, &key);
     }
-    if (rmp_has_p2p_peer(rmp, &dst) && rmp_send_p2p(rmp, &msg, now))
+    if (rmp_has_p2p_peer(rmp, dst) && rmp_send_p2p(rmp, &msg, now))
     {
         return true;
     }
@@ -499,7 +499,7 @@ bool rmp_send_flags(rmp_t *rmp, const rmp_port_t *port, air_addr_t dst, int dst_
 
 bool rmp_send_loopback(rmp_t *rmp, const rmp_port_t *port, int dst_port, const void *payload, size_t size)
 {
-    return rmp_send(rmp, port, rmp->internal.addr, dst_port, payload, size);
+    return rmp_send(rmp, port, &rmp->internal.addr, dst_port, payload, size);
 }
 
 void rmp_set_transport(rmp_t *rmp, rmp_transport_type_e type, rmp_transport_send_f send, void *user_data)

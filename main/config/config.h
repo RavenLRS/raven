@@ -145,7 +145,7 @@ rc_mode_e config_get_rc_mode(void);
 #error USE_TX_SUPPORT and USE_RX_SUPPORT both undefined
 #endif
 
-bool config_get_paired_rx(air_pairing_t *pairing, air_addr_t *addr);
+bool config_get_paired_rx(air_pairing_t *pairing, const air_addr_t *addr);
 void config_add_paired_rx(const air_pairing_t *pairing);
 bool config_get_paired_rx_at(air_pairing_t *pairing, int idx);
 bool config_remove_paired_rx_at(int idx);
@@ -161,7 +161,7 @@ bool config_set_air_info(const air_addr_t *addr, const air_info_t *info, air_lor
 
 // Used for storing keys for talking to other devices, including TX/RX/GS
 // and other RC chains using p2p.
-bool config_get_pairing(air_pairing_t *pairing, air_addr_t *addr);
+bool config_get_pairing(air_pairing_t *pairing, const air_addr_t *addr);
 
 tx_input_type_e config_get_input_type(void);
 rx_output_type_e config_get_output_type(void);

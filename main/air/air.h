@@ -53,8 +53,8 @@ typedef struct air_addr_s
     uint8_t addr[AIR_ADDR_LENGTH];
 } air_addr_t;
 
-#define AIR_ADDR_INVALID ((air_addr_t){.addr = {0, 0, 0, 0, 0, 0}})
-#define AIR_ADDR_BROADCAST ((air_addr_t){.addr = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}})
+extern const air_addr_t *AIR_ADDR_INVALID;
+extern const air_addr_t *AIR_ADDR_BROADCAST;
 
 typedef uint32_t air_key_t;
 

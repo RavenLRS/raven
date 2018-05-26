@@ -246,7 +246,7 @@ static void menu_rmp_setting_write(settings_rmp_setting_t *setting)
     settings_rmp_msg_t msg;
     settings_rmp_setting_prepare_write(setting, &msg);
     settings_device_t *dev = &remotes.devices[menu_get_active()->data2];
-    rmp_send(rc->rmp, rmp_port, dev->addr, RMP_PORT_SETTINGS, &msg, settings_rmp_msg_size(&msg));
+    rmp_send(rc->rmp, rmp_port, &dev->addr, RMP_PORT_SETTINGS, &msg, settings_rmp_msg_size(&msg));
 }
 
 static void menu_confirm_remote_ok_action(void *data)
@@ -628,7 +628,7 @@ static void menu_request_remote_setting(settings_rmp_msg_t *req, int device_inde
     req->read_req.view.recursive = false;
     req->read_req.setting_index = setting_index;
     settings_device_t *dev = &remotes.devices[device_index];
-    rmp_send(rc->rmp, rmp_port, dev->addr, RMP_PORT_SETTINGS, req, settings_rmp_msg_size(req));
+    rmp_send(rc->rmp, rmp_port, &dev->addr, RMP_PORT_SETTINGS, req, settings_rmp_msg_size(req));
 }
 
 void menu_init(rc_t *r)
@@ -702,7 +702,7 @@ void menu_update(void)
             req.helo.view.folder_id = active_menu->data1;
             req.helo.view.recursive = false;
             settings_device_t *dev = &remotes.devices[active_menu->data2];
-            rmp_send(rc->rmp, rmp_port, dev->addr, RMP_PORT_SETTINGS, &req, settings_rmp_msg_size(&req));
+            rmp_send(rc->rmp, rmp_port, &dev->addr, RMP_PORT_SETTINGS, &req, settings_rmp_msg_size(&req));
         }
         else
         {

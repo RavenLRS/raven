@@ -41,5 +41,5 @@ typedef struct rc_rmp_s
 } rc_rmp_t;
 
 void rc_rmp_init(rc_rmp_t *rc_rmp, rc_t *rc, rmp_t *rmp);
-void rc_rmp_request_air_lora_config(rc_rmp_t *rc_rmp, air_addr_t *addr);
-void rc_rmp_send_air_lora_config(rc_rmp_t *rc_rmp, air_addr_t *addr, bool ack);
+void rc_rmp_request_air_lora_config(rc_rmp_t *rc_rmp, const air_addr_t *addr);
+void rc_rmp_send_air_lora_config(rc_rmp_t *rc_rmp, const air_addr_t *addr, bool ack);

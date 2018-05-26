@@ -147,7 +147,7 @@ rc_mode_e config_get_rc_mode(void)
 }
 #endif
 
-bool config_get_paired_rx(air_pairing_t *pairing, air_addr_t *addr)
+bool config_get_paired_rx(air_pairing_t *pairing, const air_addr_t *addr)
 {
     uint8_t max_seq = 0;
     int idx = -1;
@@ -399,7 +399,7 @@ void config_set_paired_tx(const air_pairing_t *pairing)
     storage_commit(&storage);
 }
 
-bool config_get_pairing(air_pairing_t *pairing, air_addr_t *addr)
+bool config_get_pairing(air_pairing_t *pairing, const air_addr_t *addr)
 {
     switch (config_get_rc_mode())
     {

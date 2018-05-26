@@ -133,7 +133,7 @@ static void input_crsf_get_rmp_addr(input_crsf_t *input_crsf, air_addr_t *addr, 
     else
     {
         // Broadcast or unknown address. We broadcast the message either way
-        *addr = AIR_ADDR_BROADCAST;
+        *addr = *AIR_ADDR_BROADCAST;
     }
 }
 
@@ -149,7 +149,7 @@ static void input_crsf_request_setting(input_crsf_t *input_crsf, uint8_t crsf_ad
     air_addr_t dst;
     input_crsf_get_rmp_addr(input_crsf, &dst, crsf_addr);
     rmp_send_flags(input_crsf->input.rc_data->rmp, input_crsf->rmp_port,
-                   dst, RMP_PORT_SETTINGS,
+                   &dst, RMP_PORT_SETTINGS,
                    &req, settings_rmp_msg_size(&req),
                    RMP_SEND_FLAG_BROADCAST_SELF | RMP_SEND_FLAG_BROADCAST_RC);
 }
@@ -208,7 +208,7 @@ static void input_crsf_frame_callback(void *data, crsf_frame_t *frame)
             ring_buffer_discard(&input_crsf->scheduled);
         }
         rmp_send_flags(input_crsf->input.rc_data->rmp, input_crsf->rmp_port,
-                       dst, RMP_PORT_SETTINGS,
+                       &dst, RMP_PORT_SETTINGS,
                        &req, settings_rmp_msg_size(&req),
                        RMP_SEND_FLAG_BROADCAST_SELF | RMP_SEND_FLAG_BROADCAST_RC);
 
@@ -786,7 +786,7 @@ static void input_crsf_rmp_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
                 {
                     settings_rmp_msg_t write_req;
                     settings_rmp_setting_prepare_write(&cpy, &write_req);
-                    rmp_send_flags(rmp, input->rmp_port, req->msg->src, RMP_PORT_SETTINGS,
+                    rmp_send_flags(rmp, input->rmp_port, &req->msg->src, RMP_PORT_SETTINGS,
                                    &write_req, settings_rmp_msg_size(&write_req),
                                    RMP_SEND_FLAG_BROADCAST_SELF | RMP_SEND_FLAG_BROADCAST_RC);
                 }

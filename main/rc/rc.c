@@ -633,7 +633,7 @@ static void rc_rmp_msp_request_response_handler(msp_conn_t *conn, uint16_t cmd, 
     size_t cpy_size = MIN(size, sizeof(resp.payload));
     memcpy(resp.payload, payload, cpy_size);
     size_t rmp_payload_size = sizeof(resp) - sizeof(resp.payload) + cpy_size;
-    rmp_send(ctx->rc->rmp, ctx->rc->state.msp_recv_port, ctx->dst, ctx->dst_port, &resp, rmp_payload_size);
+    rmp_send(ctx->rc->rmp, ctx->rc->state.msp_recv_port, &ctx->dst, ctx->dst_port, &resp, rmp_payload_size);
     rc_rmp_free_resp_ctx(ctx);
 }
 
@@ -746,7 +746,7 @@ static void rc_msp_request_callback(msp_conn_t *conn, uint16_t cmd, const void *
                 size_t cpy_size = MIN(size, sizeof(req.payload));
                 memcpy(req.payload, payload, cpy_size);
                 size_t rmp_payload_size = sizeof(req) - sizeof(req.payload) + cpy_size;
-                if (rmp_send(rc->rmp, port, pair_addr, RMP_PORT_MSP, &req, rmp_payload_size))
+                if (rmp_send(rc->rmp, port, &pair_addr, RMP_PORT_MSP, &req, rmp_payload_size))
                 {
                     return;
                 }
@@ -1124,7 +1124,7 @@ int rc_get_alternative_pairings(rc_t *rc, air_pairing_t *pairings, size_t size)
 
     int count = 0;
     uint8_t crc = 0;
-    air_addr_t paired_addr = AIR_ADDR_INVALID;
+    air_addr_t paired_addr = *AIR_ADDR_INVALID;
     air_io_t *air_io = rc_get_air_io(rc);
     if (air_io)
     {

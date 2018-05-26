@@ -15,6 +15,11 @@
 
 #include "air.h"
 
+static const air_addr_t air_addr_invalid = ((air_addr_t){.addr = {0, 0, 0, 0, 0, 0}});
+const air_addr_t *AIR_ADDR_INVALID = &air_addr_invalid;
+static const air_addr_t air_addr_broadcast = ((air_addr_t){.addr = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}});
+const air_addr_t *AIR_ADDR_BROADCAST = &air_addr_broadcast;
+
 typedef enum
 {
     PACKET_TYPE_BIND_REQ,
