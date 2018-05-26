@@ -10,6 +10,10 @@
 #include "platform/platforms/esp32_lora_ttgo_868_915_screen.h"
 #elif defined(RAVEN_PLATFORM_ESP32_LORA_TTGO_868_915)
 #include "platform/platforms/esp32_lora_ttgo_868_915.h"
+#elif defined(RAVEN_PLATFORM_ESP32_LORA_HELTEC_433_SCREEN)
+#include "platform/platforms/esp32_lora_heltec_433_screen.h"
+#elif defined(RAVEN_PLATFORM_ESP32_LORA_HELTEC_433)
+#include "platform/platforms/esp32_lora_heltec_433.h"
 #else
 #error Unknown platform
 #endif
