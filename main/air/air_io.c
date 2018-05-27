@@ -31,7 +31,8 @@ bool air_io_has_bind_request(air_io_t *io, air_bind_packet_t *packet, air_lora_b
     air_bind_packet_t p;
     bool nc;
     air_lora_band_e nb;
-    if (io->bind.has_request)
+    air_io_has_request_f has_request = io->bind.has_request;
+    if (has_request)
     {
         if (!packet)
         {
@@ -45,7 +46,7 @@ bool air_io_has_bind_request(air_io_t *io, air_bind_packet_t *packet, air_lora_b
         {
             needs_confirmation = &nc;
         }
-        return io->bind.has_request(io->bind.user_data, packet, band, needs_confirmation);
+        return has_request(io->bind.user_data, packet, band, needs_confirmation);
     }
     return false;
 }
