@@ -473,7 +473,7 @@ static void input_crsf_update_baud_rate(input_crsf_t *input, unsigned baud_rate)
 
 static void input_crsf_send_setting_frame(input_crsf_t *input_crsf, const settings_rmp_setting_t *setting, uint8_t crsf_src_addr)
 {
-#define CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY_RB_SIZE (CRSF_MAX_SETTINGS_ENTRY_PAYLOAD_SIZE * 2)
+#define CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY_RB_SIZE (CRSF_MAX_SETTINGS_ENTRY_PAYLOAD_SIZE * 4)
 #define RB_PUSH_STR(rb, str)                 \
     do                                       \
     {                                        \
