@@ -227,7 +227,7 @@ static void rc_update_pair_air_config(rc_t *rc)
         {
             rc_rmp_request_air_lora_config(&rc->state.rc_rmp, &pair_addr);
         }
-        rc->state.pair_air_config_next_req = now + MILLIS_TO_TICKS(150);
+        rc->state.pair_air_config_next_req = now + MILLIS_TO_TICKS(500);
     }
 }
 
