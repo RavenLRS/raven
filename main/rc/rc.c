@@ -1148,6 +1148,20 @@ int rc_get_alternative_pairings(rc_t *rc, air_pairing_t *pairings, size_t size)
         rmp_peer_t *peer = &rc->rmp->internal.peers[ii];
         if (air_addr_is_valid(&peer->addr) && config_get_pairing(&pairing, &peer->addr))
         {
+            bool is_valid = false;
+            switch (rc_get_mode(rc))
+            {
+            case RC_MODE_TX:
+                is_valid = peer->role == AIR_ROLE_RX;
+                break;
+            case RC_MODE_RX:
+                is_valid = peer->role == AIR_ROLE_TX;
+                break;
+            }
+            if (!is_valid)
+            {
+                continue;
+            }
             crc = rc_crc_addr(crc, &peer->addr);
             if (count < size)
             {
