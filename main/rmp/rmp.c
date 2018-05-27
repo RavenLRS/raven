@@ -452,10 +452,14 @@ bool rmp_send(rmp_t *rmp, const rmp_port_t *port, const air_addr_t *dst, int dst
 
 bool rmp_send_flags(rmp_t *rmp, const rmp_port_t *port, const air_addr_t *dst, int dst_port, const void *payload, size_t size, rmp_send_flags_e flags)
 {
+    if (!dst)
+    {
+        dst = AIR_ADDR_BROADCAST;
+    }
     rmp_msg_t msg = {
         .src = rmp->internal.addr,
         .src_port = port ? port->port : 0,
-        .dst = dst ? *dst : *AIR_ADDR_BROADCAST,
+        .dst = *dst,
         .dst_port = dst_port,
         .payload = payload,
         .payload_size = size,
