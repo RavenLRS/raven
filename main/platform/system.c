@@ -3,7 +3,7 @@
 #include <esp_log.h>
 #include <esp_sleep.h>
 
-#include "platform.h"
+#include "target.h"
 
 #include "util/time.h"
 

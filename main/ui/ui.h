@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "platform.h"
+#include "target.h"
 
 #include "ui/beeper.h"
 #include "ui/button.h"

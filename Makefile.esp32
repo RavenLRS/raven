@@ -1,0 +1,35 @@
+ESPPORT         = $(PORT)
+export ESPPORT
+
+SDKCONFIG_BASE		:= $(PLATFORMS_DIR)/esp32/sdkconfig.base
+SDKCONFIG_PLATFORM 	:= $(PLATFORMS_DIR)/$(PLATFORM)/sdkconfig
+SDKCONFIG_VARIANT	:= $(VARIANTS_DIR)/$(VARIANT)/sdkconfig
+BUILD_DIR_BASE  	= $(PROJECT_PATH)/build-$(TARGET)
+SDKCONFIG       	= $(ROOT)/build-$(TARGET)/sdkconfig
+SDKCONFIG_DIR		= $(dir $(SDKCONFIG))
+SDKCONFIG_DEFAULTS  = $(SDKCONFIG).defaults
+
+NO_SDKCONFIG :=
+
+ifeq ("$(wildcard $(SDKCONFIG))","")
+NO_SDKCONFIG := 1
+dummy := $(shell mkdir $(SDKCONFIG_DIR) && cat $(SDKCONFIG_BASE) $(SDKCONFIG_PLATFORM) $(SDKCONFIG_VARIANT) >> $(SDKCONFIG))
+endif
+
+include $(IDF_PATH)/make/project.mk
+
+ifneq ($(NO_SDKCONFIG),)
+ifeq ("$(filter menuconfig, $(MAKECMDGOALS))","")
+menuconfig:
+	@echo
+endif
+endif
+
+$(SDKCONFIG): $(SDKCONFIG_BASE) $(SDKCONFIG_PLATFORM) $(SDKCONFIG_VARIANT)
+	echo "Make sdkconfig"
+	echo $@
+
+erase: erase_flash
+
+$(TARGET): $(SDKCONFIG) all
+

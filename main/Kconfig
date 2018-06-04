@@ -13,28 +13,4 @@ config RAVEN_FAKE_TX_INPUT
     bool "Enable fake TX input support"
     default "n"
 
-choice RAVEN_PLATFORM
-    prompt "Platform"
-    default RAVEN_PLATFORM_ESP32_LORA_TTGO_433_SCREEN
-
-    config RAVEN_PLATFORM_ESP32_LORA_TTGO_433_SCREEN
-        bool "ESP32+LoRa+OLED TTGO 433MHz"
-
-    config RAVEN_PLATFORM_ESP32_LORA_TTGO_433
-        bool "ESP32+LoRa TTGO 433MHz"
-
-    config RAVEN_PLATFORM_ESP32_LORA_TTGO_868_915_SCREEN
-        bool "ESP32+LoRa+OLED TTGO 868/915MHz"
-
-    config RAVEN_PLATFORM_ESP32_LORA_TTGO_868_915
-        bool "ESP32+LoRa TTGO 868/915MHz"
-
-    config RAVEN_PLATFORM_ESP32_LORA_HELTEC_433_SCREEN
-        bool "ESP32+LoRa+OLED HELTEC 433MHz"
-
-    config RAVEN_PLATFORM_ESP32_LORA_HELTEC_433
-        bool "ESP32+LoRa HELTEC 433MHz"
-
-endchoice
-
 endmenu

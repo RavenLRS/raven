@@ -1,7 +1,7 @@
 #include <driver/gpio.h>
 #include <driver/rtc_io.h>
 
-#include "platform.h"
+#include "target.h"
 
 #include "ui/led.h"
 

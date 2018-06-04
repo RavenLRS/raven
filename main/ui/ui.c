@@ -1,7 +1,7 @@
 
 #include <hal/log.h>
 
-#include "platform.h"
+#include "target.h"
 
 #include "config/settings.h"
 

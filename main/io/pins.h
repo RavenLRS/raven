@@ -1,6 +1,6 @@
 #pragma once
 
-#include "platform.h"
+#include "target.h"
 
 #define PIN_COUNT(v) (__builtin_popcountll(v))
 #define PIN_USABLE_MAX 16

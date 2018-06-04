@@ -4,7 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include "platform.h"
+#include "target.h"
 
 #ifdef USE_SCREEN
 

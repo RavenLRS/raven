@@ -11,7 +11,7 @@
 #include <soc/timer_group_reg.h>
 #include <soc/timer_group_struct.h>
 
-#include "platform.h"
+#include "target.h"
 
 #include "bluetooth/bluetooth.h"
 

@@ -3,7 +3,7 @@
 
 #include <esp_log.h>
 
-#include "platform.h"
+#include "target.h"
 
 #ifdef USE_SCREEN
 

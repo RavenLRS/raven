@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "platform.h"
+#include "target.h"
 
 #include "air/air.h"
 #include "air/air_lora.h"

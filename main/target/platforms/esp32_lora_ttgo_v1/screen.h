@@ -1,5 +1,3 @@
-#pragma once
-
 #define USE_SCREEN
 
 // OLED screen connections

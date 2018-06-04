@@ -31,20 +31,29 @@ to 150hz with telemetry or 200hz without telemetry in the near future.
 
 ![Raven TX on a Q X7](docs/images/raven_qx7.png?raw=true "Raven TX on a Q X7")
 
-## Building Raven
+## Compiling Raven
 
-Raven is built on top of [esp-idf V3.0](https://github.com/espressif/esp-idf), so as a first step to build raven you should install and configure it. Make sure to install version 3.0 by running
+Raven is built on top of [esp-idf V3.0](https://github.com/espressif/esp-idf), so as a first step to compile
+Raven you should install and configure it. Make sure to install version 3.0 by running
 `git checkout v3.0` (their instructions will give you the development version, not a stable one).
 Download the required submodules by running `git submodule init` followed by `git submodule update -r` in the same directory that you have cloned the esp-idf repository.
 
 Clone the Raven repository by running `git clone --recursive https://github.com/RavenLRS/raven.git`. Don't
 forget the `--recursive` option, since Raven uses submodules.
 
-From the directory where you've cloned Raven, use `make menuconfig` to configure how you want to build Raven. Raven specific options (board, frequencies, TX or RX support, etc...) are found under 
-`Components -> Raven LRS`. Note that there ESP related options that you might want to adjust (for example, the serial port used to communicate with the board).
+From the directory where you've cloned Raven, run `PORT=<port> TARGET=<target> make erase flash` to flash a new module. For
+updating a board which is already running Raven, omit the `erase` part to avoid wiping your configuration. The `erase` is only
+needed for new boards, since they might come with some pre-flashed app that can interfere with Raven.
 
-Finally, type `make flash` to flash and reboot the board. If you want to see the debug logs, you can use the builtin esp-idf monitor by
-running `make monitor`.
+Run `make` without any arguments to print the help, which includes additional instructions about the port naming as well as the
+valid list of targets. Targets use the following naming convention:
+
+- [board-name]_tx: Raven with support for working as TX only (connected to the radio).
+- [board-name]_rx: Raven with support for working as RX only (connected to the flight controller or the servos/ESCs).
+- [board-name]_txrx: Raven with support for both TX and RX, controlled by an option. Note that type of build is mostly used
+for development and troubleshooting. Most of the time you should flash the TX or the RX variants.
+
+If you want to see the debug logs, you can use the builtin esp-idf monitor by running `PORT=<port> TARGET=<target> make monitor`.
 
 
 ## Hardware setup

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "platform.h"
+#include "target.h"
 
 #include "util/macros.h"
 #include "util/time.h"

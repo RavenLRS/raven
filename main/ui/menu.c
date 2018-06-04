@@ -2,7 +2,7 @@
 
 #include <hal/log.h>
 
-#include "platform.h"
+#include "target.h"
 
 #include "air/air.h"
 
