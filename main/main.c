@@ -64,7 +64,7 @@ static void setting_changed(const setting_t *setting, void *user_data)
     }
 }
 
-void task_ui(void *arg)
+void raven_ui_init(void)
 {
     ui_config_t cfg = {
         .button = PIN_BUTTON_1,
@@ -78,7 +78,10 @@ void task_ui(void *arg)
     };
 
     ui_init(&ui, &cfg, &rc);
+}
 
+void task_ui(void *arg)
+{
     if (ui_screen_is_available(&ui))
     {
         ui_screen_splash(&ui);
@@ -138,10 +141,13 @@ void app_main()
 
     rc_init(&rc, &lora, &rmp);
 
+    raven_ui_init();
+
     xTaskCreatePinnedToCore(task_rc_update, "RC", 4096, NULL, 1, NULL, 1);
 
     xTaskCreatePinnedToCore(task_bluetooh, "BLUETOOTH", 4096, &rc, 2, NULL, 0);
     xTaskCreatePinnedToCore(task_rmp, "RMP", 4096, NULL, 2, NULL, 0);
-    // Initialize UI the last, since it might query the others
+
+    // Start updating the UI after everything else is set up, since it queries other subsystems
     xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 0);
 }

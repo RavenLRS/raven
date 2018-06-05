@@ -3,11 +3,16 @@
 
 #include "target.h"
 
+#include "platform/dispatch.h"
+
+#include "util/time.h"
+
 #include "ui/led.h"
 
 typedef struct led_s
 {
     int pin;
+    bool is_initialized;
     time_ticks_t next_update;
     time_ticks_t period;
     int next_level;
@@ -29,15 +34,30 @@ static void led_off_led(led_t *led)
     gpio_set_level(led->pin, 0);
 }
 
+static void led_init_led_task(void *data)
+{
+    led_t *led = data;
+    led_on_led(led);
+    time_millis_delay(1500);
+    led_off_led(led);
+    led->is_initialized = true;
+}
+
 static void led_init_led(led_t *led)
 {
     gpio_set_direction(led->pin, GPIO_MODE_OUTPUT);
     led_off_led(led);
     led->next_update = 0;
+    led->is_initialized = false;
+    dispatch(led_init_led_task, led);
 }
 
 static void led_update_led(led_t *led)
 {
+    if (!led->is_initialized)
+    {
+        return;
+    }
     time_ticks_t now = time_ticks_now();
     if (led->next_update > 0 && now > led->next_update)
     {
