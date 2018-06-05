@@ -24,6 +24,10 @@ static led_t led1 = {
 };
 #endif
 
+// Guard this separately in case we add support for more than 1 led
+// and this has check check for LED_1 || LED_2 || ... || LED_N
+#if defined(PIN_LED_1)
+
 static void led_on_led(led_t *led)
 {
     gpio_set_level(led->pin, 1);
@@ -88,6 +92,8 @@ static void led_set_blink_period_led(led_t *led, time_ticks_t period)
         led->next_update = 0;
     }
 }
+
+#endif
 
 void led_init(void)
 {
