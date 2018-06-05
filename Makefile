@@ -85,19 +85,19 @@ help-esp32:
 	@ $(MAKE) -f Makefile.esp32 help
 
 $(TARGET):
-	@ PORT=$(PORT) PLATFORM=$(PLATFORM) VARIANT=$(VARIANT) TARGET=$(TARGET) $(MAKE) -f Makefile.$(BASE_PLATFORM)
+	@ $(MAKE) -f Makefile.$(BASE_PLATFORM)
 
 erase: $(TARGET)
-	@ PORT=$(PORT) PLATFORM=$(PLATFORM) VARIANT=$(VARIANT) TARGET=$(TARGET) $(MAKE) -f Makefile.$(BASE_PLATFORM) erase
+	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) erase
 
 flash: $(TARGET)
-	@ PORT=$(PORT) PLATFORM=$(PLATFORM) VARIANT=$(VARIANT) TARGET=$(TARGET) $(MAKE) -f Makefile.$(BASE_PLATFORM) flash
+	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) flash
 
 monitor: $(TARGET)
-	@ PORT=$(PORT) PLATFORM=$(PLATFORM) VARIANT=$(VARIANT) TARGET=$(TARGET) $(MAKE) -f Makefile.$(BASE_PLATFORM) monitor
+	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) monitor
 
 menuconfig:
-	@ PORT=$(PORT) PLATFORM=$(PLATFORM) VARIANT=$(VARIANT) TARGET=$(TARGET) $(MAKE) -f Makefile.$(BASE_PLATFORM) menuconfig
+	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) menuconfig
 
 all:
 	@ for target in $(VALID_TARGETS); do \
