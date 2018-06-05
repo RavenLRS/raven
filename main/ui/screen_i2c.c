@@ -37,10 +37,13 @@ static void screen_i2c_install_driver(screen_i2c_config_t *cfg)
 
 bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 {
-    gpio_set_direction(cfg->rst, GPIO_MODE_OUTPUT);
-    gpio_set_level(cfg->rst, 0);
-    vTaskDelay(50 / portTICK_PERIOD_MS);
-    gpio_set_level(cfg->rst, 1);
+    if (cfg->rst > 0)
+    {
+        ESP_ERROR_CHECK(gpio_set_direction(cfg->rst, GPIO_MODE_OUTPUT))
+        ESP_ERROR_CHECK(gpio_set_level(cfg->rst, 0));
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+        ESP_ERROR_CHECK(gpio_set_level(cfg->rst, 1));
+    }
 
     screen_i2c_install_driver(cfg);
 
@@ -55,7 +58,10 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 
     if (ack_err != ESP_OK)
     {
-        gpio_set_level(cfg->rst, 0);
+        if (cfg->rst > 0)
+        {
+            ESP_ERROR_CHECK(gpio_set_level(cfg->rst, 0));
+        }
         ESP_ERROR_CHECK(i2c_driver_delete(SCREEN_I2C_MASTER_NUM));
         return false;
     }
