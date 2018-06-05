@@ -87,6 +87,9 @@ help-esp32:
 $(TARGET):
 	@ $(MAKE) -f Makefile.$(BASE_PLATFORM)
 
+clean:
+	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) clean
+
 erase: $(TARGET)
 	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) erase
 
@@ -98,6 +101,9 @@ monitor: $(TARGET)
 
 menuconfig:
 	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) menuconfig
+
+size:
+	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) size
 
 all:
 	@ for target in $(VALID_TARGETS); do \
