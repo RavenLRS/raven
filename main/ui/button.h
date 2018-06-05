@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct button_state_s
@@ -14,6 +15,7 @@ typedef struct button_state_s
 typedef struct button_s
 {
     uint8_t pin;
+    bool is_touch;
     void *user_data;
     void (*press_callback)(void *data);
     void (*long_press_callback)(void *data);

@@ -68,6 +68,11 @@ void raven_ui_init(void)
 {
     ui_config_t cfg = {
         .button = PIN_BUTTON_1,
+#if defined(PIN_BUTTON_1_IS_TOUCH)
+        .button_is_touch = true,
+#else
+        .button_is_touch = false,
+#endif
         .beeper = PIN_BEEPER,
 #ifdef USE_SCREEN
         .screen.sda = PIN_SCREEN_SDA,

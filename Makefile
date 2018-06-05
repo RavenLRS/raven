@@ -34,9 +34,16 @@ VALID_VARIANTS			:= $(sort $(VALID_VARIANTS))
 make_target				= $(platform)_$(variant)
 VALID_TARGETS			:= $(foreach platform,$(VALID_PLATFORMS),$(foreach variant,$(VALID_VARIANTS),$(make_target)))
 
+# Features that we accept via environment
+
 USE_AIR_MODE_1 ?=
 ifneq ($(USE_AIR_MODE_1),)
-  CPPFLAGS += -DUSE_AIR_MODE_1
+	CPPFLAGS += -DUSE_AIR_MODE_1
+endif
+
+PIN_BUTTON_TOUCH ?=
+ifneq ($(PIN_BUTTON_TOUCH),)
+	CPPFLAGS += -DPIN_BUTTON_TOUCH=$(PIN_BUTTON_TOUCH)
 endif
 
 CPPFLAGS += -I$(TARGET_DIR)
