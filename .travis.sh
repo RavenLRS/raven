@@ -16,4 +16,5 @@ export IDF_PATH=`pwd`
 popd
 popd
 
-make
+# Build all targets
+make ci-build

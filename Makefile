@@ -109,3 +109,11 @@ all:
 	@ for target in $(VALID_TARGETS); do \
 		TARGET=$$target $(MAKE); \
 	done
+
+# Build all targets, but run make clean after building each one
+# to avoid using too much disk space.
+ci-build:
+	for target in $(VALID_TARGETS); do \
+		TARGET=$$target $(MAKE); \
+		TARGET=$$target $(MAKE) clean; \
+	done
