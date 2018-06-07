@@ -14,5 +14,5 @@ typedef struct screen_i2c_config_s
 } screen_i2c_config_t;
 
 bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2);
-void screen_i2c_shutdown(screen_i2c_config_t *cfg);
+void screen_i2c_shutdown(screen_i2c_config_t *cfg, u8g2_t *u8g2);
 void screen_i2c_power_on(screen_i2c_config_t *cfg, u8g2_t *u8g2);

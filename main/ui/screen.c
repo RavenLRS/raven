@@ -61,7 +61,7 @@ bool screen_is_available(const screen_t *screen)
 
 void screen_shutdown(screen_t *screen)
 {
-    screen_i2c_shutdown(&screen->internal.cfg);
+    screen_i2c_shutdown(&screen->internal.cfg, &u8g2);
 }
 
 void screen_power_on(screen_t *screen)

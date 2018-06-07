@@ -25,6 +25,7 @@ static bool ui_handle_screen_wake(ui_t *ui)
     if (ui_screen_is_available(ui) && ui->internal.screen_is_off)
     {
         screen_power_on(&ui->internal.screen);
+        screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
         ui->internal.screen_is_off = false;
         return true;
     }

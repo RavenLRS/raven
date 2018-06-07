@@ -1,6 +1,7 @@
+#include <hal/log.h>
+
 #include <driver/gpio.h>
 #include <driver/i2c.h>
-#include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -85,19 +86,33 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
     return true;
 }
 
-void screen_i2c_shutdown(screen_i2c_config_t *cfg)
+void screen_i2c_shutdown(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 {
-    gpio_set_level(cfg->rst, 0);
+    LOG_I(TAG, "Screen shutdown");
+    if (cfg->rst > 0)
+    {
+        gpio_set_level(cfg->rst, 0);
+    }
+    else
+    {
+        // No RST pin, just turn on powersave mode
+        u8g2_SetPowerSave(u8g2, 1);
+    }
+    return false;
 }
 
 void screen_i2c_power_on(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 {
-    gpio_set_level(cfg->rst, 1);
+    LOG_I(TAG, "Screen power on");
+    if (cfg->rst > 1)
+    {
+        gpio_set_level(cfg->rst, 1);
+    }
 
-    ESP_LOGI(TAG, "u8g2_InitDisplay");
+    LOG_D(TAG, "u8g2_InitDisplay");
     u8g2_InitDisplay(u8g2); // send init sequence to the display, display is in sleep mode after this,
 
-    ESP_LOGI(TAG, "u8g2_SetPowerSave");
+    LOG_D(TAG, "u8g2_SetPowerSave");
     u8g2_SetPowerSave(u8g2, 0); // wake up display
     // This reduces the contrast to the minimum to save power
     u8g2_SetContrast(u8g2, 0);
