@@ -3,6 +3,7 @@
 #include <esp_event_loop.h>
 #include <esp_wifi.h>
 #include <esp_wifi_types.h>
+#include <tcpip_adapter.h>
 
 #include <hal/log.h>
 
@@ -88,6 +89,7 @@ void p2p_hal_init(p2p_hal_t *hal, p2p_hal_callback_f callback, void *user_data)
     hal->user_data = user_data;
     active_hal = hal;
     ESP_ERROR_CHECK(esp_event_loop_init(NULL, NULL));
+    tcpip_adapter_init();
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     // Disable WPA support, saves ~5K of flash, since LTO
     // is able to strip the related functions.
