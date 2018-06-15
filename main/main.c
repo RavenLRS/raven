@@ -1,12 +1,15 @@
 #include <stdio.h>
 
+#include <hal/log.h>
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #include "esp_spi_flash.h"
 #include "esp_system.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
-#include <esp_log.h>
+#include <esp_ota_ops.h>
 #include <esp_task_wdt.h>
 #include <soc/timer_group_reg.h>
 #include <soc/timer_group_struct.h>
@@ -23,6 +26,7 @@
 
 #include "p2p/p2p.h"
 
+#include "platform/ota.h"
 #include "platform/system.h"
 
 #include "rc/rc.h"
@@ -33,6 +37,8 @@
 #include "ui/ui.h"
 
 #include "util/time.h"
+
+static const char *TAG = "main";
 
 static lora_t lora = {
     .mosi = PIN_LORA_MOSI,
@@ -132,6 +138,14 @@ void task_rc_update(void *arg)
 
 void app_main()
 {
+    const esp_partition_t *boot_partition = esp_ota_get_boot_partition();
+    if (boot_partition)
+    {
+        LOG_I(TAG, "Booted from partition %s", boot_partition->label);
+    }
+
+    ota_init();
+
     config_init();
     settings_add_listener(setting_changed, NULL);
 

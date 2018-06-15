@@ -562,6 +562,15 @@ static void menu_remote_setting_action(void *data)
     }
 }
 
+static menu_entry_t menu_empty_entries[] = {
+    MENU_STRING_ENTRY(NULL, NULL),
+    MENU_END,
+};
+
+menu_t menu_empty = {
+    .entries = menu_empty_entries,
+};
+
 static void menu_bind_req_accept_action(void *data)
 {
     rc_accept_bind(rc);

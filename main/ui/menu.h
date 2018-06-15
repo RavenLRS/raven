@@ -10,6 +10,7 @@ typedef struct air_pairing_s air_pairing_t;
 typedef struct rc_s rc_t;
 typedef struct menu_s menu_t;
 
+extern menu_t menu_empty;
 extern menu_t menu_bind_req;
 extern menu_t menu_bind_info;
 extern menu_t menu_alt_pairings;

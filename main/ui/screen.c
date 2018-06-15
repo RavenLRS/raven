@@ -19,6 +19,8 @@
 #include "util/time.h"
 #include "util/version.h"
 
+#include "platform/ota.h"
+
 #include "screen.h"
 
 #define SCREEN_DRAW_BUF_SIZE 128
@@ -317,6 +319,11 @@ static int screen_autosplit_lines(char *buf, uint16_t max_width)
                 }
                 else
                 {
+                    if (ii == len)
+                    {
+                        // String ends exactly here, the last line scrolls
+                        break;
+                    }
                     buf[ii] = '\n';
                     p = &buf[ii + 1];
                     sep = -1;
@@ -391,7 +398,7 @@ static int screen_draw_multiline(char *buf, uint16_t y, screen_multiline_opt_e o
 
 static void screen_draw_label_value(screen_t *screen, const char *label, const char *val, uint16_t w, uint16_t y, uint16_t sep)
 {
-    uint16_t label_width = u8g2_GetStrWidth(&u8g2, label) + sep;
+    uint16_t label_width = (label ? u8g2_GetStrWidth(&u8g2, label) : 0) + sep;
     uint16_t max_value_width = w - label_width - 1;
     uint16_t val_width = u8g2_GetStrWidth(&u8g2, val);
     uint16_t val_offset = screen_animation_offset(val_width, max_value_width, &val_width);
@@ -400,7 +407,10 @@ static void screen_draw_label_value(screen_t *screen, const char *label, const c
     uint16_t line_height = u8g2_GetAscent(&u8g2) - u8g2_GetDescent(&u8g2);
     u8g2_DrawBox(&u8g2, 0, y - line_height, label_width, line_height);
     u8g2_SetDrawColor(&u8g2, 1);
-    u8g2_DrawStr(&u8g2, 0, y, label);
+    if (label)
+    {
+        u8g2_DrawStr(&u8g2, 0, y, label);
+    }
 }
 
 static void screen_draw_main_failsafe(screen_t *s, int16_t x, int16_t y, failsafe_reason_e reason)
@@ -952,27 +962,78 @@ static void screen_draw_bind_request_info_from_rx(screen_t *s, air_bind_packet_t
     screen_draw_multiline(SCREEN_BUF(s), top_height, SCREEN_MULTILINEOPT_NONE);
 }
 
-void screen_update(screen_t *screen)
+static void screen_draw_ota(screen_t *s)
 {
-    if (screen->internal.splashing)
+    uint16_t tw;
+    u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+    u8g2_SetFontPosTop(&u8g2);
+    screen_draw_label_value(s, NULL, "Updating...", s->internal.w, 0, 0);
+    u8g2_DrawLine(&u8g2, 2, 16, s->internal.w - 4, 16);
+
+    float progress = ota_progress_completion();
+
+    uint16_t shm = s->internal.h / 2;
+    uint16_t fx = 2;
+    uint16_t fw = s->internal.w - 4;
+    uint16_t fh = 6;
+    uint16_t fy = shm - (fh / 2);
+    if (s->internal.direction == SCREEN_DIRECTION_HORIZONTAL)
     {
+        fy += 5;
+    }
+    u8g2_DrawFrame(&u8g2, fx, fy, fw, fh);
+    if (progress > 0)
+    {
+        u8g2_DrawBox(&u8g2, fx, fy, fw * progress, fh);
+    }
+
+    u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
+    if (progress >= 0)
+    {
+        snprintf(SCREEN_BUF(s), SCREEN_DRAW_BUF_SIZE, "%3d%%", (int)(100 * progress));
+    }
+    else
+    {
+        strlcpy(SCREEN_BUF(s), "---%", SCREEN_DRAW_BUF_SIZE);
+    }
+    tw = u8g2_GetStrWidth(&u8g2, SCREEN_BUF(s));
+    u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, fy - 14, SCREEN_BUF(s));
+
+    if (progress > 0)
+    {
+        strlcpy(SCREEN_BUF(s), "Remaining:", SCREEN_DRAW_BUF_SIZE);
+        tw = u8g2_GetStrWidth(&u8g2, SCREEN_BUF(s));
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, fy + 9, SCREEN_BUF(s));
+
+        int seconds = ota_estimated_time_remaining();
+        snprintf(SCREEN_BUF(s), SCREEN_DRAW_BUF_SIZE, "%d:%02d", seconds / 60, seconds % 60);
+        tw = u8g2_GetStrWidth(&u8g2, SCREEN_BUF(s));
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, fy + 21, SCREEN_BUF(s));
+    }
+}
+
+static void screen_draw(screen_t *screen)
+{
+    menu_t *menu = menu_get_active();
+
+    if (ota_is_in_progress())
+    {
+        if (menu != &menu_empty)
+        {
+            menu_set_active(&menu_empty);
+        }
+        screen_draw_ota(screen);
         return;
     }
 
-    char buf[SCREEN_DRAW_BUF_SIZE];
+    if (menu == &menu_empty)
+    {
+        menu_pop_active();
+        menu = menu_get_active();
+    }
+
     air_bind_packet_t packet;
-    air_pairing_t alt_pairings[MENU_ALT_PAIRINGS_MAX];
-    u8g2_ClearBuffer(&u8g2);
-
-    screen->internal.w = u8g2_GetDisplayWidth(&u8g2);
-    screen->internal.h = u8g2_GetDisplayHeight(&u8g2);
-
-    screen->internal.direction = SCREEN_W(screen) > SCREEN_H(screen) ? SCREEN_DIRECTION_HORIZONTAL : SCREEN_DIRECTION_VERTICAL;
-    screen->internal.buf = buf;
-
-    menu_t *menu = menu_get_active();
     bool has_pending_bind_request = rc_has_pending_bind_request(screen->internal.rc, &packet);
-    int alt_pairing_count = rc_get_alternative_pairings(screen->internal.rc, alt_pairings, ARRAY_COUNT(alt_pairings));
     if (has_pending_bind_request && packet.role == AIR_ROLE_TX)
     {
         if (menu == &menu_bind_info)
@@ -988,8 +1049,10 @@ void screen_update(screen_t *screen)
             menu_set_active(&menu_bind_req);
         }
         screen_draw_bind_request_from_tx(screen, &packet);
+        return;
     }
-    else if (has_pending_bind_request && packet.role == AIR_ROLE_RX_AWAITING_CONFIRMATION)
+
+    if (has_pending_bind_request && packet.role == AIR_ROLE_RX_AWAITING_CONFIRMATION)
     {
         // We're a TX and we've been informed that there's an RX
         // waiting for bind confirmation.
@@ -998,8 +1061,12 @@ void screen_update(screen_t *screen)
             menu_set_active(&menu_bind_info);
         }
         screen_draw_bind_request_info_from_rx(screen, &packet);
+        return;
     }
-    else if (alt_pairing_count > 0)
+
+    air_pairing_t alt_pairings[MENU_ALT_PAIRINGS_MAX];
+    int alt_pairing_count = rc_get_alternative_pairings(screen->internal.rc, alt_pairings, ARRAY_COUNT(alt_pairings));
+    if (alt_pairing_count > 0)
     {
         menu_set_alt_pairings(alt_pairings, alt_pairing_count);
         if (menu != &menu_alt_pairings)
@@ -1007,34 +1074,52 @@ void screen_update(screen_t *screen)
             menu_set_active(&menu_alt_pairings);
         }
         screen_draw_menu(screen, &menu_alt_pairings, 0);
+        return;
+    }
+
+    // There's nothing overriding the screen, draw the normal interface
+    while (menu == &menu_empty || menu == &menu_bind_req || menu == &menu_bind_info || menu == &menu_alt_pairings)
+    {
+        menu_pop_active();
+        menu = menu_get_active();
+    }
+    if (menu != NULL)
+    {
+        screen_draw_menu(screen, menu, 0);
     }
     else
     {
-        while (menu == &menu_bind_req || menu == &menu_bind_info || menu == &menu_alt_pairings)
+        switch (screen->internal.mode)
         {
-            menu_pop_active();
-            menu = menu_get_active();
-        }
-        if (menu != NULL)
-        {
-            screen_draw_menu(screen, menu, 0);
-        }
-        else
-        {
-            switch (screen->internal.mode)
-            {
-            case SCREEN_MODE_MAIN:
-                screen_draw_main(screen);
-                break;
-            case SCREEN_MODE_CHANNELS:
-                screen_draw_channels(screen);
-                break;
-            case SCREEN_MODE_TELEMETRY:
-                screen_draw_telemetry(screen);
-                break;
-            }
+        case SCREEN_MODE_MAIN:
+            screen_draw_main(screen);
+            break;
+        case SCREEN_MODE_CHANNELS:
+            screen_draw_channels(screen);
+            break;
+        case SCREEN_MODE_TELEMETRY:
+            screen_draw_telemetry(screen);
+            break;
         }
     }
+}
+
+void screen_update(screen_t *screen)
+{
+    if (screen->internal.splashing)
+    {
+        return;
+    }
+
+    char buf[SCREEN_DRAW_BUF_SIZE];
+
+    screen->internal.w = u8g2_GetDisplayWidth(&u8g2);
+    screen->internal.h = u8g2_GetDisplayHeight(&u8g2);
+    screen->internal.direction = SCREEN_W(screen) > SCREEN_H(screen) ? SCREEN_DIRECTION_HORIZONTAL : SCREEN_DIRECTION_VERTICAL;
+    screen->internal.buf = buf;
+    u8g2_ClearBuffer(&u8g2);
+    screen_draw(screen);
     u8g2_SendBuffer(&u8g2);
 }
+
 #endif

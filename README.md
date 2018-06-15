@@ -20,6 +20,7 @@ another aircraft.
 viewer and full configuration (requires at least one button on the board).
 - Bluetooth MSP bridge using the same serial port as the RC link (works with
 all the existing Betaflight/iNAV configurators with support for Bluetooth).
+- Support for OTA updates over Bluetooth (iOS and Android apps coming soon).
 - Model ID with 64 memory slots.
 - Fully configurable from the radio using CRSF scripts (crossfire.lua
 and device.lua).

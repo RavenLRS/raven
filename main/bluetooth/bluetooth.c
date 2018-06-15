@@ -5,6 +5,8 @@
 #include <nvs_flash.h>
 
 #include "bluetooth/bluetooth_hal.h"
+#include "bluetooth/bluetooth_ota.h"
+#include "bluetooth/bluetooth_uuid.h"
 
 #include "io/io.h"
 
@@ -21,8 +23,6 @@
 
 static const char *TAG = "Bluetooth";
 
-#define RAVEN_UUID(n) BT_UUID_16_FROM(n, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c)
-#define RAVEN_SERVICE_UUID(n) RAVEN_UUID((n + 1) << 8)
 #define TELEMETRY_UUID_OFFSET 0x8000
 
 static esp_gatt_status_t hm_serial_read(gatt_server_t *server, gatt_server_char_t *chr, struct gatts_read_evt_param *r, esp_gatt_rsp_t *rsp, void *user_data);
@@ -96,9 +96,15 @@ static gatt_server_service_t services[] = {
         .chars = device_info_characteristics,
         .chars_len = ARRAY_COUNT(device_info_characteristics),
     },
-    // Telemetry
+    // OTA
     {
         .uuid = RAVEN_SERVICE_UUID(0),
+        .chars = bt_ota_characteristics,
+        .chars_len = ARRAY_COUNT(bt_ota_characteristics),
+    },
+    // Telemetry
+    {
+        .uuid = RAVEN_SERVICE_UUID(1),
         .chars = telemetry_chars,
         .chars_len = ARRAY_COUNT(telemetry_chars),
     },

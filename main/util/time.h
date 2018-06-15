@@ -20,6 +20,7 @@ typedef uint64_t time_micros_t;
 #define MILLIS_TO_TICKS(ms) ((ms) / portTICK_PERIOD_MS)
 #define SECS_TO_TICKS(s) MILLIS_TO_TICKS(1000 * s)
 #define FREQ_TO_TICKS(hz) MILLIS_TO_TICKS(1000 / hz)
+#define TICKS_TO_MILLIS(t) (t * portTICK_PERIOD_MS)
 
 #define MILLIS_TO_MICROS(ms) (ms * 1000)
 #define SECS_TO_MICROS(s) MILLIS_TO_MICROS(s * 1000)
