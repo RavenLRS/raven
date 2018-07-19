@@ -117,7 +117,8 @@ all:
 # Build all targets, but run make clean after building each one
 # to avoid using too much disk space.
 ci-build:
-	for target in $(VALID_TARGETS); do \
-		V=0 TARGET=$$target $(MAKE) -s ; \
-		V=0 TARGET=$$target $(MAKE) -s clean; \
+	@ for target in $(VALID_TARGETS); do \
+		echo "Building $$target"; \
+		TARGET=$$target $(MAKE) 1> /dev/null ; \
+		TARGET=$$target $(MAKE) clean 1> /dev/null; \
 	done
