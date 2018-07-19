@@ -34,6 +34,10 @@ VALID_VARIANTS			:= $(sort $(VALID_VARIANTS))
 make_target				= $(platform)_$(variant)
 VALID_TARGETS			:= $(foreach platform,$(VALID_PLATFORMS),$(foreach variant,$(VALID_VARIANTS),$(make_target)))
 
+ifneq ($(TARGETS_FILTER),)
+VALID_TARGETS := $(filter %$(TARGETS_FILTER),$(VALID_TARGETS))
+endif
+
 # Features that we accept via environment
 
 USE_AIR_MODE_1 ?=
@@ -114,6 +118,6 @@ all:
 # to avoid using too much disk space.
 ci-build:
 	for target in $(VALID_TARGETS); do \
-		TARGET=$$target $(MAKE); \
-		TARGET=$$target $(MAKE) clean; \
+		V=0 BATCH_BUILD=1 TARGET=$$target $(MAKE); \
+		V=0 BATCH_BUILD=1 TARGET=$$target $(MAKE) clean; \
 	done
