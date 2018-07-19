@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e -x
+set -e
 
 ESP_IDF_REPO_BASENAME=esp-idf
 ESP_IDF_REPO=https://github.com/espressif/${ESP_IDF_REPO_BASENAME}.git
