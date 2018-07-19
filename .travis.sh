@@ -16,5 +16,17 @@ export IDF_PATH=`pwd`
 popd
 popd
 
-# Build all targets
+# Setup targets to build
+case $1 in
+tx)
+    TARGETS_FILTER=_tx
+    ;;
+rx)
+    TARGETS_FILTER=_rx
+    ;;
+txrx)
+    TARGETS_FILTER=_txrx
+    ;;
+esac
+
 make ci-build

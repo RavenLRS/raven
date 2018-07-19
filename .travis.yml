@@ -20,16 +20,11 @@ addons:
 language: cpp
 dist: trusty
 
-script: ./.travis.sh
-
 jobs:
   include:
-    - stage: RX
-      name: RX
-      env: TARGETS_FILTER=_rx
-    - stage: TX
-      name: TX
-      env: TARGETS_FILTER=_tx
-    - stage: TXRX
-      name: TXRX
-      env: TARGETS_FILTER=_txrx
+    - stage: run
+      script: ./.travis.sh tx
+    -
+      script: ./.travis.sh rx
+    -
+      script: ./.travis.sh txrx
