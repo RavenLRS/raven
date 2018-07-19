@@ -2,6 +2,7 @@ sudo: false
 
 git:
   depth: 5
+  quiet: true
 
 addons:
   apt:

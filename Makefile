@@ -118,6 +118,6 @@ all:
 # to avoid using too much disk space.
 ci-build:
 	for target in $(VALID_TARGETS); do \
-		V=0 BATCH_BUILD=1 TARGET=$$target $(MAKE); \
-		V=0 BATCH_BUILD=1 TARGET=$$target $(MAKE) clean; \
+		V=0 TARGET=$$target $(MAKE) -s ; \
+		V=0 TARGET=$$target $(MAKE) -s clean; \
 	done
