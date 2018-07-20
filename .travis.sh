@@ -29,4 +29,5 @@ txrx)
     ;;
 esac
 
+export TARGETS_FILTER
 make ci-build
