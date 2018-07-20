@@ -45,6 +45,7 @@
 #define REG_DETECTION_THRESHOLD 0x37
 #define REG_SYNC_WORD 0x39
 #define REG_DIO_MAPPING_1 0x40
+#define REG_DIO_MAPPING_2 0x41
 #define REG_VERSION 0x42
 #define REG_PA_DAC 0x4d
 
@@ -349,6 +350,12 @@ void lora_init(lora_t *lora)
 
     // set auto AGC
     lora_write_reg(lora, REG_MODEM_CONFIG_3, 0x04);
+
+#if defined(CONFIG_RAVEN_DIO5_CLK_OUTPUT)
+    // Enable DIO5 as ClkOut
+    uint8_t dio_mapping_2 = lora_read_reg(lora, REG_DIO_MAPPING_2);
+    lora_write_reg(lora, REG_DIO_MAPPING_2, dio_mapping_2 | (1 << 5));
+#endif
 
     // set output power to 17 dBm
     lora_set_tx_power(lora, 17);
