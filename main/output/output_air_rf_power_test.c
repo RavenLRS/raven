@@ -1,9 +1,8 @@
 #include <hal/log.h>
 
 #include "air/air.h"
+#include "air/air_radio.h"
 #include "air/air_rf_power.h"
-
-#include "io/lora.h"
 
 #include "ui/led.h"
 
@@ -30,7 +29,7 @@ static const char *TAG = "Output.Air.RFPowerTest";
 static void output_air_rf_power_test_send(output_air_rf_power_test_t *output)
 {
     uint8_t packet[RF_TEST_PACKET_SIZE];
-    lora_send(output->lora.lora, packet, sizeof(packet));
+    air_radio_send(output->air_config.radio, packet, sizeof(packet));
 }
 
 static bool output_air_rf_power_test_open(void *data, void *config)
@@ -46,6 +45,7 @@ static bool output_air_rf_power_test_open(void *data, void *config)
 static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, time_micros_t now)
 {
     output_air_rf_power_test_t *output = data;
+    air_radio_t *radio = output->air_config.radio;
     if (now > output->next_switch)
     {
         switch ((rf_power_test_state_e)output->state)
@@ -67,16 +67,14 @@ static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, time
         case RF_POWER_TEST_STATE_BLINK:
         {
             LOG_I(TAG, "TX starting at power %d (%d dBm / %f MHz)", output->power,
-                  air_rf_power_to_dbm(output->power), air_lora_band_frequency(output->lora.band) / 1e6);
+                  air_rf_power_to_dbm(output->power), air_band_frequency(output->air_config.band) / 1e6);
             // Start transmitting. Turn the led on during transmission.
             led_set_blink_mode(RF_TEST_LED, LED_BLINK_MODE_NONE);
             led_on(RF_TEST_LED);
-            lora_sleep(output->lora.lora);
-            lora_set_tx_power(output->lora.lora, air_rf_power_to_dbm(output->power));
-            lora_set_frequency(output->lora.lora, air_lora_band_frequency(output->lora.band));
-            air_lora_set_parameters(output->lora.lora, AIR_LORA_MODE_LONGEST);
-            lora_set_spreading_factor(output->lora.lora, 12);
-            lora_set_signal_bw(output->lora.lora, LORA_SIGNAL_BW_250);
+            air_radio_sleep(radio);
+            air_radio_set_tx_power(radio, air_rf_power_to_dbm(output->power));
+            air_radio_set_frequency(radio, air_band_frequency(output->air_config.band));
+            air_radio_set_powertest_mode(radio);
             output_air_rf_power_test_send(output);
             output->state = RF_POWER_TEST_STATE_TX;
             output->next_switch = now + MILLIS_TO_MICROS(RF_TEST_TX_MS);
@@ -88,12 +86,12 @@ static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, time
             output->state = RF_POWER_TEST_STATE_IDLE;
             output->next_switch = now + MILLIS_TO_MICROS(RF_TEST_WAIT_MS);
             led_off(RF_TEST_LED);
-            lora_sleep(output->lora.lora);
+            air_radio_sleep(radio);
             output->power++;
             break;
         }
     }
-    if (output->state == RF_POWER_TEST_STATE_TX && lora_is_tx_done(output->lora.lora))
+    if (output->state == RF_POWER_TEST_STATE_TX && air_radio_is_tx_done(output->air_config.radio))
     {
         output_air_rf_power_test_send(output);
     }
@@ -103,14 +101,14 @@ static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, time
 static void output_air_rf_power_test_close(void *data, void *config)
 {
     output_air_rf_power_test_t *output = data;
-    lora_sleep(output->lora.lora);
+    air_radio_sleep(output->air_config.radio);
     led_set_blink_mode(RF_TEST_LED, LED_BLINK_MODE_NONE);
     LOG_I(TAG, "Close");
 }
 
-void output_air_rf_power_test_init(output_air_rf_power_test_t *output, air_lora_config_t *lora)
+void output_air_rf_power_test_init(output_air_rf_power_test_t *output, air_config_t *air_config)
 {
-    output->lora = *lora;
+    output->air_config = *air_config;
     output->output.min_update_interval = 0;
     output->output.vtable = (output_vtable_t){
         .open = output_air_rf_power_test_open,

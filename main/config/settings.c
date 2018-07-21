@@ -3,7 +3,6 @@
 
 #include <hal/log.h>
 
-#include "air/air_lora.h"
 #include "air/air_rf_power.h"
 
 #include "config/config.h"
@@ -108,10 +107,10 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
         return SETTING_VISIBILITY_HIDE;
 #endif
     }
-    if (SETTING_IS(setting, SETTING_KEY_LORA_BAND))
+    if (SETTING_IS(setting, SETTING_KEY_AIR_BAND))
     {
-        // LoRa band is only selectable in the TX, the RX
-        // switches to whatever LoRa band the TX is using.
+        // Air band is only selectable in the TX, the RX
+        // switches to whatever air band the TX is using.
         return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_TX);
     }
     if (SETTING_IS(setting, SETTING_KEY_TX))
@@ -268,31 +267,31 @@ static int setting_format_rx_addr(char *buf, size_t size, const setting_t *setti
 static const char *mode_table[] = {"TX", "RX"};
 #endif
 
-// Keep in sync with config_lora_band_e
-static const char *lora_band_table[] = {
-#if defined(USE_LORA_BAND_147)
+// Keep in sync with config_air_band_e
+static const char *air_band_table[] = {
+#if defined(USE_AIR_BAND_147)
     "147MHz",
 #endif
-#if defined(USE_LORA_BAND_169)
+#if defined(USE_AIR_BAND_169)
     "169MHz",
 #endif
-#if defined(USE_LORA_BAND_315)
+#if defined(USE_AIR_BAND_315)
     "315MHz",
 #endif
-#if defined(USE_LORA_BAND_433)
+#if defined(USE_AIR_BAND_433)
     "433MHz",
 #endif
-#if defined(USE_LORA_BAND_470)
+#if defined(USE_AIR_BAND_470)
     "470MHz",
 #endif
-#if defined(USE_LORA_BAND_868)
+#if defined(USE_AIR_BAND_868)
     "868MHz",
 #endif
-#if defined(USE_LORA_BAND_915)
+#if defined(USE_AIR_BAND_915)
     "915MHz",
 #endif
 };
-_Static_assert(ARRAY_COUNT(lora_band_table) == CONFIG_LORA_BAND_COUNT, "Invalid LoRa band names table");
+_Static_assert(ARRAY_COUNT(air_band_table) == CONFIG_AIR_BAND_COUNT, "Invalid air band names table");
 static const char *tx_input_table[] = {"CRSF", "Test"};
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");
@@ -373,7 +372,7 @@ static const setting_t settings[] = {
     U8_SETTING(SETTING_KEY_RC_MODE, NULL, SETTING_FLAG_READONLY, FOLDER_ID_ROOT, RC_MODE_TX, RC_MODE_TX, RC_MODE_TX),
 #endif
     BOOL_SETTING(SETTING_KEY_BIND, "Bind", SETTING_FLAG_EPHEMERAL, FOLDER_ID_ROOT, false),
-    U8_MAP_SETTING(SETTING_KEY_LORA_BAND, "LoRa Band", 0, FOLDER_ID_ROOT, lora_band_table, CONFIG_LORA_BAND_DEFAULT),
+    U8_MAP_SETTING(SETTING_KEY_AIR_BAND, "Band", 0, FOLDER_ID_ROOT, air_band_table, CONFIG_AIR_BAND_DEFAULT),
 
     FOLDER(SETTING_KEY_TX, "TX", FOLDER_ID_TX, FOLDER_ID_ROOT, setting_visibility_tx),
     U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),

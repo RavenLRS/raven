@@ -16,15 +16,15 @@
 // Buzzer
 #define PIN_BEEPER 12 // This seems appropriate for v1 boards, since it can't be pulled low during boot
 
-// LoRa
-#define PIN_LORA_SCK 5
-#define PIN_LORA_MISO 19
-#define PIN_LORA_MOSI 27
-#define PIN_LORA_CS 18
-#define PIN_LORA_RST 14
-#define PIN_LORA_DIO0 26
+// SX127X
+#define PIN_SX127X_SCK 5
+#define PIN_SX127X_MISO 19
+#define PIN_SX127X_MOSI 27
+#define PIN_SX127X_CS 18
+#define PIN_SX127X_RST 14
+#define PIN_SX127X_DIO0 26
 
-#define LORA_OUTPUT_TYPE LORA_OUTPUT_PA_BOOST
+#define SX127X_OUTPUT_TYPE SX127X_OUTPUT_PA_BOOST
 
 // SDCard pins are mapped as usable output pins, since we don't use the SDCard right now
 // Note that these boards use ESP32-PICO-D4, which has pins 16 and 17 connected to the

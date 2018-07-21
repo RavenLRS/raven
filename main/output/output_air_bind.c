@@ -1,8 +1,6 @@
 #include <hal/log.h>
 
-#include "air/air_lora.h"
-
-#include "io/lora.h"
+#include "air/air_radio.h"
 
 #include "ui/led.h"
 
@@ -18,8 +16,8 @@ static bool output_air_bind_open(void *data, void *config)
     output->binding_key = air_key_generate();
     output->has_bind_response = false;
     output->bind_packet_expires = 0;
-    air_lora_set_parameters_bind(output->lora.lora);
-    lora_set_frequency(output->lora.lora, air_lora_band_frequency(output->lora.band));
+    air_radio_set_bind_mode(output->air_config.radio);
+    air_radio_set_frequency(output->air_config.radio, air_band_frequency(output->air_config.band));
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_BIND);
     return true;
 }
@@ -27,9 +25,10 @@ static bool output_air_bind_open(void *data, void *config)
 static bool output_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t now)
 {
     output_air_bind_t *output = data;
+    air_radio_t *radio = output->air_config.radio;
     if (output->next_bind_offer < now)
     {
-        if (!lora_is_tx_done(output->lora.lora))
+        if (!air_radio_is_tx_done(radio))
         {
             LOG_W(TAG, "TX not finished before sending next bind packet");
         }
@@ -40,7 +39,7 @@ static bool output_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t
             .key = output->binding_key,
             .role = AIR_ROLE_TX,
         };
-        bind_packet.info.modes = output->lora.modes;
+        bind_packet.info.modes = output->air_config.modes;
 
         const char *name = rc_data_get_pilot_name(output->output.rc_data);
         memset(bind_packet.name, 0, sizeof(bind_packet.name));
@@ -50,22 +49,22 @@ static bool output_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t
         }
         air_bind_packet_prepare(&bind_packet);
         LOG_I(TAG, "Sending bind packet");
-        lora_send(output->lora.lora, &bind_packet, sizeof(bind_packet));
+        air_radio_send(radio, &bind_packet, sizeof(bind_packet));
         output->next_bind_offer = now + AIR_BIND_PACKET_INTERVAL_MS * 1000;
     }
     else
     {
         // Check if TX was done
-        if (!output->is_listening && lora_is_tx_done(output->lora.lora))
+        if (!output->is_listening && air_radio_is_tx_done(radio))
         {
-            lora_sleep(output->lora.lora);
-            lora_enable_continous_rx(output->lora.lora);
+            air_radio_sleep(radio);
+            air_radio_start_rx(radio);
             output->is_listening = true;
         }
-        else if (output->is_listening && lora_is_rx_done(output->lora.lora))
+        else if (output->is_listening && air_radio_is_rx_done(radio))
         {
             air_bind_packet_t *bind_resp = &output->bind_resp;
-            if (lora_read(output->lora.lora, bind_resp, sizeof(*bind_resp)) == sizeof(*bind_resp) &&
+            if (air_radio_read(radio, bind_resp, sizeof(*bind_resp)) == sizeof(*bind_resp) &&
                 air_bind_packet_validate(bind_resp) && bind_resp->key == output->binding_key)
             {
                 // Got a response from the RX. It might be informing that the RX
@@ -82,17 +81,17 @@ static bool output_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t
 static void output_air_bind_close(void *data, void *config)
 {
     output_air_bind_t *output = data;
-    lora_sleep(output->lora.lora);
+    air_radio_sleep(output->air_config.radio);
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_NONE);
 }
 
-static bool output_air_bind_has_request(void *data, air_bind_packet_t *packet, air_lora_band_e *band, bool *needs_confirmation)
+static bool output_air_bind_has_request(void *data, air_bind_packet_t *packet, air_band_e *band, bool *needs_confirmation)
 {
     output_air_bind_t *output = data;
     if (output->has_bind_response && time_micros_now() < output->bind_packet_expires)
     {
         air_bind_packet_cpy(packet, &output->bind_resp);
-        *band = output->lora.band;
+        *band = output->air_config.band;
         *needs_confirmation = output->bind_resp.role != AIR_ROLE_RX;
         return true;
     }
@@ -105,9 +104,9 @@ static bool output_air_bind_accept_request(void *data)
     return true;
 }
 
-void output_air_bind_init(output_air_bind_t *output_air_bind, air_addr_t addr, air_lora_config_t *lora)
+void output_air_bind_init(output_air_bind_t *output_air_bind, air_addr_t addr, air_config_t *air_config)
 {
-    output_air_bind->lora = *lora;
+    output_air_bind->air_config = *air_config;
     air_io_bind_t bind = {
         .has_request = output_air_bind_has_request,
         .accept_request = output_air_bind_accept_request,

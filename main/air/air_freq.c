@@ -2,8 +2,6 @@
 
 #include "air/air_freq.h"
 
-#include "io/lora.h"
-
 #include "util/macros.h"
 
 #define MAX_OFFSET (23 * 2) // in 0.125mhz steps, so 64/8 = 8Mhz up/down

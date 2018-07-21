@@ -35,7 +35,7 @@ typedef struct config_paired_rx_s
 typedef struct config_air_info_blob_s
 {
     char name[AIR_MAX_NAME_LENGTH + 1];
-    air_lora_band_e band; // Last band seen in this node
+    air_band_e band; // Last band seen in this node
     air_info_t info;
 } PACKED config_air_info_blob_t;
 
@@ -332,7 +332,7 @@ bool config_set_air_name(const air_addr_t *addr, const char *name)
     return true;
 }
 
-bool config_get_air_info(air_info_t *info, air_lora_band_e *band, const air_addr_t *addr)
+bool config_get_air_info(air_info_t *info, air_band_e *band, const air_addr_t *addr)
 {
     char key[CONFIG_KEY_BUFSIZE];
     config_air_info_blob_t blob;
@@ -352,7 +352,7 @@ bool config_get_air_info(air_info_t *info, air_lora_band_e *band, const air_addr
     return false;
 }
 
-bool config_set_air_info(const air_addr_t *addr, const air_info_t *info, air_lora_band_e band)
+bool config_set_air_info(const air_addr_t *addr, const air_info_t *info, air_band_e band)
 {
     char key[CONFIG_KEY_BUFSIZE];
     config_air_info_blob_t blob;
@@ -439,85 +439,85 @@ air_addr_t config_get_addr(void)
     return config.addr;
 }
 
-air_lora_band_e config_get_lora_band(config_lora_band_e band)
+air_band_e config_get_air_band(config_air_band_e band)
 {
     switch (band)
     {
-#if defined(USE_LORA_BAND_147)
-    case CONFIG_LORA_BAND_147:
-        return AIR_LORA_BAND_147;
+#if defined(USE_AIR_BAND_147)
+    case CONFIG_AIR_BAND_147:
+        return AIR_BAND_147;
 #endif
-#if defined(USE_LORA_BAND_169)
-    case CONFIG_LORA_BAND_169:
-        return AIR_LORA_BAND_169;
+#if defined(USE_AIR_BAND_169)
+    case CONFIG_AIR_BAND_169:
+        return AIR_BAND_169;
 #endif
-#if defined(USE_LORA_BAND_315)
-    case CONFIG_LORA_BAND_315:
-        return AIR_LORA_BAND_315;
+#if defined(USE_AIR_BAND_315)
+    case CONFIG_AIR_BAND_315:
+        return AIR_BAND_315;
 #endif
-#if defined(USE_LORA_BAND_433)
-    case CONFIG_LORA_BAND_433:
-        return AIR_LORA_BAND_433;
+#if defined(USE_AIR_BAND_433)
+    case CONFIG_AIR_BAND_433:
+        return AIR_BAND_433;
 #endif
-#if defined(USE_LORA_BAND_470)
-    case CONFIG_LORA_BAND_470:
-        return AIR_LORA_BAND_470;
+#if defined(USE_AIR_BAND_470)
+    case CONFIG_AIR_BAND_470:
+        return AIR_BAND_470;
 #endif
-#if defined(USE_LORA_BAND_868)
-    case CONFIG_LORA_BAND_868:
-        return AIR_LORA_BAND_868;
+#if defined(USE_AIR_BAND_868)
+    case CONFIG_AIR_BAND_868:
+        return AIR_BAND_868;
 #endif
-#if defined(USE_LORA_BAND_915)
-    case CONFIG_LORA_BAND_915:
-        return AIR_LORA_BAND_915;
+#if defined(USE_AIR_BAND_915)
+    case CONFIG_AIR_BAND_915:
+        return AIR_BAND_915;
 #endif
-    case CONFIG_LORA_BAND_COUNT:
+    case CONFIG_AIR_BAND_COUNT:
         break;
     }
     return 0;
 }
 
-air_lora_band_mask_t config_get_lora_band_mask(void)
+air_band_mask_t config_get_air_band_mask(void)
 {
-    air_lora_band_mask_t mask = 0;
-    for (int ii = 0; ii < CONFIG_LORA_BAND_COUNT; ii++)
+    air_band_mask_t mask = 0;
+    for (int ii = 0; ii < CONFIG_AIR_BAND_COUNT; ii++)
     {
-        air_lora_band_e band = config_get_lora_band(ii);
-        if (band != 0)
+        air_band_e band = config_get_air_band(ii);
+        if (band != AIR_BAND_INVALID)
         {
-            mask |= AIR_LORA_BAND_BIT(band);
+            mask |= AIR_BAND_BIT(band);
         }
     }
     return mask;
 }
 
-bool config_supports_lora_band(air_lora_band_e band)
+bool config_supports_air_band(air_band_e band)
 {
-    return config_get_lora_band_mask() & AIR_LORA_BAND_BIT(band);
+    return config_get_air_band_mask() & AIR_BAND_BIT(band);
 }
 
-air_lora_supported_modes_e config_get_air_lora_modes(config_air_mode_e modes)
+air_supported_modes_e config_get_air_modes(config_air_mode_e modes)
 {
     switch (modes)
     {
 #if defined(USE_AIR_MODE_1)
     case CONFIG_AIR_MODES_1_5:
-        return AIR_LORA_SUPPORTED_MODES_1_TO_5;
+        return AIR_SUPPORTED_MODES_1_TO_5;
 #endif
     case CONFIG_AIR_MODES_2_5:
-        return AIR_LORA_SUPPORTED_MODES_2_TO_5;
+        return AIR_SUPPORTED_MODES_2_TO_5;
 #if defined(USE_AIR_MODE_1)
     case CONFIG_AIR_MODES_FIXED_1:
-        return AIR_LORA_SUPPORTED_MODES_FIXED_1;
+        return AIR_SUPPORTED_MODES_FIXED_1;
 #endif
     case CONFIG_AIR_MODES_FIXED_2:
-        return AIR_LORA_SUPPORTED_MODES_FIXED_2;
+        return AIR_SUPPORTED_MODES_FIXED_2;
     case CONFIG_AIR_MODES_FIXED_3:
-        return AIR_LORA_SUPPORTED_MODES_FIXED_3;
+        return AIR_SUPPORTED_MODES_FIXED_3;
     case CONFIG_AIR_MODES_FIXED_4:
-        return AIR_LORA_SUPPORTED_MODES_FIXED_4;
+        return AIR_SUPPORTED_MODES_FIXED_4;
     case CONFIG_AIR_MODES_FIXED_5:
-        return AIR_LORA_SUPPORTED_MODES_FIXED_5;
+        return AIR_SUPPORTED_MODES_FIXED_5;
     case CONFIG_AIR_MODES_COUNT:
         break;
     }

@@ -1,5 +1,7 @@
 #include <math.h>
 
+#include "air/air_band.h"
+
 #include "config/config.h"
 
 #include "rmp/rmp_air.h"
@@ -26,11 +28,11 @@ void air_io_init(air_io_t *io, air_addr_t addr, air_io_bind_t *bind, rmp_air_t *
     lpf_init(&io->average_frame_interval, 1);
 }
 
-bool air_io_has_bind_request(air_io_t *io, air_bind_packet_t *packet, air_lora_band_e *band, bool *needs_confirmation)
+bool air_io_has_bind_request(air_io_t *io, air_bind_packet_t *packet, air_band_e *band, bool *needs_confirmation)
 {
     air_bind_packet_t p;
     bool nc;
-    air_lora_band_e nb;
+    air_band_e nb;
     air_io_has_request_f has_request = io->bind.has_request;
     if (has_request)
     {

@@ -3,8 +3,6 @@
 
 #include <hal/rand.h>
 
-#include "air/air_lora.h"
-
 #include "config/config.h"
 
 #include "platform/system.h"
@@ -54,31 +52,31 @@ void air_bind_packet_prepare(air_bind_packet_t *packet)
     packet->version = AIR_PROTOCOL_VERSION;
     packet->info.max_tx_power = 20;
     packet->info.capabilities = 0;
-    if (config_supports_lora_band(AIR_LORA_BAND_147))
+    if (config_supports_air_band(AIR_BAND_147))
     {
         packet->info.capabilities |= AIR_CAP_FREQUENCY_147MHZ;
     }
-    if (config_supports_lora_band(AIR_LORA_BAND_169))
+    if (config_supports_air_band(AIR_BAND_169))
     {
         packet->info.capabilities |= AIR_CAP_FREQUENCY_169MHZ;
     }
-    if (config_supports_lora_band(AIR_LORA_BAND_315))
+    if (config_supports_air_band(AIR_BAND_315))
     {
         packet->info.capabilities |= AIR_CAP_FREQUENCY_315MHZ;
     }
-    if (config_supports_lora_band(AIR_LORA_BAND_433))
+    if (config_supports_air_band(AIR_BAND_433))
     {
         packet->info.capabilities |= AIR_CAP_FREQUENCY_433MHZ;
     }
-    if (config_supports_lora_band(AIR_LORA_BAND_470))
+    if (config_supports_air_band(AIR_BAND_470))
     {
         packet->info.capabilities |= AIR_CAP_FREQUENCY_470MHZ;
     }
-    if (config_supports_lora_band(AIR_LORA_BAND_868))
+    if (config_supports_air_band(AIR_BAND_868))
     {
         packet->info.capabilities |= AIR_CAP_FREQUENCY_868MHZ;
     }
-    if (config_supports_lora_band(AIR_LORA_BAND_915))
+    if (config_supports_air_band(AIR_BAND_915))
     {
         packet->info.capabilities |= AIR_CAP_FREQUENCY_915MHZ;
     }

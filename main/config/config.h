@@ -5,7 +5,8 @@
 #include "target.h"
 
 #include "air/air.h"
-#include "air/air_lora.h"
+#include "air/air_band.h"
+#include "air/air_mode.h"
 
 #include "rc/rc_data.h"
 
@@ -109,29 +110,29 @@ typedef enum
 
 typedef enum
 {
-#if defined(USE_LORA_BAND_147)
-    CONFIG_LORA_BAND_147,
+#if defined(USE_AIR_BAND_147)
+    CONFIG_AIR_BAND_147,
 #endif
-#if defined(USE_LORA_BAND_169)
-    CONFIG_LORA_BAND_169,
+#if defined(USE_AIR_BAND_169)
+    CONFIG_AIR_BAND_169,
 #endif
-#if defined(USE_LORA_BAND_315)
-    CONFIG_LORA_BAND_315,
+#if defined(USE_AIR_BAND_315)
+    CONFIG_AIR_BAND_315,
 #endif
-#if defined(USE_LORA_BAND_433)
-    CONFIG_LORA_BAND_433,
+#if defined(USE_AIR_BAND_433)
+    CONFIG_AIR_BAND_433,
 #endif
-#if defined(USE_LORA_BAND_470)
-    CONFIG_LORA_BAND_470,
+#if defined(USE_AIR_BAND_470)
+    CONFIG_AIR_BAND_470,
 #endif
-#if defined(USE_LORA_BAND_868)
-    CONFIG_LORA_BAND_868,
+#if defined(USE_AIR_BAND_868)
+    CONFIG_AIR_BAND_868,
 #endif
-#if defined(USE_LORA_BAND_915)
-    CONFIG_LORA_BAND_915,
+#if defined(USE_AIR_BAND_915)
+    CONFIG_AIR_BAND_915,
 #endif
-    CONFIG_LORA_BAND_COUNT,
-} config_lora_band_e;
+    CONFIG_AIR_BAND_COUNT,
+} config_air_band_e;
 
 void config_init(void);
 
@@ -155,9 +156,9 @@ void config_set_paired_tx(const air_pairing_t *pairing);
 
 bool config_get_air_name(char *buf, size_t size, const air_addr_t *addr);
 bool config_set_air_name(const air_addr_t *addr, const char *name);
-bool config_get_air_info(air_info_t *info, air_lora_band_e *band, const air_addr_t *addr);
+bool config_get_air_info(air_info_t *info, air_band_e *band, const air_addr_t *addr);
 // True true iff info was updated, if there were no changes it returns false
-bool config_set_air_info(const air_addr_t *addr, const air_info_t *info, air_lora_band_e band);
+bool config_set_air_info(const air_addr_t *addr, const air_info_t *info, air_band_e band);
 
 // Used for storing keys for talking to other devices, including TX/RX/GS
 // and other RC chains using p2p.
@@ -168,7 +169,7 @@ rx_output_type_e config_get_output_type(void);
 
 air_addr_t config_get_addr(void);
 
-air_lora_band_e config_get_lora_band(config_lora_band_e band);
-air_lora_band_mask_t config_get_lora_band_mask(void);
-bool config_supports_lora_band(air_lora_band_e band);
-air_lora_supported_modes_e config_get_air_lora_modes(config_air_mode_e modes);
+air_band_e config_get_air_band(config_air_band_e band);
+air_band_mask_t config_get_air_band_mask(void);
+bool config_supports_air_band(air_band_e band);
+air_supported_modes_e config_get_air_modes(config_air_mode_e modes);

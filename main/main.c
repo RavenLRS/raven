@@ -12,13 +12,16 @@
 
 #include "target.h"
 
+#include "air/air_radio.h"
+#include "air/air_radio_sx127x.h"
+
 #include "bluetooth/bluetooth.h"
 
 #include "config/config.h"
 #include "config/settings.h"
 #include "config/settings_rmp.h"
 
-#include "io/lora.h"
+#include "io/sx127x.h"
 
 #include "p2p/p2p.h"
 
@@ -36,14 +39,14 @@
 
 static const char *TAG = "main";
 
-static lora_t lora = {
-    .mosi = PIN_LORA_MOSI,
-    .miso = PIN_LORA_MISO,
-    .sck = PIN_LORA_SCK,
-    .cs = PIN_LORA_CS,
-    .rst = PIN_LORA_RST,
-    .dio0 = PIN_LORA_DIO0,
-    .output_type = LORA_OUTPUT_TYPE,
+static air_radio_t radio = {
+    .sx127x.mosi = PIN_SX127X_MOSI,
+    .sx127x.miso = PIN_SX127X_MISO,
+    .sx127x.sck = PIN_SX127X_SCK,
+    .sx127x.cs = PIN_SX127X_CS,
+    .sx127x.rst = PIN_SX127X_RST,
+    .sx127x.dio0 = PIN_SX127X_DIO0,
+    .sx127x.output_type = SX127X_OUTPUT_TYPE,
 };
 
 static rc_t rc;
@@ -53,7 +56,7 @@ static ui_t ui;
 
 static void shutdown(void)
 {
-    lora_shutdown(&lora);
+    air_radio_shutdown(&radio);
     ui_shutdown(&ui);
     system_shutdown();
 }
@@ -116,9 +119,9 @@ void task_rmp(void *arg)
 
 void task_rc_update(void *arg)
 {
-    // Initialize LoRa here so its interrupts
+    // Initialize the radio here so its interrupts
     // are fired in the same CPU as this task.
-    lora_init(&lora);
+    air_radio_init(&radio);
     // Enable the WDT for this task
     ESP_ERROR_CHECK(esp_task_wdt_add(NULL));
     for (;;)
@@ -152,7 +155,7 @@ void app_main()
 
     p2p_init(&p2p, &rmp);
 
-    rc_init(&rc, &lora, &rmp);
+    rc_init(&rc, &radio, &rmp);
 
     raven_ui_init();
 

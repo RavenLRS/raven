@@ -63,7 +63,7 @@ typedef struct air_info_s
     uint32_t capabilities; // from air_capability_e
     uint8_t max_tx_power;  // Maximum power for the air protocol in db
     uint8_t channels;      // number of supported channels.
-    uint8_t modes;         // from air_lora_supported_modes_e
+    uint8_t modes;         // from air_supported_modes_e
 } PACKED air_info_t;
 
 typedef struct air_bind_packet_s

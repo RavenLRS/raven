@@ -3,12 +3,12 @@
 #include <stdbool.h>
 
 #include "air/air.h"
-#include "air/air_lora.h"
+#include "air/air_band.h"
 
 #include "util/lpf.h"
 #include "util/time.h"
 
-typedef bool (*air_io_has_request_f)(void *user_data, air_bind_packet_t *packet, air_lora_band_e *band, bool *needs_confirmation);
+typedef bool (*air_io_has_request_f)(void *user_data, air_bind_packet_t *packet, air_band_e *band, bool *needs_confirmation);
 typedef bool (*air_io_accept_request_f)(void *user_data);
 
 typedef struct air_io_bind_s
@@ -36,7 +36,7 @@ typedef struct air_io_s
 
 void air_io_init(air_io_t *io, air_addr_t addr, air_io_bind_t *bind, rmp_air_t *rmp);
 
-bool air_io_has_bind_request(air_io_t *io, air_bind_packet_t *packet, air_lora_band_e *band, bool *needs_confirmation);
+bool air_io_has_bind_request(air_io_t *io, air_bind_packet_t *packet, air_band_e *band, bool *needs_confirmation);
 bool air_io_accept_bind_request(air_io_t *io);
 void air_io_bind(air_io_t *io, air_pairing_t *pairing);
 bool air_io_is_bound(air_io_t *io);

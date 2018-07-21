@@ -24,7 +24,7 @@
 #include "rc/rc_rmp.h"
 
 typedef struct air_bind_packet_s air_bind_packet_t;
-typedef struct lora_s lora_t;
+typedef struct air_radio_s air_radio_t;
 typedef struct rc_s rc_t;
 typedef struct rmp_s rmp_t;
 typedef struct rmp_port_s rmp_port_t;
@@ -47,7 +47,7 @@ typedef struct rc_rmp_resp_ctx_s
 typedef struct rc_s
 {
     rc_data_t data;
-    lora_t *lora;
+    air_radio_t *radio;
     rmp_t *rmp;
 
     union {
@@ -94,7 +94,7 @@ typedef struct rc_s
     } state;
 } rc_t;
 
-void rc_init(rc_t *rc, lora_t *lora, rmp_t *rmp);
+void rc_init(rc_t *rc, air_radio_t *radio, rmp_t *rmp);
 
 rc_mode_e rc_get_mode(const rc_t *rc);
 bool rc_is_binding(const rc_t *rc);

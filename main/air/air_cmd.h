@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #include "air/air.h"
-#include "air/air_lora.h"
+#include "air/air_mode.h"
 
 #include "util/macros.h"
 
@@ -23,27 +23,27 @@ typedef enum
     AIR_CMD_RMP = 33,
 } air_cmd_e;
 
-inline air_lora_mode_e air_lora_mode_from_cmd(air_cmd_e cmd)
+inline air_mode_e air_mode_from_cmd(air_cmd_e cmd)
 {
-    _Static_assert(AIR_CMD_SWITCH_MODE_1 == (air_cmd_e)AIR_LORA_MODE_1, "AIR_CMD_SWITCH_MODE_1 != AIR_LORA_MODE_1");
-    _Static_assert(AIR_CMD_SWITCH_MODE_2 == (air_cmd_e)AIR_LORA_MODE_2, "AIR_CMD_SWITCH_MODE_2 != AIR_LORA_MODE_2");
-    _Static_assert(AIR_CMD_SWITCH_MODE_3 == (air_cmd_e)AIR_LORA_MODE_3, "AIR_CMD_SWITCH_MODE_3 != AIR_LORA_MODE_3");
-    _Static_assert(AIR_CMD_SWITCH_MODE_4 == (air_cmd_e)AIR_LORA_MODE_4, "AIR_CMD_SWITCH_MODE_4 != AIR_LORA_MODE_4");
-    _Static_assert(AIR_CMD_SWITCH_MODE_5 == (air_cmd_e)AIR_LORA_MODE_5, "AIR_CMD_SWITCH_MODE_5 != AIR_LORA_MODE_5");
+    _Static_assert(AIR_CMD_SWITCH_MODE_1 == (air_cmd_e)AIR_MODE_1, "AIR_CMD_SWITCH_MODE_1 != AIR_MODE_1");
+    _Static_assert(AIR_CMD_SWITCH_MODE_2 == (air_cmd_e)AIR_MODE_2, "AIR_CMD_SWITCH_MODE_2 != AIR_MODE_2");
+    _Static_assert(AIR_CMD_SWITCH_MODE_3 == (air_cmd_e)AIR_MODE_3, "AIR_CMD_SWITCH_MODE_3 != AIR_MODE_3");
+    _Static_assert(AIR_CMD_SWITCH_MODE_4 == (air_cmd_e)AIR_MODE_4, "AIR_CMD_SWITCH_MODE_4 != AIR_MODE_4");
+    _Static_assert(AIR_CMD_SWITCH_MODE_5 == (air_cmd_e)AIR_MODE_5, "AIR_CMD_SWITCH_MODE_5 != AIR_MODE_5");
 
     // XXX: This assumes modes have the same number as the commands
-    return (air_lora_mode_e)cmd;
+    return (air_mode_e)cmd;
 }
 
-inline air_cmd_e air_cmd_switch_mode_from_mode(air_lora_mode_e mode)
+inline air_cmd_e air_cmd_switch_mode_from_mode(air_mode_e mode)
 {
-    // XXX: Same as air_lora_mode_from_cmd
+    // XXX: Same as air_mode_from_cmd
     return (air_cmd_e)mode;
 }
 
 typedef struct air_cmd_switch_mode_ack_s
 {
-    air_lora_mode_e mode : 4;
+    air_mode_e mode : 4;
     // The change will be performed BEFORE transmitting
     // this TX seq.
     unsigned at_tx_seq : AIR_SEQ_BITS;

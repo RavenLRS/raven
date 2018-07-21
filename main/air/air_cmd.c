@@ -1,3 +1,5 @@
+#include <limits.h>
+
 #include "air_cmd.h"
 
 int air_cmd_size(air_cmd_e cmd)

@@ -17,7 +17,7 @@
 
 #define SETTING_KEY_RC_MODE "rc_mode"
 #define SETTING_KEY_BIND "bind"
-#define SETTING_KEY_LORA_BAND "lora_band"
+#define SETTING_KEY_AIR_BAND "air_band"
 #define SETTING_KEY_RF_POWER_TEST "rf_power_test"
 
 #define SETTING_KEY_TX "tx"

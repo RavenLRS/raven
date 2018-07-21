@@ -9,7 +9,6 @@
 
 #include "config/config.h"
 
-#include "io/lora.h"
 #include "io/pwm.h"
 
 #include "platform/dispatch.h"
@@ -181,21 +180,21 @@ static bool rc_get_pair_addr(rc_t *rc, air_addr_t *addr)
     return air_io && air_io_get_bound_addr(air_io, addr);
 }
 
-static air_lora_band_e rc_get_air_lora_band(rc_t *rc)
+static air_band_e rc_get_air_band(rc_t *rc)
 {
     switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
     {
-        config_lora_band_e config_band = settings_get_key_u8(SETTING_KEY_LORA_BAND);
-        return config_get_lora_band(config_band);
+        config_air_band_e config_band = settings_get_key_u8(SETTING_KEY_AIR_BAND);
+        return config_get_air_band(config_band);
     }
     case RC_MODE_RX:
     {
         air_pairing_t pairing;
         if (config_get_paired_tx(&pairing))
         {
-            air_lora_band_e band;
+            air_band_e band;
             if (config_get_air_info(NULL, &band, &pairing.addr))
             {
                 return band;
@@ -204,7 +203,7 @@ static air_lora_band_e rc_get_air_lora_band(rc_t *rc)
         break;
     }
     }
-    return AIR_LORA_BAND_INVALID;
+    return AIR_BAND_INVALID;
 }
 
 static void rc_invalidate_pair_air_config(rc_t *rc)
@@ -225,7 +224,7 @@ static void rc_update_pair_air_config(rc_t *rc)
         air_addr_t pair_addr;
         if (rc_get_pair_addr(rc, &pair_addr))
         {
-            rc_rmp_request_air_lora_config(&rc->state.rc_rmp, &pair_addr);
+            rc_rmp_request_air_config(&rc->state.rc_rmp, &pair_addr);
         }
         rc->state.pair_air_config_next_req = now + MILLIS_TO_TICKS(500);
     }
@@ -236,30 +235,30 @@ static void rc_pair_air_config_updated(rc_t *rc)
     rc->state.pair_air_config_next_req = 0;
 }
 
-void rc_get_air_lora_config(rc_t *rc, air_lora_config_t *lora)
+void rc_get_air_config(rc_t *rc, air_config_t *air_config)
 {
-    air_lora_supported_modes_e supported_modes = 0;
+    air_supported_modes_e supported_modes = 0;
     switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
         // TX Supports all modes for now
-        supported_modes = AIR_LORA_SUPPORTED_MODES_1_TO_5;
+        supported_modes = AIR_SUPPORTED_MODES_1_TO_5;
         break;
     case RC_MODE_RX:
     {
         // RX allows configurable modes
         config_air_mode_e config_modes = settings_get_key_u8(SETTING_KEY_RX_SUPPORTED_MODES);
-        supported_modes = config_get_air_lora_modes(config_modes);
+        supported_modes = config_get_air_modes(config_modes);
         break;
     }
     }
-    lora->lora = rc->lora;
-    lora->band = rc_get_air_lora_band(rc);
-    lora->modes = supported_modes;
-    lora->bands = config_get_lora_band_mask();
+    air_config->radio = rc->radio;
+    air_config->band = rc_get_air_band(rc);
+    air_config->modes = supported_modes;
+    air_config->bands = config_get_air_band_mask();
 }
 
-void rc_set_peer_air_lora_config(rc_t *rc, air_addr_t *addr, air_lora_band_e band, air_lora_supported_modes_e modes)
+void rc_set_peer_air_config(rc_t *rc, air_addr_t *addr, air_band_e band, air_supported_modes_e modes)
 {
     // TODO: Use the band here for better multiband module support
     air_info_t info;
@@ -296,7 +295,7 @@ static void rc_reconfigure_input(rc_t *rc)
     }
     memset(&rc->inputs, 0, sizeof(rc->inputs));
     air_pairing_t pairing;
-    air_lora_config_t lora;
+    air_config_t air_config;
     switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
@@ -318,15 +317,15 @@ static void rc_reconfigure_input(rc_t *rc)
     case RC_MODE_RX:
     {
         rmp_set_pairing(rc->rmp, NULL);
-        rc_get_air_lora_config(rc, &lora);
+        rc_get_air_config(rc, &air_config);
         if (rc->state.bind_active)
         {
-            input_air_bind_init(&rc->inputs.air_bind, config_get_addr(), &lora);
+            input_air_bind_init(&rc->inputs.air_bind, config_get_addr(), &air_config);
             rc->input = (input_t *)&rc->inputs.air_bind;
         }
         else
         {
-            input_air_init(&rc->inputs.air, config_get_addr(), &lora, rc->rmp);
+            input_air_init(&rc->inputs.air, config_get_addr(), &air_config, rc->rmp);
             rc->input = (input_t *)&rc->inputs.air;
             if (config_get_paired_tx(&pairing))
             {
@@ -374,29 +373,29 @@ static void rc_reconfigure_output(rc_t *rc)
     }
     memset(&rc->outputs, 0, sizeof(rc->outputs));
     air_pairing_t pairing;
-    air_lora_config_t lora;
+    air_config_t air_config;
     switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
     {
         rmp_set_pairing(rc->rmp, NULL);
-        rc_get_air_lora_config(rc, &lora);
+        rc_get_air_config(rc, &air_config);
 
         if (rc_should_enable_power_test(rc))
         {
-            output_air_rf_power_test_init(&rc->outputs.air_power_test, &lora);
+            output_air_rf_power_test_init(&rc->outputs.air_power_test, &air_config);
             rc->output = (output_t *)&rc->outputs.air_power_test;
             break;
         }
 
         if (rc->state.bind_active)
         {
-            output_air_bind_init(&rc->outputs.air_bind, config_get_addr(), &lora);
+            output_air_bind_init(&rc->outputs.air_bind, config_get_addr(), &air_config);
             rc->output = (output_t *)&rc->outputs.air_bind;
             break;
         }
 
-        output_air_init(&rc->outputs.air, config_get_addr(), &lora, rc->rmp);
+        output_air_init(&rc->outputs.air, config_get_addr(), &air_config, rc->rmp);
         rc->output = (output_t *)&rc->outputs.air;
         output_config.air.tx_power = rc_get_tx_rf_power(rc);
         if (config_get_paired_rx(&pairing, NULL))
@@ -412,8 +411,8 @@ static void rc_reconfigure_output(rc_t *rc)
     case RC_MODE_RX:
         if (rc_should_enable_power_test(rc))
         {
-            rc_get_air_lora_config(rc, &lora);
-            output_air_rf_power_test_init(&rc->outputs.air_power_test, &lora);
+            rc_get_air_config(rc, &air_config);
+            output_air_rf_power_test_init(&rc->outputs.air_power_test, &air_config);
             rc->output = (output_t *)&rc->outputs.air_power_test;
             break;
         }
@@ -486,7 +485,7 @@ static void rc_update_binding(rc_t *rc)
         return;
     }
     air_bind_packet_t packet;
-    air_lora_band_e band;
+    air_band_e band;
     air_pairing_t pairing;
     bool needs_confirmation = true;
     if (air_io_has_bind_request(air_io, &packet, &band, &needs_confirmation) &&
@@ -766,14 +765,14 @@ static void rc_msp_request_callback(msp_conn_t *conn, uint16_t cmd, const void *
     }
 }
 
-static void rc_send_air_lora_config_to_pair(rc_t *rc)
+static void rc_send_air_config_to_pair(rc_t *rc)
 {
     // XXX: modes/band config was changed so we need to inform the other
     // end. For now, assume they're available via P2P.
     air_addr_t pair_addr;
     if (rc_get_pair_addr(rc, &pair_addr))
     {
-        rc_rmp_send_air_lora_config(&rc->state.rc_rmp, &pair_addr, true);
+        rc_rmp_send_air_config(&rc->state.rc_rmp, &pair_addr, true);
     }
 }
 
@@ -790,9 +789,9 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
     {
         rc->state.bind_requested = setting_get_bool(setting);
     }
-    else if (SETTING_IS(setting, SETTING_KEY_LORA_BAND))
+    else if (SETTING_IS(setting, SETTING_KEY_AIR_BAND))
     {
-        rc_send_air_lora_config_to_pair(rc);
+        rc_send_air_config_to_pair(rc);
         rc_invalidate_air(rc);
     }
     else if (SETTING_IS(setting, SETTING_KEY_RF_POWER_TEST))
@@ -868,7 +867,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
             }
             if (SETTING_IS(setting, SETTING_KEY_RX_SUPPORTED_MODES))
             {
-                rc_send_air_lora_config_to_pair(rc);
+                rc_send_air_config_to_pair(rc);
                 rc_invalidate_input(rc);
             }
             if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX))
@@ -912,12 +911,12 @@ static inline bool rc_should_update_output(rc_t *rc)
     return true;
 }
 
-void rc_init(rc_t *rc, lora_t *lora, rmp_t *rmp)
+void rc_init(rc_t *rc, air_radio_t *radio, rmp_t *rmp)
 {
     memset(rc, 0, sizeof(*rc));
     rc->state.rc_mode = config_get_rc_mode();
 
-    rc->lora = lora;
+    rc->radio = radio;
     rc->rmp = rmp;
     rc->input = NULL;
     rc->input_config = NULL;
