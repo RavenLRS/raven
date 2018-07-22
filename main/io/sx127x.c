@@ -75,6 +75,8 @@
 #define TX_FIFO_ADDR 0x80
 #define RX_FIFO_ADDR 0
 
+#define SX127X_EXPECTED_VERSION 18
+
 enum
 {
     DIO0_TRIGGER_RX_DONE = 1,
@@ -223,7 +225,15 @@ void sx127x_init(sx127x_t *sx127x)
     xTaskCreatePinnedToCore(sx127x_callback_task, "SX127X-CALLBACK", 4096, sx127x, 1000, &callback_task_handle, 1);
 
     uint8_t version = sx127x_read_reg(sx127x, REG_VERSION);
-    LOG_I(TAG, "Got SX127X chip version %u", version);
+    if (version == SX127X_EXPECTED_VERSION)
+    {
+        LOG_I(TAG, "Got SX127X chip version %u", version);
+    }
+    else
+    {
+        LOG_E(TAG, "Unexpected SX127X chip version %u, expecting %d", version, SX127X_EXPECTED_VERSION);
+        UNREACHABLE();
+    }
 
     sx127x->state.mode = sx127x_read_reg(sx127x, REG_OP_MODE);
     sx127x->state.payload_size = sx127x_read_reg(sx127x, REG_PAYLOAD_LENGTH);
