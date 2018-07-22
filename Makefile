@@ -34,6 +34,8 @@ VALID_VARIANTS			:= $(sort $(VALID_VARIANTS))
 make_target				= $(platform)_$(variant)
 VALID_TARGETS			:= $(foreach platform,$(VALID_PLATFORMS),$(foreach variant,$(VALID_VARIANTS),$(make_target)))
 
+TARGETS_FILTER ?=
+
 ifneq ($(TARGETS_FILTER),)
 VALID_TARGETS := $(filter %$(TARGETS_FILTER),$(VALID_TARGETS))
 endif
