@@ -42,8 +42,10 @@
 #define REG_MODEM_CONFIG_3 0x26
 #define REG_RSSI_WIDEBAND 0x2c
 #define REG_DETECTION_OPTIMIZE 0x31
+#define REG_DETECTION_BW500_OPTIMIZE_1 0x36
 #define REG_DETECTION_THRESHOLD 0x37
 #define REG_SYNC_WORD 0x39
+#define REG_DETECTION_BW500_OPTIMIZE_2 0x3A
 #define REG_DIO_MAPPING_1 0x40
 #define REG_DIO_MAPPING_2 0x41
 #define REG_VERSION 0x42
@@ -83,7 +85,16 @@ enum
     DIO0_TRIGGER_TX_DONE,
 };
 
+enum
+{
+    SX127X_RX_SENSITIVITY_BW500_WORKAROUND_NONE = 0,
+    SX127X_RX_SENSITIVITY_BW500_WORKAROUND_HIGH_BAND = 1,
+    SX127X_RX_SENSITIVITY_BW500_WORKAROUND_LOW_BAND = 2,
+};
+
 static const char *TAG = "SX127X";
+
+static void sx127x_apply_bw500_sensitivity_workaround(sx127x_t *sx127x);
 
 static esp_err_t spi_device_transmit_sync(spi_device_handle_t handle, spi_transaction_t *trans_desc)
 {
@@ -298,6 +309,7 @@ void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq)
         {
         } while (time_micros_now() < now + 50);
     }
+    sx127x_apply_bw500_sensitivity_workaround(sx127x);
 }
 
 void sx127x_set_payload_size(sx127x_t *sx127x, uint8_t size)
@@ -505,6 +517,53 @@ void sx127x_shutdown(sx127x_t *sx127x)
 
 // #pragma region LoRa specific functions
 
+static void sx127x_apply_bw500_sensitivity_workaround(sx127x_t *sx127x)
+{
+    // This is called from sx127x_set_lora_signal_bw, so the chip is
+    // already ready for writing
+    // See https://www.semtech.com/uploads/documents/sx1276_77_78-errata.pdf
+    // TLDR:
+    // BW500 && freq >= 862M && freq <= 1020M
+    //  set reg(0x36) = 0x02, reg(0x3a) = 0x64
+    // BW500 && freq >= 410M && freq <= 525M
+    //  set reg(0x36) = 0x02, reg(0x3a) = 0x7F
+    // All other combinations, set reg(0x36) = 0x03, reg(0x3a) will be selected
+    // automatically by the chip.
+    uint8_t workaround;
+    if (sx127x->state.signal_bw == SX127X_LORA_SIGNAL_BW_500 &&
+        sx127x->state.freq >= 862000000 && sx127x->state.freq <= 1020000000)
+    {
+        workaround = SX127X_RX_SENSITIVITY_BW500_WORKAROUND_HIGH_BAND;
+    }
+    else if (sx127x->state.signal_bw == SX127X_LORA_SIGNAL_BW_500 &&
+             sx127x->state.freq >= 410000000 && sx127x->state.freq <= 525000000)
+    {
+        workaround = SX127X_RX_SENSITIVITY_BW500_WORKAROUND_LOW_BAND;
+    }
+    else
+    {
+        workaround = SX127X_RX_SENSITIVITY_BW500_WORKAROUND_NONE;
+    }
+    if (workaround != sx127x->state.bw_workaround)
+    {
+        switch (workaround)
+        {
+        case SX127X_RX_SENSITIVITY_BW500_WORKAROUND_NONE:
+            sx127x_write_reg(sx127x, REG_DETECTION_BW500_OPTIMIZE_1, 0x03);
+            break;
+        case SX127X_RX_SENSITIVITY_BW500_WORKAROUND_HIGH_BAND:
+            sx127x_write_reg(sx127x, REG_DETECTION_BW500_OPTIMIZE_1, 0x02);
+            sx127x_write_reg(sx127x, REG_DETECTION_BW500_OPTIMIZE_2, 0x64);
+            break;
+        case SX127X_RX_SENSITIVITY_BW500_WORKAROUND_LOW_BAND:
+            sx127x_write_reg(sx127x, REG_DETECTION_BW500_OPTIMIZE_1, 0x02);
+            sx127x_write_reg(sx127x, REG_DETECTION_BW500_OPTIMIZE_2, 0x7F);
+            break;
+        }
+        sx127x->state.bw_workaround = workaround;
+    }
+}
+
 void sx127x_set_lora_spreading_factor(sx127x_t *sx127x, int sf)
 {
     sx127x_prepare_write(sx127x);
@@ -548,6 +607,7 @@ void sx127x_set_lora_signal_bw(sx127x_t *sx127x, sx127x_lora_signal_bw_e sbw)
     reg = (reg & 0x0f) | (sbw << 4);
     sx127x_write_reg(sx127x, REG_MODEM_CONFIG_1, reg);
     sx127x->state.signal_bw = sbw;
+    sx127x_apply_bw500_sensitivity_workaround(sx127x);
 }
 
 void sx127x_set_lora_coding_rate(sx127x_t *sx127x, sx127x_lora_coding_rate_e rate)

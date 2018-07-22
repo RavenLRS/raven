@@ -78,6 +78,7 @@ typedef struct sx127x_s
         unsigned tx_start;
         unsigned tx_end;
         sx127x_lora_signal_bw_e signal_bw;
+        uint8_t bw_workaround;
         int sf;
     } state;
 } sx127x_t;
