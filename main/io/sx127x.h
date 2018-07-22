@@ -68,6 +68,7 @@ typedef struct sx127x_s
     {
         spi_device_handle_t spi;
         unsigned long freq;
+        uint8_t ppm_correction;
         uint8_t mode;
         uint8_t payload_size;
         bool rx_done;
@@ -87,7 +88,7 @@ void sx127x_init(sx127x_t *sx127x);
 
 void sx127x_set_tx_power(sx127x_t *sx127x, int dBm);
 // freq is in Hz
-void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq);
+void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq, int error);
 void sx127x_set_payload_size(sx127x_t *sx127x, uint8_t size);
 
 void sx127x_send(sx127x_t *sx127x, const void *buf, size_t size);
@@ -97,6 +98,8 @@ bool sx127x_is_tx_done(sx127x_t *sx127x);
 bool sx127x_is_rx_done(sx127x_t *sx127x);
 
 void sx127x_set_callback(sx127x_t *sx127x, air_radio_callback_t callback, void *data);
+
+int sx127x_frequency_error(sx127x_t *sx127x);
 
 // SNR is multiplied by 4
 int sx127x_rssi(sx127x_t *sx127x, int *snr, int *lq);

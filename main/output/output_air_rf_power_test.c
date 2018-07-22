@@ -73,7 +73,7 @@ static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, time
             led_on(RF_TEST_LED);
             air_radio_sleep(radio);
             air_radio_set_tx_power(radio, air_rf_power_to_dbm(output->power));
-            air_radio_set_frequency(radio, air_band_frequency(output->air_config.band));
+            air_radio_set_frequency(radio, air_band_frequency(output->air_config.band), 0);
             air_radio_set_powertest_mode(radio);
             output_air_rf_power_test_send(output);
             output->state = RF_POWER_TEST_STATE_TX;

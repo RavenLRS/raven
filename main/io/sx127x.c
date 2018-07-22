@@ -18,6 +18,9 @@
 
 #include "sx127x.h"
 
+// constants
+#define SX1278_FXOSC 32000000 // 32Mhz
+
 // registers
 #define REG_FIFO 0x00
 #define REG_OP_MODE 0x01
@@ -40,6 +43,10 @@
 #define REG_PREAMBLE_LSB 0x21
 #define REG_PAYLOAD_LENGTH 0x22
 #define REG_MODEM_CONFIG_3 0x26
+#define REG_PPM_CORRECTION 0x27
+#define REG_FEI_MSB 0x28
+#define REG_FEI_MID 0x29
+#define REG_FEI_LSB 0x2A
 #define REG_RSSI_WIDEBAND 0x2c
 #define REG_DETECTION_OPTIMIZE 0x31
 #define REG_DETECTION_BW500_OPTIMIZE_1 0x36
@@ -94,6 +101,7 @@ enum
 
 static const char *TAG = "SX127X";
 
+static float sx127x_get_lora_signal_bw_khz(sx127x_t *sx127x, sx127x_lora_signal_bw_e sbw);
 static void sx127x_apply_bw500_sensitivity_workaround(sx127x_t *sx127x);
 
 static esp_err_t spi_device_transmit_sync(spi_device_handle_t handle, spi_transaction_t *trans_desc)
@@ -232,6 +240,7 @@ void sx127x_init(sx127x_t *sx127x)
     sx127x->state.tx_done = false;
     sx127x->state.rx_done = false;
     sx127x->state.freq = 0;
+    sx127x->state.ppm_correction = 0;
 
     xTaskCreatePinnedToCore(sx127x_callback_task, "SX127X-CALLBACK", 4096, sx127x, 1000, &callback_task_handle, 1);
 
@@ -291,8 +300,9 @@ void sx127x_init(sx127x_t *sx127x)
 }
 
 // freq is in Hz
-void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq)
+void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq, int error)
 {
+    freq -= error;
     if (freq != sx127x->state.freq)
     {
         sx127x_prepare_write(sx127x);
@@ -308,6 +318,12 @@ void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq)
         do
         {
         } while (time_micros_now() < now + 50);
+    }
+    int8_t ppm_correction = MIN(MAX(lrintf(0.95f * (error / ((float)freq / 1000000))), -128), 127);
+    if (ppm_correction != sx127x->state.ppm_correction)
+    {
+        sx127x_write_reg(sx127x, REG_PPM_CORRECTION, (uint8_t)ppm_correction);
+        sx127x->state.ppm_correction = ppm_correction;
     }
     sx127x_apply_bw500_sensitivity_workaround(sx127x);
 }
@@ -448,6 +464,29 @@ void sx127x_set_callback(sx127x_t *sx127x, air_radio_callback_t callback, void *
     sx127x->state.callback_data = callback_data;
 }
 
+int sx127x_frequency_error(sx127x_t *sx127x)
+{
+    // Read all 3 registers in a single SPI transaction
+    spi_transaction_t t;
+    t.cmd = 0;
+    t.addr = REG_FEI_MSB;
+    t.length = 24;
+    t.rxlength = 0;
+    t.tx_buffer = NULL;
+    t.flags = SPI_TRANS_USE_RXDATA;
+    ESP_ERROR_CHECK(spi_device_transmit_sync(sx127x->state.spi, &t));
+
+    int32_t err = t.rx_data[0] << 16 | t.rx_data[1] << 8 | t.rx_data[2];
+    // Sign extend 20 bit 2's complement to 32 bit
+    if (err & 0x80000)
+    {
+        err |= 0xfff00000;
+    }
+
+    float bw = sx127x_get_lora_signal_bw_khz(sx127x, sx127x->state.signal_bw);
+    return err * bw * ((float)(1L << 24) / (float)SX1278_FXOSC / 500.0);
+}
+
 int sx127x_rssi(sx127x_t *sx127x, int *snr, int *lq)
 {
     // REG_PKT_SNR_VALUE and REG_PKT_RSSI_VALUE are after each other, so
@@ -516,6 +555,32 @@ void sx127x_shutdown(sx127x_t *sx127x)
 }
 
 // #pragma region LoRa specific functions
+
+static float sx127x_get_lora_signal_bw_khz(sx127x_t *sx127x, sx127x_lora_signal_bw_e sbw)
+{
+    switch (sbw)
+    {
+    case SX127X_LORA_SIGNAL_BW_7_8:
+        return 7.8f;
+    case SX127X_LORA_SIGNAL_BW_10_4:
+        return 10.4f;
+    case SX127X_LORA_SIGNAL_BW_15_6:
+        return 15.6f;
+    case SX127X_LORA_SIGNAL_BW_20_8:
+        return 20.8f;
+    case SX127X_LORA_SIGNAL_BW_31_25:
+        return 31.25f;
+    case SX127X_LORA_SIGNAL_BW_41_7:
+        return 41.27f;
+    case SX127X_LORA_SIGNAL_BW_62_5:
+        return 62.5f;
+    case SX127X_LORA_SIGNAL_BW_250:
+        return 250;
+    case SX127X_LORA_SIGNAL_BW_500:
+        return 500;
+    }
+    return 0;
+}
 
 static void sx127x_apply_bw500_sensitivity_workaround(sx127x_t *sx127x)
 {

@@ -17,7 +17,7 @@ static bool output_air_bind_open(void *data, void *config)
     output->has_bind_response = false;
     output->bind_packet_expires = 0;
     air_radio_set_bind_mode(output->air_config.radio);
-    air_radio_set_frequency(output->air_config.radio, air_band_frequency(output->air_config.band));
+    air_radio_set_frequency(output->air_config.radio, air_band_frequency(output->air_config.band), 0);
     led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_BIND);
     return true;
 }

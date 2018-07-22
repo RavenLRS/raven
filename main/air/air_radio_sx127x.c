@@ -14,9 +14,14 @@ void air_radio_set_tx_power(air_radio_t *radio, int dBm)
     sx127x_set_tx_power(&radio->sx127x, dBm);
 }
 
-void air_radio_set_frequency(air_radio_t *radio, unsigned long freq)
+void air_radio_set_frequency(air_radio_t *radio, unsigned long freq, int error)
 {
-    sx127x_set_frequency(&radio->sx127x, freq);
+    sx127x_set_frequency(&radio->sx127x, freq, error);
+}
+
+int air_radio_frequency_error(air_radio_t *radio)
+{
+    return sx127x_frequency_error(&radio->sx127x);
 }
 
 void air_radio_set_sync_word(air_radio_t *radio, uint8_t word)
@@ -142,7 +147,7 @@ time_micros_t air_radio_full_cycle_time(air_radio_t *radio, air_mode_e mode)
     case AIR_MODE_3:
         return MILLIS_TO_MICROS(33);
     case AIR_MODE_4:
-        return MILLIS_TO_MICROS(55);
+        return MILLIS_TO_MICROS(57);
     case AIR_MODE_5:
         return MILLIS_TO_MICROS(115);
     }

@@ -34,7 +34,7 @@ static bool input_air_bind_update_band(input_air_bind_t *input)
         band = air_band_mask_get_band(input->air_config.bands, input->band_index);
     }
     input->air_config.band = band;
-    air_radio_set_frequency(input->air_config.radio, air_band_frequency(band));
+    air_radio_set_frequency(input->air_config.radio, air_band_frequency(band), 0);
     return true;
 }
 

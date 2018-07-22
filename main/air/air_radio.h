@@ -17,7 +17,8 @@ typedef enum
 
 void air_radio_init(air_radio_t *radio);
 void air_radio_set_tx_power(air_radio_t *radio, int dBm);
-void air_radio_set_frequency(air_radio_t *radio, unsigned long freq);
+void air_radio_set_frequency(air_radio_t *radio, unsigned long freq, int error);
+int air_radio_frequency_error(air_radio_t *radio);
 
 void air_radio_set_sync_word(air_radio_t *radio, uint8_t word);
 

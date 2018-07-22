@@ -35,7 +35,7 @@ static void input_air_update_air_frequency(input_air_t *input_air, unsigned freq
 {
     input_air->freq_index = freq_index;
     air_radio_t *radio = input_air->air_config.radio;
-    air_radio_set_frequency(radio, input_air->freq_table.freqs[freq_index]);
+    air_radio_set_frequency(radio, input_air->freq_table.freqs[freq_index], input_air->freq_table.errors[freq_index]);
     air_radio_start_rx(radio);
 }
 
@@ -360,6 +360,7 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
             input_air->tx_seq = in_pkt.seq;
 
             rssi = air_radio_rssi(radio, &snr, &lq);
+            input_air->freq_table.errors[input_air->tx_seq] += air_radio_frequency_error(radio);
 
             if (cycle_is_full)
             {

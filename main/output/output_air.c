@@ -68,7 +68,7 @@ static void output_air_update_frequency(output_air_t *output_air, unsigned freq_
     if (output_air->freq_index != freq_index)
     {
         output_air->freq_index = freq_index;
-        air_radio_set_frequency(output_air->air_config.radio, output_air->freq_table.freqs[freq_index]);
+        air_radio_set_frequency(output_air->air_config.radio, output_air->freq_table.freqs[freq_index], 0);
     }
 }
 
