@@ -13,25 +13,19 @@ SDKCONFIG       	= $(ROOT)/build-$(TARGET)/sdkconfig
 SDKCONFIG_DIR		= $(dir $(SDKCONFIG))
 SDKCONFIG_DEFAULTS  = $(SDKCONFIG).defaults
 
-NO_SDKCONFIG :=
+REAL_MAKECMDGOALS = $(MAKECMDGOALS)
 
 ifeq ("$(wildcard $(SDKCONFIG))","")
-NO_SDKCONFIG := 1
-dummy := $(shell mkdir $(SDKCONFIG_DIR) && cat $(SDKCONFIG_BASE) $(SDKCONFIG_PLATFORM) $(SDKCONFIG_VARIANT) >> $(SDKCONFIG))
+# This tricks the project_config.mk in esp-idf v3.0 to not run menuconfig
+# unconditionally when the SDKCONFIG doesn't exist yet.
+# XXX: Might need adjustment when upgrading
+MAKECMDGOALS += defconfig
+dummy := $(shell mkdir -p $(SDKCONFIG_DIR) && cat $(SDKCONFIG_BASE) $(SDKCONFIG_PLATFORM) $(SDKCONFIG_VARIANT) >> $(SDKCONFIG))
 endif
 
 include $(IDF_PATH)/make/project.mk
 
-ifneq ($(NO_SDKCONFIG),)
-ifeq ("$(filter menuconfig, $(MAKECMDGOALS))","")
-menuconfig:
-	@echo
-endif
-endif
-
-$(SDKCONFIG): $(SDKCONFIG_BASE) $(SDKCONFIG_PLATFORM) $(SDKCONFIG_VARIANT)
-	echo "Make sdkconfig"
-	echo $@
+MAKECMDGOALS = $(REAL_MAKECMDGOALS)
 
 erase: erase_flash
 
