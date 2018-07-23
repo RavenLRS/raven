@@ -14,7 +14,14 @@ typedef enum
     SCREEN_MODE_MAIN,
     SCREEN_MODE_CHANNELS,
     SCREEN_MODE_TELEMETRY,
-} screen_mode_e;
+} screen_main_mode_e;
+
+typedef enum
+{
+    SCREEN_SECONDARY_MODE_NONE,
+    SCREEN_SECONDARY_MODE_FREQUENCIES,
+    SCREEN_SECONDARY_MODE_DEBUG_INFO,
+} screen_secondary_mode_e;
 
 typedef enum
 {
@@ -52,7 +59,8 @@ typedef struct screen_s
         screen_i2c_config_t cfg;
         rc_t *rc;
         bool available;
-        screen_mode_e mode;
+        screen_main_mode_e main_mode;
+        screen_secondary_mode_e secondary_mode;
         struct
         {
             int page;
@@ -70,8 +78,9 @@ bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, rc_t *rc);
 bool screen_is_available(const screen_t *screen);
 void screen_shutdown(screen_t *screen);
 void screen_power_on(screen_t *screen);
+void screen_enter_secondary_mode(screen_t *screen, screen_secondary_mode_e mode);
 
-bool screen_handle_press(screen_t *screen);
+bool screen_handle_press(screen_t *screen, bool before_menu);
 void screen_update(screen_t *screen);
 void screen_splash(screen_t *screen);
 void screen_set_orientation(screen_t *screen, screen_orientation_e orientation);

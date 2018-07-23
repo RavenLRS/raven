@@ -35,7 +35,8 @@ static void input_air_update_air_frequency(input_air_t *input_air, unsigned freq
 {
     input_air->freq_index = freq_index;
     air_radio_t *radio = input_air->air_config.radio;
-    air_radio_set_frequency(radio, input_air->freq_table.freqs[freq_index], input_air->freq_table.errors[freq_index]);
+    air_freq_table_t *freqs = &input_air->air.freq_table;
+    air_radio_set_frequency(radio, freqs->freqs[freq_index], freqs->abs_errors[freq_index]);
     air_radio_start_rx(radio);
 }
 
@@ -53,7 +54,7 @@ static void input_air_start(input_air_t *input_air)
 {
     air_radio_t *radio = input_air->air_config.radio;
     air_radio_set_sync_word(radio, air_sync_word(input_air->air.pairing.key));
-    air_freq_table_init(&input_air->freq_table, input_air->air.pairing.key, air_band_frequency(input_air->air_config.band));
+    air_freq_table_init(&input_air->air.freq_table, input_air->air.pairing.key, air_band_frequency(input_air->air_config.band));
     // TODO: RX used 17dBm fixed power
     air_radio_set_tx_power(radio, 17);
     input_air_update_air_mode(input_air);
@@ -360,7 +361,9 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
             input_air->tx_seq = in_pkt.seq;
 
             rssi = air_radio_rssi(radio, &snr, &lq);
-            input_air->freq_table.errors[input_air->tx_seq] += air_radio_frequency_error(radio);
+            int last_error = air_radio_frequency_error(radio);
+            input_air->air.freq_table.abs_errors[input_air->tx_seq] += last_error;
+            input_air->air.freq_table.last_errors[input_air->tx_seq] = last_error;
 
             if (cycle_is_full)
             {

@@ -1106,6 +1106,20 @@ unsigned rc_get_update_frequency(rc_t *rc)
     return io ? air_io_get_update_frequency(io) : 0;
 }
 
+bool rc_get_frequencies_table(rc_t *rc, air_freq_table_t *freqs)
+{
+    air_io_t *io = rc_get_air_io(rc);
+    if (io)
+    {
+        if (freqs)
+        {
+            memcpy(freqs, &io->freq_table, sizeof(*freqs));
+        }
+        return true;
+    }
+    return false;
+}
+
 const char *rc_get_pilot_name(rc_t *rc)
 {
     return rc_data_get_pilot_name(&rc->data);

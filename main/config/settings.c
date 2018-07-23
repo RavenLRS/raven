@@ -34,6 +34,7 @@ static const char *TAG = "Settings";
 static char settings_string_storage[2][SETTING_STRING_BUFFER_SIZE];
 
 #define SETTING_SHOW_IF(c) ((c) ? SETTING_VISIBILITY_SHOW : SETTING_VISIBILITY_HIDE)
+#define SETTING_SHOW_IF_SCREEN(view_id) SETTING_SHOW_IF(view_id == SETTINGS_VIEW_MENU && system_has_flag(SYSTEM_FLAG_SCREEN))
 
 static const char *off_on_table[] = {"Off", "On"};
 static const char *no_yes_table[] = {"No", "Yes"};
@@ -123,7 +124,7 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
     }
     if (SETTING_IS(setting, SETTING_KEY_SCREEN))
     {
-        return SETTING_SHOW_IF(view_id == SETTINGS_VIEW_MENU && system_has_flag(SYSTEM_FLAG_SCREEN));
+        return SETTING_SHOW_IF_SCREEN(view_id);
     }
     if (SETTING_IS(setting, SETTING_KEY_RECEIVERS))
     {
@@ -136,6 +137,10 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
     if (SETTING_IS(setting, SETTING_KEY_POWER_OFF))
     {
         return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_RX);
+    }
+    if (SETTING_IS(setting, SETTING_KEY_DIAGNOSTICS))
+    {
+        return SETTING_SHOW_IF_SCREEN(view_id);
     }
     return SETTING_VISIBILITY_SHOW;
 }
@@ -466,6 +471,10 @@ static const setting_t settings[] = {
     RO_STRING_SETTING(SETTING_KEY_ABOUT_VERSION, "Version", FOLDER_ID_ABOUT, SOFTWARE_VERSION),
     RO_STRING_SETTING(SETTING_KEY_ABOUT_BUILD_DATE, "Build Date", FOLDER_ID_ABOUT, __DATE__),
     RO_STRING_SETTING(SETTING_KEY_ABOUT_BUILD_DATE, "Board", FOLDER_ID_ABOUT, BOARD_NAME),
+
+    FOLDER(SETTING_KEY_DIAGNOSTICS, "Diagnostics", FOLDER_ID_DIAGNOSTICS, FOLDER_ID_ROOT, NULL),
+    CMD_SETTING(SETTING_KEY_DIAGNOSTICS_FREQUENCIES, "Frequencies", FOLDER_ID_DIAGNOSTICS, 0, 0),
+    CMD_SETTING(SETTING_KEY_DIAGNOSTICS_DEBUG_INFO, "Debug Info", FOLDER_ID_DIAGNOSTICS, 0, 0),
 };
 
 #if CONFIG_MAX_PAIRED_RX != 4 && CONFIG_MAX_PAIRED_RX != 16 && CONFIG_MAX_PAIRED_RX != 32

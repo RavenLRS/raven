@@ -2,7 +2,6 @@
 
 #include "air/air_cmd.h"
 #include "air/air_config.h"
-#include "air/air_freq.h"
 #include "air/air_io.h"
 #include "air/air_stream.h"
 
@@ -40,7 +39,6 @@ typedef struct output_air_s
     bool rx_done;
     unsigned seq : AIR_SEQ_BITS;
     unsigned freq_index;
-    air_freq_table_t freq_table;
     air_stream_t air_stream;
     bool expecting_downlink_packet;
     unsigned consecutive_downlink_lost_packets;

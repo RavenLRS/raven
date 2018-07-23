@@ -48,10 +48,14 @@ static void ui_handle_screen_button_press(void *user_data)
     {
         return;
     }
-    bool handled = menu_press();
+    bool handled = screen_handle_press(&ui->internal.screen, true);
     if (!handled)
     {
-        handled |= screen_handle_press(&ui->internal.screen);
+        handled |= menu_press();
+    }
+    if (!handled)
+    {
+        handled |= screen_handle_press(&ui->internal.screen, false);
     }
     if (handled)
     {
@@ -141,6 +145,16 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
     if (SETTING_IS(setting, SETTING_KEY_SCREEN_AUTO_OFF) && screen_is_available(&ui->internal.screen))
     {
         ui_set_screen_set_autooff(ui, setting_get_u8(setting));
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_DIAGNOSTICS_FREQUENCIES))
+    {
+        screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_FREQUENCIES);
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_DIAGNOSTICS_DEBUG_INFO))
+    {
+        screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_DEBUG_INFO);
     }
 #endif
 }

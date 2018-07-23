@@ -1,8 +1,7 @@
 #pragma once
 
-#include "air/air_config.h"
 #include "air/air_cmd.h"
-#include "air/air_freq.h"
+#include "air/air_config.h"
 #include "air/air_io.h"
 #include "air/air_stream.h"
 
@@ -35,7 +34,6 @@ typedef struct input_air_s
     time_micros_t uplink_cycle_time;
     time_micros_t last_packet_at;
     time_micros_t next_packet_deadline;
-    air_freq_table_t freq_table;
     unsigned freq_index;
 
     msp_air_t msp_air;

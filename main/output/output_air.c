@@ -68,7 +68,7 @@ static void output_air_update_frequency(output_air_t *output_air, unsigned freq_
     if (output_air->freq_index != freq_index)
     {
         output_air->freq_index = freq_index;
-        air_radio_set_frequency(output_air->air_config.radio, output_air->freq_table.freqs[freq_index], 0);
+        air_radio_set_frequency(output_air->air_config.radio, output_air->air.freq_table.freqs[freq_index], 0);
     }
 }
 
@@ -110,7 +110,7 @@ static void output_air_start(output_air_t *output_air)
     air_radio_set_tx_power(radio, output_air->tx_power);
     output_air->tx_power = -1;
     air_radio_set_sync_word(radio, air_sync_word(output_air->air.pairing.key));
-    air_freq_table_init(&output_air->freq_table, output_air->air.pairing.key, air_band_frequency(output_air->air_config.band));
+    air_freq_table_init(&output_air->air.freq_table, output_air->air.pairing.key, air_band_frequency(output_air->air_config.band));
     output_air->freq_index = 0xFF;
     output_air_update_frequency(output_air, 0);
     air_radio_set_callback(radio, output_air_radio_callback, output_air);

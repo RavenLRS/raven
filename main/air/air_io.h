@@ -4,6 +4,7 @@
 
 #include "air/air.h"
 #include "air/air_band.h"
+#include "air/air_freq.h"
 
 #include "util/lpf.h"
 #include "util/time.h"
@@ -25,6 +26,7 @@ typedef struct air_io_s
     air_addr_t addr;
     air_pairing_t pairing;
     air_info_t pairing_info;
+    air_freq_table_t freq_table;
     air_io_bind_t bind;
     rmp_air_t *rmp;
     lpf_t rssi;

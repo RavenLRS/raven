@@ -435,11 +435,16 @@ static void menu_local_setting_action(void *data)
         if (setting->flags & SETTING_FLAG_CMD)
         {
             setting_cmd_flag_e cmd_flags = setting_cmd_get_flags(setting);
-            if (cmd_flags & (SETTING_CMD_FLAG_CONFIRM))
+            if (cmd_flags & SETTING_CMD_FLAG_CONFIRM)
             {
                 menu_confirm.prompt = setting->name;
                 menu_confirm.entries[0].data = (void *)setting;
                 menu_enter(&menu_confirm);
+            }
+            else
+            {
+                // Command without confirmation
+                setting_cmd_exec(setting);
             }
         }
         else

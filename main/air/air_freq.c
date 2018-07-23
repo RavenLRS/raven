@@ -19,6 +19,7 @@ void air_freq_table_init(air_freq_table_t *tbl, air_key_t key, unsigned long bas
         lfsr = (lfsr >> 1) | (b << 15);
         tbl->freqs[ii] = base_freq + (((int64_t)lfsr % (MAX_OFFSET * 2) - MAX_OFFSET)) * 1e6 / 8;
         LOG_D(TAG, "Freq %d = %lu", ii, tbl->freqs[ii]);
-        tbl->errors[ii] = 0;
+        tbl->abs_errors[ii] = 0;
+        tbl->last_errors[ii] = 0;
     }
 }

@@ -35,6 +35,12 @@ bool system_has_flag(system_flag_e flag)
     return system_flags & flag;
 }
 
+float system_temperature(void)
+{
+    extern uint8_t temprature_sens_read();
+    return (temprature_sens_read() - 32) / 1.8;
+}
+
 bool system_awake_from_deep_sleep(void)
 {
     return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED;

@@ -1,6 +1,7 @@
 #include "target.h"
 
 #ifdef USE_SCREEN
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -20,6 +21,7 @@
 #include "util/version.h"
 
 #include "platform/ota.h"
+#include "platform/system.h"
 
 #include "screen.h"
 
@@ -69,6 +71,11 @@ void screen_shutdown(screen_t *screen)
 void screen_power_on(screen_t *screen)
 {
     screen_i2c_power_on(&screen->internal.cfg, &u8g2);
+}
+
+void screen_enter_secondary_mode(screen_t *screen, screen_secondary_mode_e mode)
+{
+    screen->internal.secondary_mode = mode;
 }
 
 static void screen_splash_task(void *arg)
@@ -210,16 +217,27 @@ bool screen_is_animating(const screen_t *screen)
     return false;
 }
 
-bool screen_handle_press(screen_t *screen)
+bool screen_handle_press(screen_t *screen, bool before_menu)
 {
-    switch (screen->internal.mode)
+    if (screen->internal.secondary_mode != SCREEN_SECONDARY_MODE_NONE)
+    {
+        screen->internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
+        return true;
+    }
+
+    if (before_menu)
+    {
+        return false;
+    }
+
+    switch (screen->internal.main_mode)
     {
     case SCREEN_MODE_MAIN:
-        screen->internal.mode = SCREEN_MODE_CHANNELS;
+        screen->internal.main_mode = SCREEN_MODE_CHANNELS;
         break;
     case SCREEN_MODE_CHANNELS:
         screen->internal.telemetry.page = 0;
-        screen->internal.mode = SCREEN_MODE_TELEMETRY;
+        screen->internal.main_mode = SCREEN_MODE_TELEMETRY;
         break;
     case SCREEN_MODE_TELEMETRY:
         if (screen->internal.telemetry.page < screen->internal.telemetry.count - 1)
@@ -228,7 +246,7 @@ bool screen_handle_press(screen_t *screen)
         }
         else
         {
-            screen->internal.mode = SCREEN_MODE_MAIN;
+            screen->internal.main_mode = SCREEN_MODE_MAIN;
         }
         break;
     }
@@ -1012,6 +1030,123 @@ static void screen_draw_ota(screen_t *s)
     }
 }
 
+static void screen_draw_frequencies(screen_t *s)
+{
+    air_freq_table_t freqs;
+    size_t count = ARRAY_COUNT(freqs.freqs);
+
+    u8g2_SetDrawColor(&u8g2, 1);
+    u8g2_SetFontPosTop(&u8g2);
+
+    if (!rc_get_frequencies_table(s->internal.rc, &freqs))
+    {
+        u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+        screen_draw_label_value(s, NULL, "No frequencies table", s->internal.w, 0, 0);
+        return;
+    }
+
+    u8g2_SetFont(&u8g2, u8g2_font_micro_tr);
+    uint16_t fr_height = 0;
+    uint16_t fr_width = 0;
+    uint16_t x = 0;
+    uint16_t y = 0;
+    char *buf = SCREEN_BUF(s);
+
+    switch (SCREEN_DIRECTION(s))
+    {
+    case SCREEN_DIRECTION_HORIZONTAL:
+        fr_height = 2 * SCREEN_H(s) / count;
+        fr_width = SCREEN_W(s) / 2;
+        y = SCREEN_H(s) - (fr_height * (count / 2));
+        break;
+    case SCREEN_DIRECTION_VERTICAL:
+        fr_height = SCREEN_H(s) / count;
+        fr_width = SCREEN_W(s);
+        y = SCREEN_H(s) - (fr_height * count);
+        break;
+    }
+
+    uint16_t sy = y;
+
+    uint16_t fr_mw = 0;
+    for (int ii = 0; ii < count; ii++)
+    {
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%02d", ii + 1);
+        uint16_t fw = u8g2_GetStrWidth(&u8g2, buf);
+        if (fw > fr_mw)
+        {
+            fr_mw = fw;
+        }
+    }
+
+    fr_mw += 3;
+
+    for (int ii = 0; ii < count; ii++)
+    {
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%02d %.03fMHz", ii + 1, freqs.freqs[ii] / 1e6f);
+        u8g2_DrawStr(&u8g2, x, y, buf);
+        y += fr_height;
+        if (ii == (count / 2) - 1 && fr_width < SCREEN_W(s))
+        {
+            x += fr_width;
+            y = sy;
+        }
+    }
+}
+
+static void screen_draw_debug_info(screen_t *s)
+{
+    char *buf = SCREEN_BUF(s);
+    u8g2_SetDrawColor(&u8g2, 1);
+    u8g2_SetFontPosTop(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+
+    air_freq_table_t freqs;
+    bool has_freqs = false;
+    float freq_error = 0;
+    float abs_freq_error = 0;
+    if (rc_get_frequencies_table(s->internal.rc, &freqs))
+    {
+        for (int ii = 0; ii < ARRAY_COUNT(freqs.last_errors); ii++)
+        {
+            freq_error += fabsf(freqs.last_errors[ii]);
+            float abs_error = fabsf(freqs.abs_errors[ii]);
+            if (abs_error > fabsf(abs_freq_error))
+            {
+                abs_freq_error = freqs.abs_errors[ii];
+            }
+        }
+        freq_error /= ARRAY_COUNT(freqs.last_errors);
+        has_freqs = true;
+    }
+
+    uint16_t y = 0;
+    if (has_freqs)
+    {
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%.03fkHz", freq_error / 1e3f);
+    }
+    else
+    {
+        strncpy(buf, "---", SCREEN_DRAW_BUF_SIZE);
+    }
+    screen_draw_label_value(s, "Ferror:", buf, SCREEN_W(s), y, 3);
+    y += 16;
+
+    if (has_freqs)
+    {
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%+.03fkHz", abs_freq_error / 1e3f);
+    }
+    else
+    {
+        strncpy(buf, "---", SCREEN_DRAW_BUF_SIZE);
+    }
+    screen_draw_label_value(s, "Abs. Ferror:", buf, SCREEN_W(s), y, 3);
+    y += 16;
+
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%.02f C", system_temperature());
+    screen_draw_label_value(s, "Core Temp:", buf, SCREEN_W(s), y, 3);
+}
+
 static void screen_draw(screen_t *screen)
 {
     menu_t *menu = menu_get_active();
@@ -1083,22 +1218,33 @@ static void screen_draw(screen_t *screen)
         menu_pop_active();
         menu = menu_get_active();
     }
-    if (menu != NULL)
+    if (menu != NULL && screen->internal.secondary_mode == SCREEN_SECONDARY_MODE_NONE)
     {
         screen_draw_menu(screen, menu, 0);
     }
     else
     {
-        switch (screen->internal.mode)
+        switch (screen->internal.secondary_mode)
         {
-        case SCREEN_MODE_MAIN:
-            screen_draw_main(screen);
+        case SCREEN_SECONDARY_MODE_NONE:
+            switch (screen->internal.main_mode)
+            {
+            case SCREEN_MODE_MAIN:
+                screen_draw_main(screen);
+                break;
+            case SCREEN_MODE_CHANNELS:
+                screen_draw_channels(screen);
+                break;
+            case SCREEN_MODE_TELEMETRY:
+                screen_draw_telemetry(screen);
+                break;
+            }
             break;
-        case SCREEN_MODE_CHANNELS:
-            screen_draw_channels(screen);
+        case SCREEN_SECONDARY_MODE_FREQUENCIES:
+            screen_draw_frequencies(screen);
             break;
-        case SCREEN_MODE_TELEMETRY:
-            screen_draw_telemetry(screen);
+        case SCREEN_SECONDARY_MODE_DEBUG_INFO:
+            screen_draw_debug_info(screen);
             break;
         }
     }

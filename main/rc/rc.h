@@ -24,6 +24,7 @@
 #include "rc/rc_rmp.h"
 
 typedef struct air_bind_packet_s air_bind_packet_t;
+typedef struct air_freq_table_s air_freq_table_t;
 typedef struct air_radio_s air_radio_t;
 typedef struct rc_s rc_t;
 typedef struct rmp_s rmp_t;
@@ -106,6 +107,7 @@ int rc_get_rssi_db(rc_t *rc);
 int rc_get_rssi_percentage(rc_t *rc);
 float rc_get_snr(rc_t *rc);
 unsigned rc_get_update_frequency(rc_t *rc);
+bool rc_get_frequencies_table(rc_t *rc, air_freq_table_t *freqs);
 
 const char *rc_get_pilot_name(rc_t *rc);
 const char *rc_get_craft_name(rc_t *rc);
