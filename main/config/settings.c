@@ -197,6 +197,7 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
     return SETTING_VISIBILITY_SHOW;
 }
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
 static setting_visibility_e setting_visibility_rx_channel_outputs(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     int index = setting_rx_channel_output_get_pos(setting);
@@ -209,12 +210,6 @@ static setting_visibility_e setting_visibility_rx_channel_outputs(folder_id_e fo
         }
     }
     return SETTING_VISIBILITY_HIDE;
-}
-
-static setting_visibility_e setting_visibility_receivers(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
-{
-    int rx_num = setting_receiver_get_rx_num(setting);
-    return SETTING_SHOW_IF(config_get_paired_rx_at(NULL, rx_num));
 }
 
 static int setting_format_rx_channel_output(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
@@ -232,6 +227,14 @@ static int setting_format_rx_channel_output(char *buf, size_t size, const settin
         }
     }
     return 0;
+}
+
+#endif
+
+static setting_visibility_e setting_visibility_receivers(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
+{
+    int rx_num = setting_receiver_get_rx_num(setting);
+    return SETTING_SHOW_IF(config_get_paired_rx_at(NULL, rx_num));
 }
 
 static int setting_format_rx_name(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
@@ -399,6 +402,7 @@ static const setting_t settings[] = {
     U8_MAP_SETTING(SETTING_KEY_RX_MSP_BAUDRATE, "MSP Baudrate", 0, FOLDER_ID_RX, msp_baudrate_table, MSP_SERIAL_BAUDRATE_FIRST),
     BOOL_YN_SETTING(SETTING_KEY_RX_FPORT_INVERTED, "FPort Inverted", 0, FOLDER_ID_RX, false),
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
     FOLDER(SETTING_KEY_RX_CHANNEL_OUTPUTS, "Channel Outputs", FOLDER_ID_RX_CHANNEL_OUTPUTS, FOLDER_ID_RX, setting_visibility_rx_channel_outputs),
     RX_CHANNEL_OUTPUT_PIN_SETTING(0),
     RX_CHANNEL_OUTPUT_PIN_SETTING(1),
@@ -416,6 +420,7 @@ static const setting_t settings[] = {
     RX_CHANNEL_OUTPUT_PIN_SETTING(13),
     RX_CHANNEL_OUTPUT_PIN_SETTING(14),
     RX_CHANNEL_OUTPUT_PIN_SETTING(15),
+#endif
 
     FOLDER(SETTING_KEY_SCREEN, "Screen", FOLDER_ID_SCREEN, FOLDER_ID_ROOT, NULL),
     U8_MAP_SETTING(SETTING_KEY_SCREEN_ORIENTATION, "Orientation", 0, FOLDER_ID_SCREEN, screen_orientation_table, SCREEN_ORIENTATION_DEFAULT),
