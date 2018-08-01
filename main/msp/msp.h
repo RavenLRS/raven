@@ -69,7 +69,7 @@ int msp_conn_write(msp_conn_t *conn, msp_direction_e direction, uint16_t cmd, co
 int msp_conn_send(msp_conn_t *conn, uint16_t cmd, const void *payload, size_t size, msp_cmd_callback_f callback, void *callback_data);
 
 // Used by transports that push data rather than being polled
-void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint16_t cmd, const void *data, size_t size);
+void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint16_t cmd, const void *data, int size);
 
 // Sets a global callback for all the decoded messages. The callback in msp_conn_write() is ignored while
 // this is non-NULL. Set to NULL to clear.

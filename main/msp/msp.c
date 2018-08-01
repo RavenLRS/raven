@@ -60,12 +60,18 @@ int msp_conn_send(msp_conn_t *conn, uint16_t cmd, const void *payload, size_t si
     return msp_conn_write(conn, MSP_DIRECTION_TO_MWC, cmd, payload, size);
 }
 
-void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint16_t cmd, const void *data, size_t size)
+void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint16_t cmd, const void *data, int size)
 {
     // Call the callback
     if (conn->global_callback)
     {
+        if (size < 0)
+        {
+            LOG_W(TAG, "Got MSP error code %d, skipping global callback", size);
+            return;
+        }
         conn->global_callback(conn, cmd, data, size, conn->global_callback_data);
+
         return;
     }
 
@@ -76,6 +82,11 @@ void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint
     {
         if (cb_req.code == cmd)
         {
+            if (size < 0)
+            {
+                LOG_W(TAG, "Got MSP error code %d, skipping callback", size);
+                break;
+            }
             if (cb_req.callback)
             {
                 cb_req.callback(conn, cmd, data, size, cb_req.data);
