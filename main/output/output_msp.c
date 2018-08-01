@@ -90,7 +90,7 @@ typedef struct msp_attitude_s
 {
     uint16_t roll;  // 0.1deg
     uint16_t pitch; // 0.1deg
-    uint16_t yaw;   // 1deg!!!! - NOTE THE DIFFERENCE
+    uint16_t yaw;   // 1deg!!!! - NOTE THE DIFFERENCE [0, 360)
 } PACKED msp_attitude_t;
 
 typedef struct msp_raw_imu_s
@@ -222,9 +222,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
             break;
         }
         const msp_attitude_t *data = payload;
-        // Range is [-180, 180], need to translate to 0-360 and convert
-        // to 0.01deg
-        OUTPUT_TELEMETRY_UPDATE_U16(arg, TELEMETRY_ID_HEADING, (data->yaw + 180) * 100);
+        OUTPUT_TELEMETRY_UPDATE_U16(arg, TELEMETRY_ID_HEADING, data->yaw * 100);
         break;
     }
     case MSP_RAW_IMU:
