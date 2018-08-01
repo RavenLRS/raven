@@ -95,10 +95,10 @@ typedef struct msp_attitude_s
 
 typedef struct msp_raw_imu_s
 {
-    uint16_t acc_x;
-    uint16_t acc_y;
-    uint16_t acc_z;
-    uint16_t gyro_x;
+    int16_t acc_x; // acc in 1G * 512
+    int16_t acc_y;
+    int16_t acc_z;
+    uint16_t gyro_x; // rotation in DPS
     uint16_t gyro_y;
     uint16_t gyro_z;
     uint16_t mag_x;
@@ -131,6 +131,12 @@ typedef struct msp_misc_s
     uint8_t vbat_max_cell_voltage;
     uint8_t vbat_warning_cell_voltage;
 } PACKED msp_misc_t;
+
+static uint32_t output_msp_acc_to_telemetry(int16_t acc)
+{
+    // Convert from (1G * 512) to 0.01G
+    return acc * (100 / 512.0f);
+}
 
 static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const void *payload, int size, void *arg)
 {
@@ -233,9 +239,9 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
         }
         const msp_raw_imu_t *data = payload;
         // TODO: Units are probably wrong here
-        OUTPUT_TELEMETRY_UPDATE_I32(arg, TELEMETRY_ID_ACC_X, data->acc_x);
-        OUTPUT_TELEMETRY_UPDATE_I32(arg, TELEMETRY_ID_ACC_Y, data->acc_y);
-        OUTPUT_TELEMETRY_UPDATE_I32(arg, TELEMETRY_ID_ACC_Z, data->acc_z);
+        OUTPUT_TELEMETRY_UPDATE_I32(arg, TELEMETRY_ID_ACC_X, output_msp_acc_to_telemetry(data->acc_x));
+        OUTPUT_TELEMETRY_UPDATE_I32(arg, TELEMETRY_ID_ACC_Y, output_msp_acc_to_telemetry(data->acc_y));
+        OUTPUT_TELEMETRY_UPDATE_I32(arg, TELEMETRY_ID_ACC_Z, output_msp_acc_to_telemetry(data->acc_z));
         break;
     }
     case MSP_MISC:
