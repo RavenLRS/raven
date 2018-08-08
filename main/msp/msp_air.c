@@ -4,6 +4,8 @@
 
 #include "air/air_stream.h"
 
+#include "msp/msp_serial.h"
+
 #include "util/macros.h"
 #include "util/uvarint.h"
 
@@ -26,10 +28,13 @@ static int msp_air_write(void *transport, msp_direction_e direction, uint16_t cm
     switch (direction)
     {
     case MSP_DIRECTION_TO_MWC:
-        buf[0] = '<';
+        buf[0] = MSP_SERIAL_DIRECTION_TO_MWC_BYTE;
         break;
     case MSP_DIRECTION_FROM_MWC:
-        buf[0] = '>';
+        buf[0] = MSP_SERIAL_DIRECTION_FROM_MWC_BYTE;
+        break;
+    case MSP_DIRECTION_ERROR:
+        buf[0] = MSP_SERIAL_DIRECTION_ERROR_BYTE;
         break;
     }
     int used = uvarint_encode16(&buf[1], sizeof(buf) - 1, cmd);
@@ -50,11 +55,14 @@ static bool msp_air_decode(const void *payload, size_t size, msp_direction_e *di
     const uint8_t *ptr = payload;
     switch (*ptr)
     {
-    case '<':
+    case MSP_SERIAL_DIRECTION_TO_MWC_BYTE:
         *direction = MSP_DIRECTION_TO_MWC;
         break;
-    case '>':
+    case MSP_SERIAL_DIRECTION_FROM_MWC_BYTE:
         *direction = MSP_DIRECTION_FROM_MWC;
+        break;
+    case MSP_SERIAL_DIRECTION_ERROR_BYTE:
+        *direction = MSP_DIRECTION_ERROR;
         break;
     default:
         LOG_W(TAG, "Invalid direction chracter %d (%c)", *ptr, *ptr);

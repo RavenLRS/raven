@@ -6,9 +6,6 @@
 
 #include "util/ringbuffer.h"
 
-// Required space for the protocol in addition to the data we want to send
-#define MSP_V1_PROTOCOL_BYTES 6
-
 // MSP codes we use
 #define MSP_FC_VARIANT 2
 #define MSP_FC_VERSION 3
@@ -31,6 +28,7 @@ typedef enum
 {
     MSP_DIRECTION_TO_MWC,
     MSP_DIRECTION_FROM_MWC,
+    MSP_DIRECTION_ERROR, // Set by the FC as an error response
 } msp_direction_e;
 
 enum

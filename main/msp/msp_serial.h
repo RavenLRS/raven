@@ -7,6 +7,14 @@
 
 #include "msp/msp_transport.h"
 
+// Required space for the protocol in addition to the data we want to send
+#define MSP_V1_PROTOCOL_BYTES 6
+#define MSP_V2_PROTOCOL_BYTES 9
+
+#define MSP_SERIAL_DIRECTION_TO_MWC_BYTE '<'
+#define MSP_SERIAL_DIRECTION_FROM_MWC_BYTE '>'
+#define MSP_SERIAL_DIRECTION_ERROR_BYTE '!'
+
 typedef enum
 {
     MSP_SERIAL_BAUDRATE_115200 = 0,
