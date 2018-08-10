@@ -315,8 +315,10 @@ static bool output_msp_update(void *output, rc_data_t *data, time_micros_t now)
         }
         if (output_msp->polls[ii].next_poll < now)
         {
-            MSP_SEND_REQ(output, output_msp->polls[ii].cmd);
-            output_msp->polls[ii].next_poll = now + output_msp->polls[ii].interval;
+            if (MSP_SEND_REQ(output, output_msp->polls[ii].cmd) > 0)
+            {
+                output_msp->polls[ii].next_poll = now + output_msp->polls[ii].interval;
+            }
         }
     }
     return true;

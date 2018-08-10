@@ -10,6 +10,7 @@
 #include <esp_timer.h>
 
 #define MILLIS_PER_SEC (1000)
+#define MICROS_PER_SEC (1000000)
 
 typedef TickType_t time_ticks_t;
 typedef uint32_t time_millis_t;

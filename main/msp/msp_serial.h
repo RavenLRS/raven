@@ -7,6 +7,8 @@
 
 #include "msp/msp_transport.h"
 
+#include "util/time.h"
+
 // Required space for the protocol in addition to the data we want to send
 #define MSP_V1_PROTOCOL_BYTES 6
 #define MSP_V2_PROTOCOL_BYTES 9
@@ -33,6 +35,16 @@ typedef struct msp_serial_s
     uint8_t buf[MSP_MAX_PAYLOAD_SIZE];
     int buf_pos;
     io_t io;
+    struct
+    {
+        bool active;
+        uint32_t bytes_per_second;
+        time_micros_t last_write;
+        size_t last_write_size;
+        time_micros_t response_pending_until;
+        bool response_pending_is_estimate;
+        size_t expected_response_size;
+    } half_duplex;
 } msp_serial_t;
 
 void msp_serial_init(msp_serial_t *tr, io_t *io);

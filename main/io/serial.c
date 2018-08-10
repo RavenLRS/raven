@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include <hal/mutex.h>
+
 #include <driver/uart.h>
 
 #include "io/pins.h"
@@ -23,6 +25,7 @@ typedef struct serial_port_s
     uart_isr_handle_t isr_handle;
     uint8_t buf[128];
     unsigned buf_pos;
+    mutex_t mutex;
 } serial_port_t;
 
 // We support 2 UART ports at maximum, ignoring UART0 since
@@ -88,10 +91,12 @@ static void serial_isr(void *arg)
             }
             else
             {
+                mutex_lock(&port->mutex);
                 if (port->buf_pos < sizeof(port->buf))
                 {
                     port->buf[port->buf_pos++] = c;
                 }
+                mutex_unlock(&port->mutex);
             }
         }
         port->dev->int_clr.rxfifo_full = 1;
@@ -194,6 +199,7 @@ serial_port_t *serial_port_open(const serial_port_config_t *config)
         }
     }
     assert(port);
+    mutex_open(&port->mutex);
     port->config = *config;
     serial_port_do_open(port);
     return port;
@@ -205,10 +211,15 @@ int serial_port_read(serial_port_t *port, void *buf, size_t size, time_ticks_t t
     {
         return uart_read_bytes(port->port_num, buf, size, timeout);
     }
+    mutex_lock(&port->mutex);
     int cpy_size = MIN(size, port->buf_pos);
-    memcpy(buf, port->buf, cpy_size);
-    memmove(&port->buf[0], &port->buf[cpy_size], port->buf_pos - cpy_size);
-    port->buf_pos -= cpy_size;
+    if (cpy_size > 0)
+    {
+        memcpy(buf, port->buf, cpy_size);
+        memmove(&port->buf[0], &port->buf[cpy_size], port->buf_pos - cpy_size);
+        port->buf_pos -= cpy_size;
+    }
+    mutex_unlock(&port->mutex);
     return cpy_size;
 }
 
@@ -284,6 +295,7 @@ void serial_port_close(serial_port_t *port)
     {
         ESP_ERROR_CHECK(esp_intr_free(port->isr_handle));
     }
+    mutex_close(&port->mutex);
     port->open = false;
 }
 
@@ -299,4 +311,13 @@ void serial_port_destroy(serial_port_t **port)
         serial_port_close(*port);
         *port = NULL;
     }
+}
+
+io_flags_t serial_port_io_flags(serial_port_t *port)
+{
+    if (serial_port_is_half_duplex(port))
+    {
+        return IO_FLAG_HALF_DUPLEX;
+    }
+    return 0;
 }

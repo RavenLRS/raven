@@ -2,13 +2,11 @@
 
 #include <stddef.h>
 
+#include "io/io.h"
+
 #include "util/time.h"
 
-#define SERIAL_IO(port) ((io_t){            \
-    .read = (io_read_f)serial_port_read,    \
-    .write = (io_write_f)serial_port_write, \
-    .data = port,                           \
-})
+#define SERIAL_IO(port) IO_MAKE(serial_port_read, serial_port_write, serial_port_io_flags, port)
 
 typedef struct serial_port_s serial_port_t;
 
@@ -51,3 +49,5 @@ bool serial_port_set_baudrate(serial_port_t *port, uint32_t baudrate);
 void serial_port_close(serial_port_t *port);
 bool serial_port_is_half_duplex(serial_port_t *port);
 void serial_port_destroy(serial_port_t **port);
+
+io_flags_t serial_port_io_flags(serial_port_t *port);

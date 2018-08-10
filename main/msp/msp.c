@@ -44,6 +44,13 @@ int msp_conn_send(msp_conn_t *conn, uint16_t cmd, const void *payload, size_t si
         .data = callback_data,
     };
 
+    // Write before enqueing the callback, since the write could fail
+    int ret = msp_conn_write(conn, MSP_DIRECTION_TO_MWC, cmd, payload, size);
+    if (ret < 0)
+    {
+        // TODO: Handle MSP_BUSY with an internal buffer?
+        return ret;
+    }
     // We need to force push here because we don't support callback
     // expiration yet.
     // TODO: Support callback expiration
@@ -57,7 +64,7 @@ int msp_conn_send(msp_conn_t *conn, uint16_t cmd, const void *payload, size_t si
         }
         return -1;
     }
-    return msp_conn_write(conn, MSP_DIRECTION_TO_MWC, cmd, payload, size);
+    return ret;
 }
 
 void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint16_t cmd, const void *data, int size)
@@ -93,6 +100,7 @@ void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint
             }
             break;
         }
+        LOG_W(TAG, "Discaring callback for MSP code %d (%d in RB)", (int)cb_req.code, ring_buffer_count(&conn->rb));
     }
 }
 

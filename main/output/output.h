@@ -109,6 +109,7 @@ typedef struct output_msp_poll_s
 typedef struct output_fc_s
 {
     char fw_variant[4]; // 4-char code
+    bool fw_version_is_pending;
     uint8_t fw_version[3];
     time_micros_t next_fw_update;
     int8_t rssi_channel;

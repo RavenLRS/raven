@@ -14,6 +14,8 @@
 #define MSP_SERIAL_SYNC_BYTE '$'
 #define MSP_V1_SERIAL_MARKER_BYTE 'M'
 #define MSP_V2_SERIAL_MARKER_BYTE 'X'
+#define MSP_HALF_DUPLEX_MIN_TIMEOUT_US 10000
+#define MSP_HALF_DUPLEX_MAX_TIMEOUT_US MICROS_PER_SEC
 
 static const char *TAG = "MSP.Transport.Serial";
 
@@ -29,6 +31,17 @@ int msp_serial_baudrate_get(msp_serial_baudrate_e br)
     }
 
     return -1;
+}
+
+static unsigned msp_serial_expected_response_delay(msp_serial_t *serial, size_t response_size)
+{
+    if (serial->half_duplex.bytes_per_second == 0)
+    {
+        return MSP_HALF_DUPLEX_MAX_TIMEOUT_US;
+    }
+
+    unsigned delay = ((response_size + serial->half_duplex.last_write_size) * MICROS_PER_SEC / serial->half_duplex.bytes_per_second) * 1.2f;
+    return MIN(MAX(delay, MSP_HALF_DUPLEX_MIN_TIMEOUT_US), MSP_HALF_DUPLEX_MAX_TIMEOUT_US);
 }
 
 static int msp_serial_v1_encode(msp_direction_e direction, uint16_t code, const void *data, size_t size, void *buf, size_t bufsize)
@@ -143,11 +156,12 @@ static int msp_serial_v1_decode(msp_serial_t *serial, int *start, int *end, msp_
 
     // Size is after $M>
     uint8_t payload_size = serial->buf[*start + 3];
-    int packet_size = MSP_V1_PROTOCOL_BYTES + payload_size;
-    LOG_D(TAG, "Expecting packet of size %d, got %d", (int)packet_size, (int)*end - *start);
+    size_t packet_size = MSP_V1_PROTOCOL_BYTES + payload_size;
+    LOG_D(TAG, "Expecting MSPv1 packet of size %d, got %d", (int)packet_size, (int)*end - *start);
     if (*end - *start < packet_size)
     {
         // Incomplete packet, must wait until next update
+        serial->half_duplex.expected_response_size = packet_size;
         return MSP_EOF;
     }
     if (!msp_serial_decode_direction(serial->buf[*start + 2], direction))
@@ -160,7 +174,7 @@ static int msp_serial_v1_decode(msp_serial_t *serial, int *start, int *end, msp_
     uint16_t packet_code = serial->buf[*start + 4];
     uint8_t crc = serial->buf[*start + packet_size - 1];
     uint8_t ccrc = crc_xor_bytes(&serial->buf[*start + 3], packet_size - 3 - 1);
-    LOG_D(TAG, "Got serial code %d (payload size %d)", (int)packet_code, (int)payload_size);
+    LOG_D(TAG, "Got MSPv1 serial code %d (payload size %d)", (int)packet_code, (int)payload_size);
     uint8_t *packet_data = NULL;
     if (payload_size > 0)
     {
@@ -203,10 +217,11 @@ static int msp_serial_v2_decode(msp_serial_t *serial, int *start, int *end, msp_
     // Size is after $X>
     uint16_t payload_size = serial->buf[*start + 6];
     payload_size |= serial->buf[*start + 7] << 8;
-    int packet_size = MSP_V2_PROTOCOL_BYTES + payload_size;
-    LOG_D(TAG, "Expecting packet of size %d, got %d", (int)packet_size, (int)*end - *start);
+    size_t packet_size = MSP_V2_PROTOCOL_BYTES + payload_size;
+    LOG_D(TAG, "Expecting MSPv2 packet of size %d, got %d", (int)packet_size, (int)*end - *start);
     if (*end - *start < packet_size)
     {
+        serial->half_duplex.expected_response_size = packet_size;
         // Incomplete packet, must wait until next update
         return MSP_EOF;
     }
@@ -221,7 +236,7 @@ static int msp_serial_v2_decode(msp_serial_t *serial, int *start, int *end, msp_
     packet_code |= serial->buf[*start + 5] << 8;
     uint8_t crc = serial->buf[*start + packet_size - 1];
     uint8_t ccrc = crc8_dvb_s2_bytes(&serial->buf[*start + 3], packet_size - 3 - 1);
-    LOG_D(TAG, "Got serial code %d (payload size %d)", (int)packet_code, (int)payload_size);
+    LOG_D(TAG, "Got MSPv2 serial code %d (payload size %d)", (int)packet_code, (int)payload_size);
     uint8_t *packet_data = NULL;
     if (payload_size > 0)
     {
@@ -286,12 +301,10 @@ static int msp_serial_read(void *transport, msp_direction_e *direction, uint16_t
                 ret = msp_serial_v2_decode(serial, &start, &end, direction, cmd, payload, size);
                 break;
             default:
-                LOG_W(TAG, "Skipping unknown MSP sync byte %c", serial->buf[start + 1]);
+                LOG_W(TAG, "Skipping unknown MSP sync byte %c (0x%02x)", serial->buf[start + 1], serial->buf[start + 1]);
+                start++;
                 continue;
             }
-        }
-        if (ret != MSP_EOF)
-        {
             break;
         }
         // Advance to the next byte
@@ -302,12 +315,38 @@ static int msp_serial_read(void *transport, msp_direction_e *direction, uint16_t
     if (start > 0)
     {
         LOG_D(TAG, "Consumed %d bytes", start);
+        LOG_BUFFER_D(TAG, &serial->buf[start], start);
         if (start != serial->buf_pos)
         {
             // Got some data at the end that we need to copy
             memmove(serial->buf, &serial->buf[start], end - start);
         }
         serial->buf_pos -= start;
+
+        if (serial->half_duplex.active)
+        {
+            if (ret != MSP_EOF)
+            {
+                serial->half_duplex.response_pending_until = 0;
+                if (ret > 0)
+                {
+                    time_micros_t now = time_micros_now();
+                    uint32_t bytes_per_second = ((ret + serial->half_duplex.last_write_size) * MICROS_PER_SEC) / (now - serial->half_duplex.last_write);
+                    serial->half_duplex.bytes_per_second = serial->half_duplex.bytes_per_second * 0.95f + bytes_per_second * 0.05f;
+                }
+            }
+        }
+    }
+
+    if (serial->half_duplex.active && ret == MSP_EOF)
+    {
+        // Check if we already know the expected payload size. Extend the max delay if needed.
+        if (serial->half_duplex.response_pending_is_estimate && serial->half_duplex.expected_response_size > 0)
+        {
+            unsigned delay = msp_serial_expected_response_delay(serial, serial->half_duplex.expected_response_size);
+            serial->half_duplex.response_pending_until = MAX(serial->half_duplex.last_write + delay, serial->half_duplex.response_pending_until);
+            serial->half_duplex.response_pending_is_estimate = false;
+        }
     }
 
     return ret;
@@ -315,8 +354,18 @@ static int msp_serial_read(void *transport, msp_direction_e *direction, uint16_t
 
 static int msp_serial_write(void *transport, msp_direction_e direction, uint16_t cmd, const void *payload, size_t size)
 {
+    msp_serial_t *serial = transport;
     uint8_t buf[MSP_MAX_PAYLOAD_SIZE];
     int packet_size;
+
+    if (serial->half_duplex.active)
+    {
+        if (serial->half_duplex.response_pending_until > time_micros_now())
+        {
+            return MSP_BUSY;
+        }
+    }
+
     if (cmd <= 254)
     {
         packet_size = msp_serial_v1_encode(direction, cmd, payload, size, buf, sizeof(buf));
@@ -329,8 +378,19 @@ static int msp_serial_write(void *transport, msp_direction_e direction, uint16_t
     {
         return packet_size;
     }
-    msp_serial_t *serial = transport;
     LOG_D(TAG, "Writing %d bytes", packet_size);
+    if (serial->half_duplex.active)
+    {
+        time_micros_t now = time_micros_now();
+        serial->half_duplex.last_write = now;
+        serial->half_duplex.last_write_size = packet_size;
+        // Initially, expect a reply of 32 bytes. We'll adjust it
+        // when the packet header is received.
+        unsigned expected_delay = msp_serial_expected_response_delay(serial, 32);
+        serial->half_duplex.response_pending_until = now + expected_delay;
+        serial->half_duplex.response_pending_is_estimate = true;
+        serial->half_duplex.expected_response_size = 0;
+    }
     return io_write(&serial->io, buf, packet_size);
 }
 
@@ -339,5 +399,7 @@ void msp_serial_init(msp_serial_t *tr, io_t *io)
     tr->transport.vtable.read = msp_serial_read;
     tr->transport.vtable.write = msp_serial_write;
     tr->io = *io;
+    memset(&tr->half_duplex, 0, sizeof(tr->half_duplex));
+    tr->half_duplex.active = io_is_half_duplex(io);
     tr->buf_pos = 0;
 }

@@ -36,6 +36,7 @@ enum
     MSP_EOF = -1,
     MSP_INVALID_CHECKSUM = -2,
     MSP_BUF_TOO_SMALL = -3,
+    MSP_BUSY = -4,
 };
 
 typedef struct msp_conn_s msp_conn_t;

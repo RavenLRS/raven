@@ -136,7 +136,6 @@ static void output_msp_configure_polling(output_t *output)
 
 static void output_msp_callback(msp_conn_t *conn, uint16_t cmd, const void *payload, int size, void *callback_data)
 {
-    // TODO: Stop if size < 0, indicates error
     output_t *output = callback_data;
     switch (cmd)
     {
@@ -144,8 +143,7 @@ static void output_msp_callback(msp_conn_t *conn, uint16_t cmd, const void *payl
         if (size == 4)
         {
             memcpy(output->fc.fw_variant, payload, size);
-            // Request version
-            MSP_SEND_REQ(output, MSP_FC_VERSION);
+            output->fc.fw_version_is_pending = true;
         }
         break;
     case MSP_FC_VERSION:
@@ -183,9 +181,19 @@ static void output_msp_poll(output_t *output, time_micros_t now)
 {
     if (output->fc.next_fw_update < now)
     {
-        MSP_SEND_REQ(output, MSP_FC_VARIANT);
-        output->fc.next_fw_update = now + OUTPUT_FC_MSP_UPDATE_INTERVAL;
+        if (MSP_SEND_REQ(output, MSP_FC_VARIANT) > 0)
+        {
+            output->fc.next_fw_update = now + OUTPUT_FC_MSP_UPDATE_INTERVAL;
+        }
     }
+    else if (output->fc.fw_version_is_pending)
+    {
+        if (MSP_SEND_REQ(output, MSP_FC_VERSION) > 0)
+        {
+            output->fc.fw_version_is_pending = false;
+        }
+    }
+
     for (int ii = 0; ii < OUTPUT_FC_MAX_NUM_POLLS; ii++)
     {
         time_micros_t interval = output->fc.polls[ii].interval;
@@ -197,8 +205,10 @@ static void output_msp_poll(output_t *output, time_micros_t now)
         }
         if (output->fc.polls[ii].next_poll < now)
         {
-            MSP_SEND_REQ(output, output->fc.polls[ii].cmd);
-            output->fc.polls[ii].next_poll = now + interval;
+            if (MSP_SEND_REQ(output, output->fc.polls[ii].cmd) > 0)
+            {
+                output->fc.polls[ii].next_poll = now + interval;
+            }
         }
     }
 }
