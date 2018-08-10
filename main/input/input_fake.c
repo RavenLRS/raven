@@ -59,6 +59,10 @@ static bool input_fake_update(void *input, rc_data_t *data, time_micros_t now)
     {
         failsafe_reset_interval(&input_fake->input.failsafe, now);
     }
+    if (failsafe_is_active(&input_fake->input.failsafe))
+    {
+        return false;
+    }
     if (now > input_fake->next_update)
     {
         for (int ii = 0; ii < FAKE_INPUT_MOVED_CHANNELS; ii++)
