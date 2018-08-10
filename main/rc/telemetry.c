@@ -81,7 +81,7 @@ static const char *telemetry_format_altitude(const telemetry_t *val, char *buf, 
 
 static const char *telemetry_format_vertical_speed(const telemetry_t *val, char *buf, size_t bufsize)
 {
-    snprintf(buf, bufsize, "%.02fm/s", val->val.u16 / 100.0);
+    snprintf(buf, bufsize, "%.02fm/s", val->val.i16 / 100.0);
     return buf;
 }
 
