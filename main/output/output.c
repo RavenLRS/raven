@@ -171,7 +171,7 @@ static void output_msp_callback(msp_conn_t *conn, uint16_t cmd, const void *payl
             // MSP based FCs return 0 to mean disabled, non-zero to indicate
             // that the channel number (from 1) is the RSSI channel.
             uint8_t fc_rssi_channel = *((const uint8_t *)payload);
-            output->fc.rssi_channel = fc_rssi_channel > 0 ? fc_rssi_channel - 1 : 0;
+            output->fc.rssi_channel = fc_rssi_channel > 0 ? fc_rssi_channel - 1 : -1;
         }
         break;
     }
