@@ -14,22 +14,6 @@ static telemetry_downlink_id_e input_downlink_telemetry[] = {
     TELEMETRY_ID_RX_RF_POWER,
 };
 
-void rc_data_reset_data_states(rc_data_t *data)
-{
-    for (int ii = 0; ii < RC_CHANNELS_NUM; ii++)
-    {
-        data_state_init(&data->channels[ii].data_state);
-    }
-    for (int ii = 0; ii < ARRAY_COUNT(data->telemetry_uplink); ii++)
-    {
-        data_state_init(&data->telemetry_uplink[ii].data_state);
-    }
-    for (int ii = 0; ii < ARRAY_COUNT(data->telemetry_downlink); ii++)
-    {
-        data_state_init(&data->telemetry_downlink[ii].data_state);
-    }
-}
-
 void rc_data_reset_input(rc_data_t *data)
 {
     memset(data->channels, 0, sizeof(data->channels));
@@ -42,7 +26,15 @@ void rc_data_reset_input(rc_data_t *data)
     {
         memset(&data->telemetry_downlink[TELEMETRY_DOWNLINK_GET_IDX(input_downlink_telemetry[ii])], 0, sizeof(data->telemetry_downlink[0]));
     }
-    rc_data_reset_data_states(data);
+    // Reset data states for fields updated by the input
+    for (int ii = 0; ii < RC_CHANNELS_NUM; ii++)
+    {
+        data_state_init(&data->channels[ii].data_state);
+    }
+    for (int ii = 0; ii < ARRAY_COUNT(data->telemetry_uplink); ii++)
+    {
+        data_state_init(&data->telemetry_uplink[ii].data_state);
+    }
     data->channels_num = RC_CHANNELS_NUM;
     data->ready = false;
 #ifdef SETUP_FAKE_TELEMETRY
@@ -79,7 +71,11 @@ void rc_data_reset_output(rc_data_t *data)
             memset(&data->telemetry_downlink[ii], 0, sizeof(data->telemetry_downlink[0]));
         }
     }
-    rc_data_reset_data_states(data);
+    // Reset data states for fields updated by the output
+    for (int ii = 0; ii < ARRAY_COUNT(data->telemetry_downlink); ii++)
+    {
+        data_state_init(&data->telemetry_downlink[ii].data_state);
+    }
 #ifdef SETUP_FAKE_TELEMETRY
     time_ticks_t now = time_ticks_now();
     (void)TELEMETRY_SET_U16(data, TELEMETRY_ID_BAT_VOLTAGE, 14.7 * 100, now);

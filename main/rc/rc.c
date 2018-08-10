@@ -294,8 +294,6 @@ static void rc_reconfigure_input(rc_t *rc)
         rc->input_config = NULL;
     }
     memset(&rc->inputs, 0, sizeof(rc->inputs));
-    air_pairing_t pairing;
-    air_config_t air_config;
     switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
@@ -316,6 +314,15 @@ static void rc_reconfigure_input(rc_t *rc)
         break;
     case RC_MODE_RX:
     {
+#if defined(CONFIG_RAVEN_FAKE_INPUT)
+        input_fake_init(&rc->inputs.fake);
+        rc->inputs.fake.update_interval = FREQ_TO_MICROS(100);
+        rc->input = (input_t *)&rc->inputs.fake;
+        rc->input_config = NULL;
+#else
+        air_pairing_t pairing;
+        air_config_t air_config;
+
         rmp_set_pairing(rc->rmp, NULL);
         rc_get_air_config(rc, &air_config);
         if (rc->state.bind_active)
@@ -335,6 +342,7 @@ static void rc_reconfigure_input(rc_t *rc)
         }
 
         rc_invalidate_pair_air_config(rc);
+#endif
         break;
     }
     }

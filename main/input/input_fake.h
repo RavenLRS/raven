@@ -10,6 +10,7 @@ typedef struct input_fake_s
     bool channels[RC_CHANNELS_NUM];
     time_micros_t next_flip;
     time_micros_t next_update;
+    time_micros_t update_interval;
 } input_fake_t;
 
 void input_fake_init(input_fake_t *input);
