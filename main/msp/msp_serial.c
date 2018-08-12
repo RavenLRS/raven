@@ -141,7 +141,7 @@ static bool msp_serial_decode_direction(uint8_t b, msp_direction_e *direction)
         *direction = MSP_DIRECTION_ERROR;
         break;
     default:
-        LOG_W(TAG, "Invalid direction chracter 0x%02x (%c)", b, b);
+        LOG_D(TAG, "Invalid direction chracter 0x%02x (%c)", b, b);
         return false;
     }
     return true;
@@ -194,8 +194,8 @@ static int msp_serial_v1_decode(msp_serial_t *serial, int *start, int *end, msp_
 
     if (crc != ccrc)
     {
-        LOG_W(TAG, "Invalid CRC 0x%02x, expecting 0x%02x", crc, ccrc);
-        LOG_BUFFER_W(TAG, &serial->buf[*start - packet_size], packet_size);
+        LOG_D(TAG, "Invalid CRC 0x%02x, expecting 0x%02x", crc, ccrc);
+        LOG_BUFFER_D(TAG, &serial->buf[*start - packet_size], packet_size);
         return MSP_INVALID_CHECKSUM;
     }
 
@@ -256,8 +256,8 @@ static int msp_serial_v2_decode(msp_serial_t *serial, int *start, int *end, msp_
 
     if (crc != ccrc)
     {
-        LOG_W(TAG, "Invalid CRC 0x%02x, expecting 0x%02x", crc, ccrc);
-        LOG_BUFFER_W(TAG, &serial->buf[*start - packet_size], packet_size);
+        LOG_D(TAG, "Invalid CRC 0x%02x, expecting 0x%02x", crc, ccrc);
+        LOG_BUFFER_D(TAG, &serial->buf[*start - packet_size], packet_size);
         return MSP_INVALID_CHECKSUM;
     }
 
@@ -301,7 +301,7 @@ static int msp_serial_read(void *transport, msp_direction_e *direction, uint16_t
                 ret = msp_serial_v2_decode(serial, &start, &end, direction, cmd, payload, size);
                 break;
             default:
-                LOG_W(TAG, "Skipping unknown MSP sync byte %c (0x%02x)", serial->buf[start + 1], serial->buf[start + 1]);
+                LOG_D(TAG, "Skipping unknown MSP sync byte %c (0x%02x)", serial->buf[start + 1], serial->buf[start + 1]);
                 start++;
                 continue;
             }

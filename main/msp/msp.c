@@ -74,7 +74,7 @@ void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint
     {
         if (size < 0)
         {
-            LOG_W(TAG, "Got MSP error code %d, skipping global callback", size);
+            LOG_D(TAG, "Got MSP error code %d, skipping global callback", size);
             return;
         }
         conn->global_callback(conn, cmd, data, size, conn->global_callback_data);
@@ -91,7 +91,7 @@ void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint
         {
             if (size < 0)
             {
-                LOG_W(TAG, "Got MSP error code %d, skipping callback", size);
+                LOG_D(TAG, "Got MSP error code %d, skipping callback", size);
                 break;
             }
             if (cb_req.callback)
@@ -100,7 +100,7 @@ void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint
             }
             break;
         }
-        LOG_W(TAG, "Discaring callback for MSP code %u (looking for %u, %u in queue)", cb_req.code, cmd, ring_buffer_count(&conn->rb));
+        LOG_D(TAG, "Discarding callback for MSP code %u (looking for %u, %u in queue)", cb_req.code, cmd, ring_buffer_count(&conn->rb));
     }
 }
 
