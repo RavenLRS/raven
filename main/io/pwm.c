@@ -9,6 +9,8 @@
 
 #include "pwm.h"
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+
 #define PWM_TIMER_FREQ_HZ 50
 #define PWM_RESOLUTION LEDC_TIMER_15_BIT
 #define PWM_DUTY_MAX_VALUE ((1 << PWM_RESOLUTION) - 1)
@@ -206,3 +208,5 @@ bool pwm_output_can_use_pin(int pin)
     }
     return false;
 }
+
+#endif // CONFIG_RAVEN_USE_PWM_OUTPUTS

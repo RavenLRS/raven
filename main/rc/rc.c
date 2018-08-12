@@ -466,8 +466,10 @@ static void rc_reconfigure_output(rc_t *rc)
             break;
         }
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
         // Update PWM output configuration
         pwm_update_config();
+#endif
 
         break;
     }
@@ -878,10 +880,12 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
                 rc_send_air_config_to_pair(rc);
                 rc_invalidate_input(rc);
             }
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
             if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX))
             {
                 pwm_update_config();
             }
+#endif
             if (SETTING_IS(setting, SETTING_KEY_RX_CRAFT_NAME))
             {
                 rc_update_rx_craft_name(rc, time_micros_now());
@@ -953,7 +957,9 @@ void rc_init(rc_t *rc, air_radio_t *radio, rmp_t *rmp)
     rc->state.msp_recv_port = rmp_open_port(rmp, RMP_PORT_MSP, rc_rmp_msp_request_handler, rc);
     rmp_set_transport(rmp, RMP_TRANSPORT_RC, rc_send_rmp, rc);
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
     pwm_init();
+#endif
 
     if (rc_should_autostart_bind(rc))
     {
@@ -1342,7 +1348,9 @@ void rc_update(rc_t *rc)
 
     if (input_new_data)
     {
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
         pwm_update(&rc->data);
+#endif
     }
 
     if (UNLIKELY(rc->state.bind_active))
