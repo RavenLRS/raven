@@ -483,7 +483,7 @@ static bool output_air_open(void *output, void *config)
     return true;
 }
 
-static bool output_air_update(void *output, rc_data_t *data, time_micros_t now)
+static bool output_air_update(void *output, rc_data_t *data, bool update_rc, time_micros_t now)
 {
     output_air_t *output_air = output;
 
@@ -499,7 +499,8 @@ static bool output_air_update(void *output, rc_data_t *data, time_micros_t now)
         cycle_begin = now;
 #endif
     }
-    return true;
+    // Tell the output layer to not mess with the channel dirty states
+    return false;
 }
 
 static void output_air_close(void *output, void *config)
@@ -525,7 +526,6 @@ void output_air_init(output_air_t *output, air_addr_t addr, air_config_t *air_co
     };
     rmp_air_init(&output->rmp_air, rmp, &addr, &output->air_stream);
     air_io_init(&output->air, addr, NULL, &output->rmp_air);
-    output->output.min_update_interval = 0;
 }
 
 void output_air_set_tx_power(output_air_t *output, int tx_power)

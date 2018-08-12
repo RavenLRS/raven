@@ -22,7 +22,7 @@ static bool output_air_bind_open(void *data, void *config)
     return true;
 }
 
-static bool output_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t now)
+static bool output_air_bind_update(void *data, rc_data_t *rc_data, bool update_rc, time_micros_t now)
 {
     output_air_bind_t *output = data;
     air_radio_t *radio = output->air_config.radio;

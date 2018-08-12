@@ -70,16 +70,17 @@ static bool output_sbus_update_sport(void *output, rc_data_t *data)
     return true;
 }
 
-static bool output_sbus_update(void *output, rc_data_t *data, time_micros_t now)
+static bool output_sbus_update(void *output, rc_data_t *data, bool update_rc, time_micros_t now)
 {
-    if (rc_data_is_ready(data))
+    if (update_rc)
     {
         if (!output_sbus_update_sbus(output, data))
         {
             return false;
         }
     }
-    return output_sbus_update_sport(output, data);
+    output_sbus_update_sport(output, data);
+    return true;
 }
 
 static void output_sbus_close(void *output, void *config)
@@ -91,11 +92,6 @@ static void output_sbus_close(void *output, void *config)
 
 void output_sbus_init(output_sbus_t *output)
 {
-    // Each frame lasts 3ms and there should be be 6ms between updates
-    output->output.min_update_interval = MILLIS_TO_MICROS(9);
-    // Don't wait more than 15ms to send a frame, otherwise the FC
-    // might think the cable broke and go into FS.
-    output->output.max_update_interval = MILLIS_TO_MICROS(15);
     output->output.flags = OUTPUT_FLAG_LOCAL;
     output->output.vtable = (output_vtable_t){
         .open = output_sbus_open,

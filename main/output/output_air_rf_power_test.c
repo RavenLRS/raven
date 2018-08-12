@@ -42,7 +42,7 @@ static bool output_air_rf_power_test_open(void *data, void *config)
     return true;
 }
 
-static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, time_micros_t now)
+static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, bool update_rc, time_micros_t now)
 {
     output_air_rf_power_test_t *output = data;
     air_radio_t *radio = output->air_config.radio;
@@ -95,7 +95,7 @@ static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, time
     {
         output_air_rf_power_test_send(output);
     }
-    return true;
+    return false;
 }
 
 static void output_air_rf_power_test_close(void *data, void *config)
@@ -109,7 +109,6 @@ static void output_air_rf_power_test_close(void *data, void *config)
 void output_air_rf_power_test_init(output_air_rf_power_test_t *output, air_config_t *air_config)
 {
     output->air_config = *air_config;
-    output->output.min_update_interval = 0;
     output->output.vtable = (output_vtable_t){
         .open = output_air_rf_power_test_open,
         .update = output_air_rf_power_test_update,

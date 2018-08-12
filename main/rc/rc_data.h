@@ -115,7 +115,6 @@ inline bool rc_data_is_ready(rc_data_t *data)
 {
     if (!data->ready)
     {
-
         for (int ii = 0; ii < data->channels_num; ii++)
         {
             control_channel_t *ch = &data->channels[ii];
@@ -129,6 +128,34 @@ inline bool rc_data_is_ready(rc_data_t *data)
         data->ready = true;
     }
     return true;
+}
+
+inline bool rc_data_has_dirty_channels(rc_data_t *data)
+{
+    if (rc_data_is_ready(data))
+    {
+        for (int ii = 0; ii < data->channels_num; ii++)
+        {
+            control_channel_t *ch = &data->channels[ii];
+            if (data_state_is_dirty(&ch->data_state))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Used by the RX to keep track when the channels need to be flushed
+// to the FC. ACK seq is not used, since differential updates only
+// happen OTA.
+inline void rc_data_channels_sent(rc_data_t *data, time_micros_t now)
+{
+    for (int ii = 0; ii < data->channels_num; ii++)
+    {
+        control_channel_t *ch = &data->channels[ii];
+        data_state_sent(&ch->data_state, -1, now);
+    }
 }
 
 unsigned rc_data_get_channel_percentage(const rc_data_t *data, unsigned ch);

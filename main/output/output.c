@@ -243,6 +243,11 @@ bool output_open(rc_data_t *data, output_t *output, void *config)
         output->craft_name_setting = NULL;
         if (!output->is_open && output->vtable.open)
         {
+            output->min_rc_update_interval = 0;
+            // If the data is slower than 5hz, repeat frames
+            output->max_rc_update_interval = FREQ_TO_MICROS(5);
+            output->next_rc_update_no_earlier_than = 0;
+            output->next_rc_update_no_later_than = TIME_MICROS_MAX;
             is_open = output->is_open = output->vtable.open(output, config);
             if (is_open)
             {
@@ -255,43 +260,51 @@ bool output_open(rc_data_t *data, output_t *output, void *config)
 
 bool output_update(output_t *output, time_micros_t now)
 {
-    /*
-        TODO: Call update only when needed. Make the output
-        declare its minimum interval between updates and a
-        maximum (FC might expect a packet from time to time)
-        and call it only when needed.
-    */
     bool updated = false;
     if (output)
     {
         // Update RC control
-        if (output->vtable.update)
+        bool update_rc = false;
+        uint16_t channel_value;
+        control_channel_t *rssi_channel = NULL;
+        bool can_update_already = now > output->next_rc_update_no_earlier_than;
+        bool can_update_via_max_interval = now > output->next_rc_update_no_later_than &&
+                                           !failsafe_is_active(output->rc_data->failsafe.input);
+        bool can_update_via_new_data = rc_data_has_dirty_channels(output->rc_data);
+        if (can_update_already && (can_update_via_max_interval || can_update_via_new_data))
         {
-            if (output->next_update < now)
+            update_rc = true;
+
+            if (output->fc.rssi_channel >= 0 && output->fc.rssi_channel < RC_CHANNELS_NUM)
             {
-                uint16_t channel_value;
-                control_channel_t *rssi_channel = NULL;
-                if (output->fc.rssi_channel >= 0 && output->fc.rssi_channel < RC_CHANNELS_NUM)
-                {
-                    rssi_channel = &output->rc_data->channels[output->fc.rssi_channel];
-                    uint8_t lq = TELEMETRY_GET_I8(output->rc_data, TELEMETRY_ID_RX_LINK_QUALITY);
-                    lq = MIN(MAX(0, lq), 100);
-                    channel_value = rssi_channel->value;
-                    rssi_channel->value = RC_CHANNEL_VALUE_FROM_PERCENTAGE(lq);
-                }
-                updated = output->vtable.update(output, output->rc_data, now);
-                if (updated)
-                {
-                    output->next_update = now + output->min_update_interval;
-                }
-                // Restore the channel data we ovewrote
-                if (rssi_channel)
-                {
-                    rssi_channel->value = channel_value;
-                }
+                rssi_channel = &output->rc_data->channels[output->fc.rssi_channel];
+                uint8_t lq = TELEMETRY_GET_I8(output->rc_data, TELEMETRY_ID_RX_LINK_QUALITY);
+                lq = MIN(MAX(0, lq), 100);
+                channel_value = rssi_channel->value;
+                rssi_channel->value = RC_CHANNEL_VALUE_FROM_PERCENTAGE(lq);
             }
-            failsafe_update(&output->failsafe, time_micros_now());
         }
+        updated = output->vtable.update(output, output->rc_data, update_rc, now);
+        if (updated && update_rc)
+        {
+            rc_data_channels_sent(output->rc_data, now);
+            output->next_rc_update_no_earlier_than = now + output->min_rc_update_interval;
+            if (output->max_rc_update_interval > 0)
+            {
+                output->next_rc_update_no_later_than = now + output->max_rc_update_interval;
+            }
+            else
+            {
+                output->next_rc_update_no_later_than = TIME_MICROS_MAX;
+            }
+        }
+        // Restore the channel data we ovewrote
+        if (rssi_channel)
+        {
+            rssi_channel->value = channel_value;
+        }
+        failsafe_update(&output->failsafe, time_micros_now());
+
         // Read MSP transport responses (if any)
         if (msp_io_is_connected(&output->msp))
         {

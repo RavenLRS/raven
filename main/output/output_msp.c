@@ -272,14 +272,24 @@ static bool output_msp_open(void *output, void *config)
     };
 
     output_msp->output.serial_port = serial_port_open(&serial_config);
+    if (serial_port_is_half_duplex(output_msp->output.serial_port))
+    {
+        // With half duplex at 115200 bps we're limited to 50hz
+        output_msp->output.min_rc_update_interval = FREQ_TO_MICROS(50);
+    }
+    else
+    {
+        output_msp->output.min_rc_update_interval = 0;
+    }
     io_t msp_serial_io = SERIAL_IO(output_msp->output.serial_port);
     msp_serial_init(&output_msp->msp_serial, &msp_serial_io);
     OUTPUT_SET_MSP_TRANSPORT(output_msp, MSP_TRANSPORT(&output_msp->msp_serial));
     return true;
 }
 
-static bool output_msp_update(void *output, rc_data_t *data, time_micros_t now)
+static bool output_msp_update(void *output, rc_data_t *data, bool update_rc, time_micros_t now)
 {
+    output_msp_t *output_msp = output;
     // RC via MSP is implemented in fc_msp.c, via the MSP_SET_RAW_RC code.
     // Each channel is received as an uint16_t and its value must be the actual
     // PWM us channel value (i.e. [1000-2000] range). A request can contain
@@ -288,7 +298,8 @@ static bool output_msp_update(void *output, rc_data_t *data, time_micros_t now)
     // this number of channels is rejected. Channels not present in a request
     // are set to zero. There are no flags, failsafe is detected by a timeout
     // in the updates.
-    if (!failsafe_is_active(data->failsafe.input) && rc_data_is_ready(data))
+    bool updated = false;
+    if (update_rc)
     {
         msp_channels_payload_t payload;
         for (int ii = 0; ii < MSP_RC_MAX_SUPPORTED_CHANNELS; ii++)
@@ -303,10 +314,12 @@ static bool output_msp_update(void *output, rc_data_t *data, time_micros_t now)
                 payload.channels[ii] = 1000;
             }
         }
-        msp_conn_send(OUTPUT_MSP_CONN_GET(output), MSP_SET_RAW_RC, &payload, sizeof(payload), NULL, NULL);
+        if (msp_conn_send(OUTPUT_MSP_CONN_GET(output), MSP_SET_RAW_RC, &payload, sizeof(payload), NULL, NULL) > 0)
+        {
+            updated = true;
+        }
     }
     // Check if we need to poll for any telemetry
-    output_msp_t *output_msp = output;
     for (int ii = 0; ii < OUTPUT_MSP_POLL_COUNT; ii++)
     {
         if (output_msp->polls[ii].interval == MSP_POLL_INTERVAL_NONE)
@@ -321,7 +334,7 @@ static bool output_msp_update(void *output, rc_data_t *data, time_micros_t now)
             }
         }
     }
-    return true;
+    return updated;
 }
 
 static void output_msp_close(void *out, void *config)
@@ -337,7 +350,6 @@ void output_msp_init(output_msp_t *output)
     // is 150ms due to a bug in the MSP out of band data
     // handling (this is at 115200)
     // Betaflight hasn't been tested yet.
-    output->output.min_update_interval = MILLIS_TO_MICROS(10);
     output->output.flags = OUTPUT_FLAG_LOCAL;
     output->output.vtable = (output_vtable_t){
         .open = output_msp_open,

@@ -5,7 +5,7 @@ static bool output_none_open(void *output, void *config)
     return true;
 }
 
-static bool output_none_update(void *output, rc_data_t *data, time_micros_t now)
+static bool output_none_update(void *output, rc_data_t *data, bool update_rc, time_micros_t now)
 {
     return true;
 }
@@ -16,7 +16,6 @@ static void output_none_close(void *output, void *config)
 
 void output_none_init(output_none_t *output)
 {
-    output->output.min_update_interval = MILLIS_TO_MICROS(60 * 1000);
     output->output.flags = OUTPUT_FLAG_LOCAL;
     output->output.vtable = (output_vtable_t){
         .open = output_none_open,

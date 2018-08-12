@@ -23,7 +23,9 @@ typedef enum
 typedef struct output_vtable_s
 {
     bool (*open)(void *output, void *config);
-    bool (*update)(void *output, rc_data_t *data, time_micros_t now);
+    // update_control indicates if the output should send the control data again
+    // Returns wheter the RC data update was sent to the FC
+    bool (*update)(void *output, rc_data_t *data, bool update_control, time_micros_t now);
     void (*close)(void *output, void *config);
 } output_vtable_t;
 
@@ -136,9 +138,10 @@ typedef struct output_s
     telemetry_downlink_f telemetry_calculate;
     msp_io_t msp;
     output_fc_t fc;
-    time_micros_t min_update_interval;
-    time_micros_t max_update_interval;
-    time_micros_t next_update;
+    time_micros_t min_rc_update_interval;
+    time_micros_t max_rc_update_interval;
+    time_micros_t next_rc_update_no_earlier_than;
+    time_micros_t next_rc_update_no_later_than;
     const setting_t *craft_name_setting;
     output_flags_e flags;
     output_vtable_t vtable;

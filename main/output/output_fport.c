@@ -172,6 +172,7 @@ static void output_fport_receive(output_fport_t *output_fport)
         if (crc != output_fport->buf[n + frame_size - 1])
         {
             // Invalid checksum
+            LOG_W(TAG, "Invalid checksum 0x%02x, expecting 0x%02x", output_fport->buf[n + frame_size - 1], crc);
             n += frame_size;
             continue;
         }
@@ -195,27 +196,35 @@ static void output_fport_receive(output_fport_t *output_fport)
     output_fport->buf_pos = 0;
 }
 
-static bool output_fport_update(void *output, rc_data_t *data, time_micros_t now)
+static bool output_fport_update(void *output, rc_data_t *data, bool update_rc, time_micros_t now)
 {
+    // TODO: The half duplex nature of FPort means that we won't update the telemetry
+    // when the TX is powered off (and MSP received from BT over FPort won't work).
+    // This could be worked around by scheduling telemetry requests in any case,
+    // but since the output doesn't know when an update to the RC data will come,
+    // it will need some intrusive changes.
     output_fport_t *output_fport = output;
-    output_fport_receive(output_fport);
 
-    serial_port_begin_write(output_fport->output.serial_port);
+    if (update_rc)
+    {
+        output_fport_receive(output_fport);
+        serial_port_begin_write(output_fport->output.serial_port);
 
-    // Write the control frame
-    fport_control_data_t control = {
-        // RSSI is directly used as a % value, so we can pass the LQ as is
-        .rssi = MAX(TELEMETRY_GET_DOWNLINK_I8(data, TELEMETRY_ID_RX_LINK_QUALITY), 0),
-    };
-    sbus_encode_data(&control.sbus, data, failsafe_is_active(data->failsafe.input));
-    fport_write_payload(output_fport, FPORT_FRAME_TYPE_CONTROL, &control, sizeof(control));
+        // Write the control frame
+        fport_control_data_t control = {
+            // RSSI is directly used as a % value, so we can pass the LQ as is
+            .rssi = MAX(TELEMETRY_GET_DOWNLINK_I8(data, TELEMETRY_ID_RX_LINK_QUALITY), 0),
+        };
+        sbus_encode_data(&control.sbus, data, failsafe_is_active(data->failsafe.input));
+        fport_write_payload(output_fport, FPORT_FRAME_TYPE_CONTROL, &control, sizeof(control));
 
-    // Request telemetry. Doesn't matter what we write here since the FC
-    // just checks for FPORT_FRAME_TYPE_TELEMETRY_REQUEST
-    smartport_payload_t telemetry = {0};
-    fport_write_payload(output_fport, FPORT_FRAME_TYPE_TELEMETRY_REQUEST, &telemetry, sizeof(telemetry));
+        // Request telemetry. Doesn't matter what we write here since the FC
+        // just checks for FPORT_FRAME_TYPE_TELEMETRY_REQUEST
+        smartport_payload_t telemetry = {0};
+        fport_write_payload(output_fport, FPORT_FRAME_TYPE_TELEMETRY_REQUEST, &telemetry, sizeof(telemetry));
 
-    serial_port_end_write(output_fport->output.serial_port);
+        serial_port_end_write(output_fport->output.serial_port);
+    }
 
     return true;
 }
@@ -228,7 +237,6 @@ static void output_fport_close(void *output, void *config)
 
 void output_fport_init(output_fport_t *output)
 {
-    output->output.min_update_interval = MILLIS_TO_MICROS(9);
     output->output.flags = OUTPUT_FLAG_LOCAL;
     output->output.vtable = (output_vtable_t){
         .open = output_fport_open,

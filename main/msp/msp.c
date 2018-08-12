@@ -100,7 +100,7 @@ void msp_conn_dispatch_message(msp_conn_t *conn, msp_direction_e direction, uint
             }
             break;
         }
-        LOG_W(TAG, "Discaring callback for MSP code %d (%d in RB)", (int)cb_req.code, ring_buffer_count(&conn->rb));
+        LOG_W(TAG, "Discaring callback for MSP code %u (looking for %u, %u in queue)", cb_req.code, cmd, ring_buffer_count(&conn->rb));
     }
 }
 
