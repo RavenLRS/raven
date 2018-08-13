@@ -29,7 +29,7 @@
 // SDCard pins are mapped as usable output pins, since we don't use the SDCard right now
 // Note that these boards use ESP32-PICO-D4, which has pins 16 and 17 connected to the
 // internal SPI flash, so we can't use them.
-#define PIN_USABLE_BASE_MASK (PIN_N(1) | PIN_N(3) | PIN_N(4) | PIN_N(11) | PIN_N(13) | PIN_N(23) | PIN_N(32) | PIN_N(33))
+#define PIN_USABLE_BASE_MASK (PIN_N(1) | PIN_N(3) | PIN_N(4) | PIN_N(11) | PIN_N(13) | PIN_N(23) | PIN_N(25) | PIN_N(32) | PIN_N(33))
 #if defined(PIN_BUTTON_TOUCH)
 #define PIN_USABLE_MASK (PIN_USABLE_BASE_MASK & ~PIN_N(PIN_BUTTON_TOUCH))
 #else
