@@ -5,8 +5,11 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include <driver/dac.h>
+
 #include <esp_ota_ops.h>
 #include <esp_task_wdt.h>
+
 #include <soc/timer_group_reg.h>
 #include <soc/timer_group_struct.h>
 
@@ -147,6 +150,11 @@ void app_main()
 
     config_init();
     settings_add_listener(setting_changed, NULL);
+
+    // Disable DAC output on GPIO25 and GPIO26. It's enabled by default and
+    // can alter the output levels otherwise.
+    ESP_ERROR_CHECK(dac_output_disable(DAC_CHANNEL_1));
+    ESP_ERROR_CHECK(dac_output_disable(DAC_CHANNEL_2));
 
     air_addr_t addr = config_get_addr();
     rmp_init(&rmp, &addr);
