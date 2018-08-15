@@ -490,6 +490,11 @@ static bool output_air_update(void *output, rc_data_t *data, bool update_rc, tim
     if (output_air->rx_done)
     {
         output_air_recv_packet(output_air, data, now);
+#if defined(OUTPUT_AIR_AS_FAST_AS_POSSIBLE)
+        // This is used to test the maximum update frequency
+        // of a given air mode.
+        output_air->next_packet = now - 1;
+#endif
     }
     if (now > output_air->next_packet)
     {

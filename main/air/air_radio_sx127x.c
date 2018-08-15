@@ -45,29 +45,43 @@ void air_radio_set_mode(air_radio_t *radio, air_mode_e mode)
     switch (mode)
     {
     case AIR_MODE_1:
-        // We reduce coding rate in this mode to be as fast
-        // as possible. Intended for short range and fast
-        // update rate.
-        sx127x_set_lora_preamble_length(&radio->sx127x, 8);
-        sx127x_set_lora_spreading_factor(&radio->sx127x, 6);
-        sx127x_set_lora_coding_rate(&radio->sx127x, SX127X_LORA_CODING_RATE_4_5);
+        // Datasheet page 47, 4.2.2.1
+        // FDEV + (BR / 2) <= 250000
+        // Datasheet page 48, 4.2.3.1
+        // 0.5 <= (2 * FDEV) / BR <= 10
+        // Datasheet page 88, 5.5.6
+        // BR < 2 x RxBw
+        // Where:
+        //  FDEV = Frequency deviation in Hz
+        //  BR = Bitrate in bps
+        //  RxBw = Receiver bandwidth in Hz
+        sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_FSK);
+        sx127x_set_fsk_fdev(&radio->sx127x, 125000);
+        sx127x_set_fsk_bitrate(&radio->sx127x, 200000);
+        sx127x_set_fsk_rx_bandwidth(&radio->sx127x, 250000);
+        sx127x_set_fsk_rx_afc_bandwidth(&radio->sx127x, 250000);
+        sx127x_set_fsk_preamble_length(&radio->sx127x, 5);
         break;
     case AIR_MODE_2:
+        sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_LORA);
         sx127x_set_lora_preamble_length(&radio->sx127x, 6);
         sx127x_set_lora_spreading_factor(&radio->sx127x, 7);
         sx127x_set_lora_coding_rate(&radio->sx127x, SX127X_LORA_CODING_RATE_4_6);
         break;
     case AIR_MODE_3:
+        sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_LORA);
         sx127x_set_lora_preamble_length(&radio->sx127x, 6);
         sx127x_set_lora_spreading_factor(&radio->sx127x, 8);
         sx127x_set_lora_coding_rate(&radio->sx127x, SX127X_LORA_CODING_RATE_4_6);
         break;
     case AIR_MODE_4:
+        sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_LORA);
         sx127x_set_lora_preamble_length(&radio->sx127x, 6);
         sx127x_set_lora_spreading_factor(&radio->sx127x, 9);
         sx127x_set_lora_coding_rate(&radio->sx127x, SX127X_LORA_CODING_RATE_4_6);
         break;
     case AIR_MODE_5:
+        sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_LORA);
         sx127x_set_lora_preamble_length(&radio->sx127x, 6);
         sx127x_set_lora_spreading_factor(&radio->sx127x, 10);
         sx127x_set_lora_coding_rate(&radio->sx127x, SX127X_LORA_CODING_RATE_4_8);
@@ -141,7 +155,7 @@ time_micros_t air_radio_full_cycle_time(air_radio_t *radio, air_mode_e mode)
     switch (mode)
     {
     case AIR_MODE_1:
-        return MILLIS_TO_MICROS(10);
+        return MILLIS_TO_MICROS(6.666);
     case AIR_MODE_2:
         return MILLIS_TO_MICROS(20);
     case AIR_MODE_3:

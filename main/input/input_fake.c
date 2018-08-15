@@ -5,6 +5,9 @@
 
 #include "input_fake.h"
 
+//#define INPUT_FAKE_CONSTANT
+//#define INPUT_FAKE_FORCE_PERIODIC_FAILSAFE
+
 #ifdef INPUT_FAKE_FORCE_PERIODIC_FAILSAFE
 // Enter FS for 5 seconds out of every 30
 #define INPUT_FAKE_SHOULD_RESET_FS() ({                        \
@@ -24,7 +27,7 @@ static bool input_fake_open(void *input, void *config)
     for (int ii = 0; ii < FAKE_INPUT_MOVED_CHANNELS; ii++)
     {
         input_fake->channels[ii] = rand_hal_u32() % 2 == 0;
-        rc_data_update_channel(input_fake->input.rc_data, ii, RC_CHANNEL_CENTER_VALUE, now);
+        rc_data_update_channel(input_fake->input.rc_data, ii, RC_CHANNEL_MIN_VALUE, now);
     }
     // Put all flipped channels to low, so they have a value
     for (int ii = FAKE_INPUT_MOVED_CHANNELS; ii < RC_CHANNELS_NUM; ii++)
@@ -40,6 +43,8 @@ static bool input_fake_open(void *input, void *config)
 static void input_fake_update_channel(input_fake_t *input, rc_data_t *data, int idx, time_micros_t now)
 {
     control_channel_t *ch = &data->channels[idx];
+    unsigned value = ch->value;
+#if !defined(INPUT_FAKE_CONSTANT)
     bool *up = &input->channels[idx];
     if (*up && ch->value == RC_CHANNEL_MAX_VALUE)
     {
@@ -49,7 +54,9 @@ static void input_fake_update_channel(input_fake_t *input, rc_data_t *data, int 
     {
         *up = true;
     }
-    rc_data_update_channel(data, idx, ch->value + (*up ? 1 : -1), now);
+    value += *up ? 1 : -1;
+#endif
+    rc_data_update_channel(data, idx, value, now);
 }
 
 static bool input_fake_update(void *input, rc_data_t *data, time_micros_t now)
@@ -76,6 +83,7 @@ static bool input_fake_update(void *input, rc_data_t *data, time_micros_t now)
         {
             int ch = FAKE_INPUT_MOVED_CHANNELS + (rand_hal_u32() % (RC_CHANNELS_NUM - FAKE_INPUT_MOVED_CHANNELS));
             unsigned value = data->channels[ch].value;
+#if !defined(INPUT_FAKE_CONSTANT)
             if (value > RC_CHANNEL_MAX_VALUE * 0.9)
             {
                 // Channel high
@@ -91,6 +99,7 @@ static bool input_fake_update(void *input, rc_data_t *data, time_micros_t now)
                 // Channel mid
                 value = rand_hal_u32() % 2 == 0 ? RC_CHANNEL_MIN_VALUE : RC_CHANNEL_MAX_VALUE;
             }
+#endif
             rc_data_update_channel(data, ch, value, now);
             input_fake->next_flip = now + MILLIS_TO_MICROS(500);
         }

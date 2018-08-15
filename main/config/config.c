@@ -500,13 +500,13 @@ air_supported_modes_e config_get_air_modes(config_air_mode_e modes)
 {
     switch (modes)
     {
-#if defined(USE_AIR_MODE_1)
+#if defined(CONFIG_RAVEN_AIR_MODE_1)
     case CONFIG_AIR_MODES_1_5:
         return AIR_SUPPORTED_MODES_1_TO_5;
 #endif
     case CONFIG_AIR_MODES_2_5:
         return AIR_SUPPORTED_MODES_2_TO_5;
-#if defined(USE_AIR_MODE_1)
+#if defined(CONFIG_RAVEN_AIR_MODE_1)
     case CONFIG_AIR_MODES_FIXED_1:
         return AIR_SUPPORTED_MODES_FIXED_1;
 #endif

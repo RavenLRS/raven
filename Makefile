@@ -47,13 +47,6 @@ ifneq ($(TARGETS_FILTER),)
 VALID_TARGETS := $(filter %$(TARGETS_FILTER),$(VALID_TARGETS))
 endif
 
-# Features that we accept via environment
-
-USE_AIR_MODE_1 ?=
-ifneq ($(USE_AIR_MODE_1),)
-	CPPFLAGS += -DUSE_AIR_MODE_1
-endif
-
 CPPFLAGS += -I$(TARGET_DIR)
 
 .PHONY: raven-help $(TARGET)

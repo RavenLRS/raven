@@ -48,6 +48,7 @@ static void input_air_update_air_mode(input_air_t *input_air)
     input_air->full_cycle_time = air_radio_full_cycle_time(radio, input_air->air_mode);
     input_air->uplink_cycle_time = air_radio_uplink_cycle_time(radio, input_air->air_mode);
     failsafe_set_max_interval(&input_air->input.failsafe, air_radio_rx_failsafe_interval(radio, input_air->air_mode));
+    input_air->reset_rssi = true;
 }
 
 static void input_air_start(input_air_t *input_air)
@@ -326,6 +327,7 @@ static bool input_air_open(void *input, void *config)
     input_air->seq = 0;
     input_air->consecutive_lost_packets = 0;
     input_air->telemetry_fed_index = 0;
+    input_air->reset_rssi = true;
     air_stream_init(&input_air->air_stream, input_air_stream_channel_decoded,
                     input_air_stream_telemetry_decoded, input_air_stream_cmd_decoded, input);
     msp_air_init(&input_air->msp_air, &input_air->air_stream, input_air_msp_before_feed, input_air);
@@ -376,7 +378,15 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
             }
             // Do this after the response packet has been sent, otherwise the processing
             // could delay the response too much resulting on a lost cycle.
-            air_io_update_rssi(&input_air->air, rssi, snr, lq, now);
+            if (input_air->reset_rssi)
+            {
+                air_io_reset_rssi(&input_air->air, rssi, snr, lq, now);
+                input_air->reset_rssi = false;
+            }
+            else
+            {
+                air_io_update_rssi(&input_air->air, rssi, snr, lq, now);
+            }
             failsafe_reset_interval(&input_air->input.failsafe, now);
             air_io_on_frame(&input_air->air, now);
             updated = true;

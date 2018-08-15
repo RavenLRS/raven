@@ -34,6 +34,7 @@ typedef struct input_air_s
     time_micros_t uplink_cycle_time;
     time_micros_t last_packet_at;
     time_micros_t next_packet_deadline;
+    bool reset_rssi;
     unsigned freq_index;
 
     msp_air_t msp_air;

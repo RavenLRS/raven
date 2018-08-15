@@ -1093,7 +1093,7 @@ float rc_get_snr(rc_t *rc)
         return TELEMETRY_GET_I8(&rc->data, TELEMETRY_ID_RX_SNR) / TELEMETRY_SNR_MULTIPLIER;
     case RC_MODE_RX:
         // Return our own SNR
-        return GET_AIR_IO_FILTERED_FIELD(rc, snr);
+        return GET_AIR_IO_FILTERED_FIELD(rc, snr) / TELEMETRY_SNR_MULTIPLIER;
     }
     assert(0 && "unreachable");
     return 0;
