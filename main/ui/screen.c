@@ -527,6 +527,7 @@ static void screen_draw_main_rssi(screen_t *s, int16_t x, int16_t y)
 
     char *buf = SCREEN_BUF(s);
 
+    float snr = rc_get_snr(rc);
     if (SCREEN_DIRECTION(s) == SCREEN_DIRECTION_HORIZONTAL)
     {
         // Show the units for the first 3 seconds after animation, then
@@ -538,8 +539,17 @@ static void screen_draw_main_rssi(screen_t *s, int16_t x, int16_t y)
         }
         else
         {
-            snprintf(buf, SCREEN_DRAW_BUF_SIZE, "R:%+3d |F:%3u| S:%+0.1f",
-                     rc_get_rssi_db(rc), rc_get_update_frequency(rc), rc_get_snr(rc));
+            char snr_str[8];
+            if (snr >= 10 || snr <= -10)
+            {
+                snprintf(snr_str, sizeof(snr_str), "%+d", (int)snr);
+            }
+            else
+            {
+                snprintf(snr_str, sizeof(snr_str), "%+0.1f", snr);
+            }
+            snprintf(buf, SCREEN_DRAW_BUF_SIZE, "R:%+3d |F:%3u| S:%s",
+                     rc_get_rssi_db(rc), rc_get_update_frequency(rc), snr_str);
         }
         u8g2_DrawStr(&u8g2, x, y + bar_y + 20, buf);
     }
@@ -549,7 +559,6 @@ static void screen_draw_main_rssi(screen_t *s, int16_t x, int16_t y)
         screen_draw_label_value(s, "R:", buf, SCREEN_W(s), y + bar_y + 26, 3);
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%uHz", rc_get_update_frequency(rc));
         screen_draw_label_value(s, "F:", buf, SCREEN_W(s), y + bar_y + 38, 3);
-        float snr = rc_get_snr(rc);
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%+.2fdB", snr);
         screen_draw_label_value(s, "S:", buf, SCREEN_W(s), y + bar_y + 50, 3);
     }
