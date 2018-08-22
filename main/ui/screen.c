@@ -759,12 +759,13 @@ static unsigned screen_draw_telemetry_val(screen_t *s, const telemetry_t *val, i
     uint16_t max_value_width = 0;
     uint16_t value_y_offset = 0;
     uint16_t value_indentation_vert = 0;
+    uint16_t update_indicator_width = 10;
     unsigned total_height = 0;
 
     switch (SCREEN_DIRECTION(s))
     {
     case SCREEN_DIRECTION_HORIZONTAL:
-        max_value_width = SCREEN_W(s) - name_width - 10 - 5;
+        max_value_width = SCREEN_W(s) - name_width - update_indicator_width - 5;
         value_y_offset = 0;
         total_height = TELEMETRY_LINE_HEIGHT;
         break;
@@ -793,7 +794,26 @@ static unsigned screen_draw_telemetry_val(screen_t *s, const telemetry_t *val, i
     // its value.
     if (data_state_get_last_update(&val->data_state) + MILLIS_TO_MICROS(200) > time_micros_now())
     {
-        u8g2_DrawStr(&u8g2, value_x - 10, y + 2, "*");
+        switch (SCREEN_DIRECTION(s))
+        {
+        case SCREEN_DIRECTION_HORIZONTAL:
+            // Draw at the left of the value
+            u8g2_DrawStr(&u8g2, value_x - update_indicator_width, y + 2, "*");
+            break;
+        case SCREEN_DIRECTION_VERTICAL:
+            // Draw at right of the label, if possible. Otherwise draw at the
+            // right of the value.
+            {
+                uint16_t indicator_x = SCREEN_W(s) - update_indicator_width;
+                uint16_t offset = 0;
+                if (name_width >= indicator_x)
+                {
+                    offset = value_y_offset;
+                }
+                u8g2_DrawStr(&u8g2, indicator_x, y + offset + 2, "*");
+                break;
+            }
+        }
     }
     // Draw a separator if we're in vertical mode
     if (SCREEN_DIRECTION(s) == SCREEN_DIRECTION_VERTICAL)
