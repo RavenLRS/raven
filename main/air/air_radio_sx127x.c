@@ -147,7 +147,7 @@ time_micros_t air_radio_full_cycle_time(air_radio_t *radio, air_mode_e mode)
     case AIR_MODE_3:
         return MILLIS_TO_MICROS(33);
     case AIR_MODE_4:
-        return MILLIS_TO_MICROS(57);
+        return MILLIS_TO_MICROS(66);
     case AIR_MODE_5:
         return MILLIS_TO_MICROS(115);
     }

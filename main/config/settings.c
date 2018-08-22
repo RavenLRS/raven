@@ -314,7 +314,7 @@ static const char *config_air_modes_table[] = {
 #endif
     "2 (50Hz)",
     "3 (30Hz)",
-    "4 (18Hz)",
+    "4 (15Hz)",
     "5 (9Hz)",
 };
 _Static_assert(ARRAY_COUNT(config_air_modes_table) == CONFIG_AIR_MODES_COUNT, "CONFIG_AIR_MODES_COUNT is invalid");
