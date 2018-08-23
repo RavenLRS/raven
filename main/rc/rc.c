@@ -558,13 +558,13 @@ static void rc_rssi_update(rc_t *rc)
     {
     case RC_MODE_TX:
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RSSI_ANT1, rssi, now);
-        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_SNR, snr * TELEMETRY_SNR_MULTIPLIER, now);
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_SNR, snr, now);
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_LINK_QUALITY, lq, now);
         break;
     case RC_MODE_RX:
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RSSI_ANT1, rssi, now);
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RSSI_ANT2, rssi, now);
-        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_SNR, snr * TELEMETRY_SNR_MULTIPLIER, now);
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_SNR, snr, now);
         (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_LINK_QUALITY, lq, now);
         break;
     }
