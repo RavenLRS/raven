@@ -451,7 +451,7 @@ void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq, int error)
     if (sx127x->state.op_mode == SX127X_OP_MODE_LORA)
     {
         // TODO: Should ppm_correction be applied in FSK mode?
-        int8_t ppm_correction = MIN(MAX(lrintf(0.95f * (error / ((float)freq / 1000000))), -128), 127);
+        int8_t ppm_correction = CONSTRAIN_TO_I8(lrintf(0.95f * (error / ((float)freq / 1000000))));
         if (ppm_correction != sx127x->state.lora.ppm_correction)
         {
             sx127x_prepare_write(sx127x);

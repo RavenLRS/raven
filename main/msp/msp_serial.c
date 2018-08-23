@@ -41,7 +41,7 @@ static unsigned msp_serial_expected_response_delay(msp_serial_t *serial, size_t 
     }
 
     unsigned delay = ((response_size + serial->half_duplex.last_write_size) * MICROS_PER_SEC / serial->half_duplex.bytes_per_second) * 1.2f;
-    return MIN(MAX(delay, MSP_HALF_DUPLEX_MIN_TIMEOUT_US), MSP_HALF_DUPLEX_MAX_TIMEOUT_US);
+    return CONSTRAIN(delay, MSP_HALF_DUPLEX_MIN_TIMEOUT_US, MSP_HALF_DUPLEX_MAX_TIMEOUT_US);
 }
 
 static int msp_serial_v1_encode(msp_direction_e direction, uint16_t code, const void *data, size_t size, void *buf, size_t bufsize)

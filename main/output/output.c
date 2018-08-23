@@ -278,8 +278,7 @@ bool output_update(output_t *output, time_micros_t now)
             if (output->fc.rssi_channel >= 0 && output->fc.rssi_channel < RC_CHANNELS_NUM)
             {
                 rssi_channel = &output->rc_data->channels[output->fc.rssi_channel];
-                uint8_t lq = TELEMETRY_GET_I8(output->rc_data, TELEMETRY_ID_RX_LINK_QUALITY);
-                lq = MIN(MAX(0, lq), 100);
+                uint8_t lq = CONSTRAIN(TELEMETRY_GET_I8(output->rc_data, TELEMETRY_ID_RX_LINK_QUALITY), 0, 100);
                 channel_value = rssi_channel->value;
                 rssi_channel->value = RC_CHANNEL_VALUE_FROM_PERCENTAGE(lq);
             }
