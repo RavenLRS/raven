@@ -422,7 +422,7 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
                 input_air->air_mode = input_air->air_mode_longest;
                 input_air_update_air_mode(input_air);
             }
-            air_io_update_reset_rssi(&input_air->air);
+            air_io_invalidate_rssi(&input_air->air, now);
         }
         break;
     case AIR_INPUT_STATE_TX:
