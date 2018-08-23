@@ -807,8 +807,9 @@ int sx127x_rssi(sx127x_t *sx127x, int *snr, int *lq)
     {
     case SX127X_OP_MODE_FSK:
         rssi_value = sx127x_read_reg(sx127x, REG_FSK_RSSI_VALUE) / -2;
-        // There's no actual SNR in FSK mode, so we approximate it
-        snr_value = (-rx_sensitivity + rssi_value) * 4;
+        // There's no actual SNR in FSK mode, so we approximate it.
+        // Constrain it so it fits in an int8_t
+        snr_value = CONSTRAIN_TO_I8((rssi_value - rx_sensitivity) * SX127X_SNR_SCALE);
         break;
     case SX127X_OP_MODE_LORA:
     {
