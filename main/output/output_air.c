@@ -25,27 +25,25 @@ static time_micros_t cycle_end;
 #define MODE_SWITCH_LONGER_VALUE (3 * TELEMETRY_SNR_MULTIPLIER)
 #define MODE_SWITCH_WAIT_INTERVAL_US MILLIS_TO_MICROS(1000)
 
+typedef enum
+{
+    OUTPUT_AIR_STATE_IDLE,    // Waiting for TX
+    OUTPUT_AIR_STATE_TX,      // Transmitting
+    OUTPUT_AIR_STATE_TX_DONE, // Transmission done, still in TX mode
+    OUTPUT_AIR_STATE_RX,      // Receiving
+    OUTPUT_AIR_STATE_RX_DONE, // Received frame, still not processed
+} output_air_state_e;
+
 static void output_air_radio_callback(air_radio_t *radio, air_radio_callback_reason_e reason, void *data)
 {
     output_air_t *output_air = data;
     switch (reason)
     {
     case AIR_RADIO_CALLBACK_REASON_RX_DONE:
-        output_air->rx_done = true;
+        output_air->state = OUTPUT_AIR_STATE_RX_DONE;
         break;
     case AIR_RADIO_CALLBACK_REASON_TX_DONE:
-        // Making the LoRa modem sleep before switching into RX modes
-        // resets the FIFO, while adding a minimal time overhead since
-        // we would need to at least put it in idle to update the
-        // payload size.
-        air_radio_sleep(output_air->air_config.radio);
-        // Don't enable RX mode if there's no telemetry in this cycle,
-        // just get ready for the next send.
-        if (output_air->expecting_downlink_packet)
-        {
-            air_radio_set_payload_size(output_air->air_config.radio, sizeof(air_rx_packet_t));
-            air_radio_start_rx(output_air->air_config.radio);
-        }
+        output_air->state = OUTPUT_AIR_STATE_TX_DONE;
         break;
     }
 }
@@ -58,8 +56,7 @@ static void output_air_update_mode(output_air_t *output_air)
     output_air->requested_air_mode = 0;
     output_air->start_switch_air_mode_faster_at = 0;
     output_air->start_switch_air_mode_longer_at = 0;
-    output_air->full_cycle_time = air_radio_full_cycle_time(radio, output_air->air_mode);
-    output_air->uplink_cycle_time = air_radio_uplink_cycle_time(radio, output_air->air_mode);
+    output_air->cycle_time = air_radio_cycle_time(radio, output_air->air_mode);
     failsafe_set_max_interval(&output_air->output.failsafe, air_radio_tx_failsafe_interval(radio, output_air->air_mode));
 }
 
@@ -349,18 +346,8 @@ static void output_air_send_control_packet(output_air_t *output_air, rc_data_t *
         LOG_D(TAG, "Missing or invalid downlink packet");
         output_air_stop_ack(output_air, data);
     }
-    if (air_radio_cycle_is_full(output_air->air_config.radio, output_air->air_mode, output_air->seq))
-    {
-        output_air->next_packet = now + output_air->full_cycle_time;
-        output_air->expecting_downlink_packet = true;
-    }
-    else
-    {
-        output_air->next_packet = now + output_air->uplink_cycle_time;
-        output_air->expecting_downlink_packet = false;
-    }
-    output_air->is_listening = false;
-    output_air->rx_done = false;
+    output_air->next_packet = now + output_air->cycle_time;
+    output_air->expecting_downlink_packet = true;
     // If the input is in failsafe mode, connection with the control side was
     // lost (e.g. cable to the radio was broken?), so we stop sending control
     // frames. If the connection is re-established we start sending again so
@@ -414,7 +401,6 @@ static void output_air_recv_packet(output_air_t *output_air, rc_data_t *data, ti
     air_rx_packet_t in_pkt;
     int rssi, snr, lq;
 
-    output_air->rx_done = false;
     if (air_radio_read(radio, &in_pkt, sizeof(in_pkt)) == sizeof(in_pkt))
     {
         //LOG_BUFFER_I("RADIO-IN", &in_pkt, sizeof(in_pkt));
@@ -473,8 +459,9 @@ static bool output_air_open(void *output, void *config)
     output_air_config_t *config_air = config;
     output_air->tx_power = config_air->tx_power;
     output_air->seq = 0;
-    output_air->is_listening = false;
     output_air->force_stream_feed = false;
+    output_air->next_packet = 0;
+    output_air->state = OUTPUT_AIR_STATE_IDLE;
     output_air_start(output_air);
     air_stream_init(&output_air->air_stream, NULL,
                     output_air_stream_telemetry_decoded, output_air_stream_cmd_decoded, output);
@@ -487,22 +474,50 @@ static bool output_air_update(void *output, rc_data_t *data, bool update_rc, tim
 {
     output_air_t *output_air = output;
 
-    if (output_air->rx_done)
-    {
-        output_air_recv_packet(output_air, data, now);
-#if defined(OUTPUT_AIR_AS_FAST_AS_POSSIBLE)
-        // This is used to test the maximum update frequency
-        // of a given air mode.
-        output_air->next_packet = now - 1;
-#endif
-    }
+    // If the next scheduled packet is now due, we stop everything
+    // else and start transmitting.
     if (now > output_air->next_packet)
     {
+        output_air->state = OUTPUT_AIR_STATE_TX;
         output_air_send_control_packet(output_air, data, now);
 #ifdef AIR_DEBUG_CYCLE_TIME
         printf("CYCLE %llu\n", cycle_end - cycle_begin);
         cycle_begin = now;
 #endif
+    }
+
+    switch ((output_air_state_e)output_air->state)
+    {
+    case OUTPUT_AIR_STATE_IDLE:
+        break;
+    case OUTPUT_AIR_STATE_TX:
+        // Nothing to do, transition to OUTPUT_AIR_STATE_TX_DONE
+        // is done via callback
+        break;
+    case OUTPUT_AIR_STATE_TX_DONE:
+        // Making the LoRa modem sleep before switching into RX modes
+        // resets the FIFO, while adding a minimal time overhead since
+        // we would need to at least put it in idle to update the
+        // payload size.
+        air_radio_sleep(output_air->air_config.radio);
+        // Enable RX mode
+        air_radio_set_payload_size(output_air->air_config.radio, sizeof(air_rx_packet_t));
+        air_radio_start_rx(output_air->air_config.radio);
+        output_air->state = OUTPUT_AIR_STATE_RX;
+        break;
+    case OUTPUT_AIR_STATE_RX:
+        // Nothing to do, transition to OUTPUT_AIR_STATE_RX_DONE
+        // is done via callback
+        break;
+    case OUTPUT_AIR_STATE_RX_DONE:
+        output_air_recv_packet(output_air, data, now);
+        output_air->state = OUTPUT_AIR_STATE_IDLE;
+#if defined(OUTPUT_AIR_AS_FAST_AS_POSSIBLE)
+        // This is used to test the maximum update frequency
+        // of a given air mode.
+        output_air->next_packet = now;
+#endif
+        break;
     }
     // Tell the output layer to not mess with the channel dirty states
     return false;

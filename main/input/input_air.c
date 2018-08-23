@@ -10,7 +10,7 @@
 #include "input_air.h"
 
 #define AIR_TO_CHANNEL_INPUT(val) RC_CHANNEL_DECODE_FROM_BITS(val, AIR_CHANNEL_BITS)
-#define FULL_CYCLE_TIME_WAIT_FACTOR 1.10f // Wait 110% of the cycle time to decide we've lost a packet
+#define CYCLE_TIME_WAIT_FACTOR 0.20f // Wait an extra 20% of the cycle time to decide we've lost a packet
 // Maximum number of lost packets to continue jumping forward
 #define MAX_LOST_PACKETS_JUMPING_FORWARD (AIR_SEQ_COUNT / 2)
 
@@ -45,8 +45,7 @@ static void input_air_update_air_mode(input_air_t *input_air)
     air_radio_t *radio = input_air->air_config.radio;
     air_radio_set_mode(radio, input_air->air_mode);
     air_cmd_switch_mode_ack_reset(&input_air->switch_air_mode);
-    input_air->full_cycle_time = air_radio_full_cycle_time(radio, input_air->air_mode);
-    input_air->uplink_cycle_time = air_radio_uplink_cycle_time(radio, input_air->air_mode);
+    input_air->cycle_time = air_radio_cycle_time(radio, input_air->air_mode);
     failsafe_set_max_interval(&input_air->input.failsafe, air_radio_rx_failsafe_interval(radio, input_air->air_mode));
     input_air->reset_rssi = true;
 }
@@ -349,15 +348,8 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
         if (input_air_receive(input_air, &in_pkt))
         {
             input_air->last_packet_at = now;
-            bool cycle_is_full = air_radio_cycle_is_full(radio, input_air->air_mode, in_pkt.seq);
-            if (cycle_is_full)
-            {
-                input_air->next_packet_deadline = now + input_air->full_cycle_time * FULL_CYCLE_TIME_WAIT_FACTOR;
-            }
-            else
-            {
-                input_air->next_packet_deadline = now + input_air->uplink_cycle_time * FULL_CYCLE_TIME_WAIT_FACTOR;
-            }
+            input_air->next_packet_expected_at = now + input_air->cycle_time;
+            input_air->next_packet_deadline = input_air->next_packet_expected_at + input_air->cycle_time * CYCLE_TIME_WAIT_FACTOR;
             input_air->consecutive_lost_packets = 0;
             input_air->rx_success++;
             input_air->tx_seq = in_pkt.seq;
@@ -367,15 +359,8 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
             input_air->air.freq_table.abs_errors[input_air->tx_seq] += last_error;
             input_air->air.freq_table.last_errors[input_air->tx_seq] = last_error;
 
-            if (cycle_is_full)
-            {
-                input_air_send_response(input_air, data, now);
-            }
-            else
-            {
-                air_radio_sleep(radio);
-                input_air_prepare_next_receive(input_air);
-            }
+            input_air_send_response(input_air, data, now);
+
             // Do this after the response packet has been sent, otherwise the processing
             // could delay the response too much resulting on a lost cycle.
             if (input_air->reset_rssi)
@@ -400,17 +385,10 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
         else if (now > input_air->next_packet_deadline)
         {
             // Packet was lost
-            unsigned lost_tx_seq = input_air_next_expected_tx_seq(input_air);
             input_air->rx_errors++;
             input_air->consecutive_lost_packets++;
-            if (air_radio_cycle_is_full(radio, input_air->air_mode, lost_tx_seq))
-            {
-                input_air->next_packet_deadline = now + input_air->full_cycle_time * FULL_CYCLE_TIME_WAIT_FACTOR;
-            }
-            else
-            {
-                input_air->next_packet_deadline = now + input_air->uplink_cycle_time * FULL_CYCLE_TIME_WAIT_FACTOR;
-            }
+            input_air->next_packet_expected_at = now + input_air->cycle_time;
+            input_air->next_packet_deadline = input_air->next_packet_expected_at + input_air->cycle_time * CYCLE_TIME_WAIT_FACTOR;
             LOG_W(TAG, "invalid or lost frame, %u consecutive, %f%% error rate",
                   input_air->consecutive_lost_packets,
                   (input_air->rx_errors * 100.0) / (input_air->rx_errors + input_air->rx_success));

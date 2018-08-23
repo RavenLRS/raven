@@ -34,13 +34,17 @@ void air_radio_start_rx(air_radio_t *radio)
     sx127x_enable_continous_rx(&radio->sx127x);
 }
 
-void air_radio_set_mode(air_radio_t *radio, air_mode_e mode)
+static void air_radio_sx127x_set_lora_mode_parameters(air_radio_t *radio)
 {
-    sx127x_idle(&radio->sx127x);
-
+    sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_LORA);
     sx127x_set_lora_signal_bw(&radio->sx127x, SX127X_LORA_SIGNAL_BW_500);
     sx127x_set_lora_header_mode(&radio->sx127x, SX127X_LORA_HEADER_IMPLICIT);
     sx127x_set_lora_crc(&radio->sx127x, false);
+}
+
+void air_radio_set_mode(air_radio_t *radio, air_mode_e mode)
+{
+    sx127x_sleep(&radio->sx127x);
 
     switch (mode)
     {
@@ -63,25 +67,25 @@ void air_radio_set_mode(air_radio_t *radio, air_mode_e mode)
         sx127x_set_fsk_preamble_length(&radio->sx127x, 5);
         break;
     case AIR_MODE_2:
-        sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_LORA);
+        air_radio_sx127x_set_lora_mode_parameters(radio);
         sx127x_set_lora_preamble_length(&radio->sx127x, 6);
         sx127x_set_lora_spreading_factor(&radio->sx127x, 7);
         sx127x_set_lora_coding_rate(&radio->sx127x, SX127X_LORA_CODING_RATE_4_6);
         break;
     case AIR_MODE_3:
-        sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_LORA);
+        air_radio_sx127x_set_lora_mode_parameters(radio);
         sx127x_set_lora_preamble_length(&radio->sx127x, 6);
         sx127x_set_lora_spreading_factor(&radio->sx127x, 8);
         sx127x_set_lora_coding_rate(&radio->sx127x, SX127X_LORA_CODING_RATE_4_6);
         break;
     case AIR_MODE_4:
-        sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_LORA);
+        air_radio_sx127x_set_lora_mode_parameters(radio);
         sx127x_set_lora_preamble_length(&radio->sx127x, 6);
         sx127x_set_lora_spreading_factor(&radio->sx127x, 9);
         sx127x_set_lora_coding_rate(&radio->sx127x, SX127X_LORA_CODING_RATE_4_6);
         break;
     case AIR_MODE_5:
-        sx127x_set_op_mode(&radio->sx127x, SX127X_OP_MODE_LORA);
+        air_radio_sx127x_set_lora_mode_parameters(radio);
         sx127x_set_lora_preamble_length(&radio->sx127x, 6);
         sx127x_set_lora_spreading_factor(&radio->sx127x, 10);
         sx127x_set_lora_coding_rate(&radio->sx127x, SX127X_LORA_CODING_RATE_4_8);
@@ -150,7 +154,7 @@ void air_radio_shutdown(air_radio_t *radio)
     sx127x_shutdown(&radio->sx127x);
 }
 
-time_micros_t air_radio_full_cycle_time(air_radio_t *radio, air_mode_e mode)
+time_micros_t air_radio_cycle_time(air_radio_t *radio, air_mode_e mode)
 {
     switch (mode)
     {
@@ -167,37 +171,6 @@ time_micros_t air_radio_full_cycle_time(air_radio_t *radio, air_mode_e mode)
     }
     UNREACHABLE();
     return 0;
-}
-
-time_micros_t air_radio_uplink_cycle_time(air_radio_t *radio, air_mode_e mode)
-{
-    switch (mode)
-    {
-    case AIR_MODE_1:
-        return MILLIS_TO_MICROS(4.5f);
-    case AIR_MODE_2:
-        return MILLIS_TO_MICROS(20);
-    case AIR_MODE_3:
-        return MILLIS_TO_MICROS(31);
-    case AIR_MODE_4:
-        return MILLIS_TO_MICROS(75);
-    case AIR_MODE_5:
-        return MILLIS_TO_MICROS(115);
-    }
-    UNREACHABLE();
-    return 0;
-}
-
-bool air_radio_cycle_is_full(air_radio_t *radio, air_mode_e mode, unsigned seq)
-{
-#if 0
-    // TODO
-    if (mode == AIR_LORA_MODE_1)
-    {
-        return seq % 6 == 0;
-    }
-#endif
-    return true;
 }
 
 time_micros_t air_radio_tx_failsafe_interval(air_radio_t *radio, air_mode_e mode)

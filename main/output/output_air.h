@@ -30,13 +30,11 @@ typedef struct output_air_s
     time_micros_t start_switch_air_mode_faster_at;
     time_micros_t start_switch_air_mode_longer_at;
     air_cmd_switch_mode_ack_t switch_air_mode;
-    bool is_listening;
     bool force_stream_feed;
     time_micros_t last_downlink_packet_at;
-    time_micros_t full_cycle_time;
-    time_micros_t uplink_cycle_time;
+    time_micros_t cycle_time;
     time_micros_t next_packet;
-    bool rx_done;
+    int state;
     unsigned seq : AIR_SEQ_BITS;
     unsigned freq_index;
     air_stream_t air_stream;

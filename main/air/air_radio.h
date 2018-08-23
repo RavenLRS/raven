@@ -43,8 +43,6 @@ void air_radio_set_callback(air_radio_t *radio, air_radio_callback_t callback, v
 void air_radio_sleep(air_radio_t *radio);
 void air_radio_shutdown(air_radio_t *radio);
 
-time_micros_t air_radio_full_cycle_time(air_radio_t *radio, air_mode_e mode);
-time_micros_t air_radio_uplink_cycle_time(air_radio_t *radio, air_mode_e mode);
-bool air_radio_cycle_is_full(air_radio_t *radio, air_mode_e mode, unsigned seq);
+time_micros_t air_radio_cycle_time(air_radio_t *radio, air_mode_e mode);
 time_micros_t air_radio_tx_failsafe_interval(air_radio_t *radio, air_mode_e mode);
 time_micros_t air_radio_rx_failsafe_interval(air_radio_t *radio, air_mode_e mode);
