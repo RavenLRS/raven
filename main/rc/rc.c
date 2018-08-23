@@ -22,6 +22,7 @@
 
 #include "util/crc.h"
 #include "util/lpf.h"
+#include "util/macros.h"
 
 #include "rc.h"
 
@@ -540,18 +541,10 @@ static void rc_rssi_update(rc_t *rc)
     {
         return;
     }
-    int rssi = lpf_value(&air_io->rssi);
     // TODO: Should we make it 16 bits or apply some offset
     // to represent lower values?
-    if (rssi < -128)
-    {
-        rssi = -128;
-    }
-    else if (rssi > 127)
-    {
-        rssi = 127;
-    }
-    float snr = lpf_value(&air_io->snr);
+    int rssi = CONSTRAIN_TO_I8(lpf_value(&air_io->rssi));
+    float snr = CONSTRAIN_TO_I8(lpf_value(&air_io->snr));
     int8_t lq = lpf_value(&air_io->lq);
     time_micros_t now = time_micros_now();
     switch (rc_get_mode(rc))

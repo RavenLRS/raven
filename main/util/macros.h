@@ -20,6 +20,9 @@
      _a > _b ? _b : _a; })
 #endif
 
+#define CONSTRAIN(x, min, max) MIN(MAX(x, min), max)
+#define CONSTRAIN_TO_I8(x) CONSTRAIN(x, INT8_MIN, INT8_MAX)
+
 #define STR_EQUAL(s1, s2) (strcmp(s1, s2) == 0)
 #define STR_HAS_PREFIX(s, p) (strstr(s, p) == s)
 
