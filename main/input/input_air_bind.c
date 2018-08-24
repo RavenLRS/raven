@@ -111,6 +111,7 @@ static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t 
             // Not actually required since now we always send
             // a response, but if we change that in the future
             // we'd need to re-enable RX mode.
+            air_radio_sleep(radio);
             air_radio_start_rx(radio);
         }
         else if (now > input->send_response_at)

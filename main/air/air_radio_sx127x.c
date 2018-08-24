@@ -136,10 +136,10 @@ void air_radio_set_mode(air_radio_t *radio, air_mode_e mode)
 
 void air_radio_set_bind_mode(air_radio_t *radio)
 {
+    // Same as fast parameters as mode 2
+    air_radio_set_mode(radio, AIR_MODE_2);
     sx127x_set_tx_power(&radio->sx127x, 1);
     sx127x_set_lora_sync_word(&radio->sx127x, SX127X_DEFAULT_LORA_SYNC_WORD);
-    // Same as fast parameters as short range mode
-    air_radio_set_mode(radio, AIR_MODE_FASTEST);
     sx127x_set_payload_size(&radio->sx127x, sizeof(air_bind_packet_t));
 }
 
