@@ -2,6 +2,8 @@
 
 #include "io/sx127x.h"
 
+#include "rc/telemetry.h"
+
 #include "air_radio_sx127x.h"
 
 void air_radio_init(air_radio_t *radio)
@@ -40,6 +42,45 @@ static void air_radio_sx127x_set_lora_mode_parameters(air_radio_t *radio)
     sx127x_set_lora_signal_bw(&radio->sx127x, SX127X_LORA_SIGNAL_BW_500);
     sx127x_set_lora_header_mode(&radio->sx127x, SX127X_LORA_HEADER_IMPLICIT);
     sx127x_set_lora_crc(&radio->sx127x, false);
+}
+
+bool air_radio_should_switch_to_faster_mode(air_radio_t *radio, air_mode_e current, air_mode_e faster, int telemetry_id, telemetry_t *t)
+{
+    if (telemetry_id == TELEMETRY_ID_RX_SNR)
+    {
+        // For switching up, we require an SNR of 4dB per mode. This only affects
+        // the LoRa modes, since the only FSK mode is the fastest
+        int8_t val = telemetry_get_i8(t, telemetry_id);
+        return val >= 4 * (current - faster) * TELEMETRY_SNR_MULTIPLIER;
+    }
+    return false;
+}
+
+bool air_radio_should_switch_to_longer_mode(air_radio_t *radio, air_mode_e current, air_mode_e longer, int telemetry_id, telemetry_t *t)
+{
+    if (telemetry_id == TELEMETRY_ID_RX_SNR)
+    {
+        // For switching down in FSK mode, we use an SNR of 5dB. From the
+        // LoRa modes, we switch down at 1.5dB
+        int8_t val = telemetry_get_i8(t, telemetry_id);
+        int threshold;
+        if (current == AIR_MODE_1)
+        {
+            threshold = 5 * TELEMETRY_SNR_MULTIPLIER;
+        }
+        else
+        {
+            threshold = 1.5f * TELEMETRY_SNR_MULTIPLIER;
+        }
+        return val <= threshold;
+    }
+    return false;
+}
+
+unsigned air_radio_confirmations_required_for_switching_modes(air_radio_t *radio, air_mode_e current, air_mode_e to)
+{
+    // Use 4 for MODE_5, 8 for MODE_4, ... up to a maximum of 15
+    return MIN(15, 4 * ((AIR_MODE_LONGEST + 1) - current));
 }
 
 void air_radio_set_mode(air_radio_t *radio, air_mode_e mode)

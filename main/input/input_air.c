@@ -10,7 +10,7 @@
 #include "input_air.h"
 
 #define AIR_TO_CHANNEL_INPUT(val) RC_CHANNEL_DECODE_FROM_BITS(val, AIR_CHANNEL_BITS)
-#define CYCLE_TIME_WAIT_FACTOR 0.20f // Wait an extra 20% of the cycle time to decide we've lost a packet
+#define CYCLE_TIME_WAIT_FACTOR 0.10f // Wait an extra 10% of the cycle time to decide we've lost a packet
 // Maximum number of lost packets to continue jumping forward
 #define MAX_LOST_PACKETS_JUMPING_FORWARD (AIR_SEQ_COUNT / 2)
 
@@ -114,10 +114,8 @@ static void input_air_stream_cmd_decoded(void *user, air_cmd_e cmd, const void *
         }
         if (mode != input_air->air_mode && mode != input_air->switch_air_mode.mode)
         {
-            unsigned count = MIN(15, 3 * ((AIR_MODE_LONGEST + 1) - input_air->air_mode));
+            unsigned count = air_radio_confirmations_required_for_switching_modes(input_air->air_config.radio, input_air->air_mode, mode);
             LOG_I(TAG, "Got request for switch to mode %d, %u confirmations", mode, count);
-            // TODO: Move this to the radio driver
-            // Use 3 for MODE_5, 6 for MODE_4, ... up to a maximum of 15
             input_air->switch_air_mode.mode = mode;
             input_air->switch_air_mode.at_tx_seq = (input_air->tx_seq + count + input_air->consecutive_lost_packets) % AIR_SEQ_COUNT;
         }

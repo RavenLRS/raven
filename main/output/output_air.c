@@ -16,13 +16,6 @@ static time_micros_t cycle_begin;
 static time_micros_t cycle_end;
 #endif
 
-#define MODE_SWITCH_TELEMETRY_ID TELEMETRY_ID_RX_SNR
-#define MODE_SWITCH_TELEMETRY_TYPE int8_t
-#define MODE_SWITCH_TELEMETRY_GET_VALUE(x) telemetry_get_i8(x, MODE_SWITCH_TELEMETRY_ID)
-// Switch to faster mode if SNR is above 5dB
-#define MODE_SWITCH_FASTER_VALUE (5 * TELEMETRY_SNR_MULTIPLIER)
-// Switch to a longer mode if the SNR is below 2dB
-#define MODE_SWITCH_LONGER_VALUE (2 * TELEMETRY_SNR_MULTIPLIER)
 #define MODE_SWITCH_WAIT_INTERVAL_US MILLIS_TO_MICROS(1000)
 
 typedef enum
@@ -48,16 +41,24 @@ static void output_air_radio_callback(air_radio_t *radio, air_radio_callback_rea
     }
 }
 
+static void output_air_invalidate_mode_sw(output_air_t *output_air)
+{
+    air_cmd_switch_mode_ack_reset(&output_air->air_modes.sw.ack);
+    output_air->air_modes.sw.requested = AIR_MODE_INVALID;
+    output_air->air_modes.sw.to_faster_scheduled_at = 0;
+    output_air->air_modes.sw.to_longer_scheduled_at = 0;
+}
+
 static void output_air_update_mode(output_air_t *output_air)
 {
     air_radio_t *radio = output_air->air_config.radio;
-    air_radio_set_mode(radio, output_air->air_mode);
-    air_cmd_switch_mode_ack_reset(&output_air->switch_air_mode);
-    output_air->requested_air_mode = 0;
-    output_air->start_switch_air_mode_faster_at = 0;
-    output_air->start_switch_air_mode_longer_at = 0;
-    output_air->cycle_time = air_radio_cycle_time(radio, output_air->air_mode);
-    failsafe_set_max_interval(&output_air->output.failsafe, air_radio_tx_failsafe_interval(radio, output_air->air_mode));
+    air_mode_e air_mode = output_air->air_modes.current;
+    air_radio_set_mode(radio, air_mode);
+    output_air->air_modes.faster = air_mode_faster(air_mode, output_air->air_modes.common);
+    output_air->air_modes.longer = air_mode_longer(air_mode, output_air->air_modes.common);
+    output_air->cycle_time = air_radio_cycle_time(radio, air_mode);
+    output_air_invalidate_mode_sw(output_air);
+    failsafe_set_max_interval(&output_air->output.failsafe, air_radio_tx_failsafe_interval(radio, air_mode));
 }
 
 static void output_air_update_frequency(output_air_t *output_air, unsigned freq_index)
@@ -71,8 +72,9 @@ static void output_air_update_frequency(output_air_t *output_air, unsigned freq_
 
 static void output_air_start_switch_air_mode(output_air_t *output_air)
 {
-    LOG_I(TAG, "Preparing switch to mode %d", output_air->requested_air_mode);
-    air_cmd_e cmd = air_cmd_switch_mode_from_mode(output_air->requested_air_mode);
+    air_mode_e requested = output_air->air_modes.sw.requested;
+    LOG_I(TAG, "Preparing switch to mode %d", requested);
+    air_cmd_e cmd = air_cmd_switch_mode_from_mode(requested);
     air_stream_feed_output_cmd(&output_air->air_stream, cmd, NULL, 0);
 }
 
@@ -120,59 +122,8 @@ static void output_air_stream_telemetry_decoded(void *user, int telemetry_id, co
     output_air_t *output_air = user;
     telemetry_t *t = &output_air->output.rc_data->telemetry_downlink[TELEMETRY_DOWNLINK_GET_IDX(telemetry_id)];
     bool changed = telemetry_set_bytes(t, data, size, now);
-    switch (telemetry_id)
+    if (telemetry_id == TELEMETRY_ID_CRAFT_NAME)
     {
-    case MODE_SWITCH_TELEMETRY_ID:
-    {
-        if (air_cmd_switch_mode_ack_in_progress(&output_air->switch_air_mode))
-        {
-            // We're already switching modes
-            //
-            // TODO: If we're switching up and we should now switch down,
-            // cancel the old switch and start the new one.
-            break;
-        }
-        MODE_SWITCH_TELEMETRY_TYPE value = MODE_SWITCH_TELEMETRY_GET_VALUE(t);
-        if (value >= MODE_SWITCH_FASTER_VALUE)
-        {
-            air_mode_e faster = air_mode_faster(output_air->air_mode, output_air->common_air_modes_mask);
-            if (air_mode_is_valid(faster))
-            {
-                if (output_air->start_switch_air_mode_faster_at == 0)
-                {
-                    output_air->start_switch_air_mode_faster_at = now + MODE_SWITCH_WAIT_INTERVAL_US;
-                }
-                else if (now > output_air->start_switch_air_mode_faster_at)
-                {
-                    output_air->requested_air_mode = faster;
-                    output_air_start_switch_air_mode(output_air);
-                }
-            }
-        }
-        else if (value <= MODE_SWITCH_LONGER_VALUE)
-        {
-            air_mode_e longer = air_mode_longer(output_air->air_mode, output_air->common_air_modes_mask);
-            if (air_mode_is_valid(longer))
-            {
-                if (output_air->start_switch_air_mode_longer_at == 0)
-                {
-                    output_air->start_switch_air_mode_longer_at = now + MODE_SWITCH_WAIT_INTERVAL_US;
-                }
-                else if (now > output_air->start_switch_air_mode_longer_at)
-                {
-                    output_air->requested_air_mode = longer;
-                    output_air_start_switch_air_mode(output_air);
-                }
-            }
-        }
-        else
-        {
-            output_air->start_switch_air_mode_faster_at = 0;
-            output_air->start_switch_air_mode_longer_at = 0;
-        }
-        break;
-    }
-    case TELEMETRY_ID_CRAFT_NAME:
         if (changed)
         {
             air_addr_t bound_addr;
@@ -181,7 +132,49 @@ static void output_air_stream_telemetry_decoded(void *user, int telemetry_id, co
                 config_set_air_name(&bound_addr, data);
             }
         }
-        break;
+    }
+    if (!air_cmd_switch_mode_ack_in_progress(&output_air->air_modes.sw.ack))
+    {
+        // Otherwise we're already switching modes
+        //
+        // TODO: If we're switching up and we should now switch down,
+        // cancel the old switch and start the new one.
+        if (air_mode_is_valid(output_air->air_modes.longer) &&
+            air_radio_should_switch_to_longer_mode(output_air->air_config.radio,
+                                                   output_air->air_modes.current,
+                                                   output_air->air_modes.longer,
+                                                   telemetry_id,
+                                                   t))
+        {
+            output_air->air_modes.sw.to_faster_scheduled_at = 0;
+            if (output_air->air_modes.sw.to_longer_scheduled_at == 0)
+            {
+                output_air->air_modes.sw.to_longer_scheduled_at = now + MODE_SWITCH_WAIT_INTERVAL_US;
+            }
+            else if (now > output_air->air_modes.sw.to_longer_scheduled_at)
+            {
+                output_air->air_modes.sw.requested = output_air->air_modes.longer;
+                output_air_start_switch_air_mode(output_air);
+            }
+        }
+        else if (air_mode_is_valid(output_air->air_modes.faster) &&
+                 air_radio_should_switch_to_faster_mode(output_air->air_config.radio,
+                                                        output_air->air_modes.current,
+                                                        output_air->air_modes.faster,
+                                                        telemetry_id,
+                                                        t))
+        {
+            output_air->air_modes.sw.to_longer_scheduled_at = 0;
+            if (output_air->air_modes.sw.to_faster_scheduled_at == 0)
+            {
+                output_air->air_modes.sw.to_faster_scheduled_at = now + MODE_SWITCH_WAIT_INTERVAL_US;
+            }
+            else if (now > output_air->air_modes.sw.to_faster_scheduled_at)
+            {
+                output_air->air_modes.sw.requested = output_air->air_modes.faster;
+                output_air_start_switch_air_mode(output_air);
+            }
+        }
     }
 }
 
@@ -194,10 +187,10 @@ static void output_air_stream_cmd_decoded(void *user, air_cmd_e cmd, const void 
         if (size == sizeof(air_cmd_switch_mode_ack_t))
         {
             const air_cmd_switch_mode_ack_t *ack = data;
-            if (ack->mode == output_air->requested_air_mode)
+            if (ack->mode == output_air->air_modes.sw.requested)
             {
                 // Got confirmation from the RX that we're switching modes
-                air_cmd_switch_mode_ack_copy(&output_air->switch_air_mode, ack);
+                air_cmd_switch_mode_ack_copy(&output_air->air_modes.sw.ack, ack);
                 LOG_I(TAG, "Got confirmation for switch to mode %d at seq %u (current seq %u)",
                       ack->mode, ack->at_tx_seq,
                       output_air->seq);
@@ -218,7 +211,7 @@ static void output_air_stream_cmd_decoded(void *user, air_cmd_e cmd, const void 
         if (size == 1)
         {
             const uint8_t *mode = data;
-            output_air->common_air_modes_mask = air_mode_mask_remove(output_air->common_air_modes_mask, *mode);
+            output_air->air_modes.common = air_mode_mask_remove(output_air->air_modes.common, *mode);
         }
         break;
     }
@@ -325,18 +318,18 @@ static void output_air_send_control_packet(output_air_t *output_air, rc_data_t *
 
         // When the RX goes into FS, it switches to longest mode, so
         // eventually both ends will see each other.
-        air_cmd_switch_mode_ack_reset(&output_air->switch_air_mode);
-        if (output_air->air_mode != output_air->air_mode_longest)
+        air_cmd_switch_mode_ack_reset(&output_air->air_modes.sw.ack);
+        if (output_air->air_modes.current != output_air->air_modes.longest)
         {
-            output_air->air_mode = output_air->air_mode_longest;
+            output_air->air_modes.current = output_air->air_modes.longest;
             output_air_update_mode(output_air);
         }
     }
 
-    if (air_cmd_switch_mode_ack_proceed(&output_air->switch_air_mode, output_air->seq))
+    if (air_cmd_switch_mode_ack_proceed(&output_air->air_modes.sw.ack, output_air->seq))
     {
-        output_air->air_mode = output_air->switch_air_mode.mode;
-        LOG_I(TAG, "Switch to mode %d for seq %u", output_air->air_mode, output_air->seq);
+        output_air->air_modes.current = output_air->air_modes.sw.ack.mode;
+        LOG_I(TAG, "Switch to mode %d for seq %u", output_air->air_modes.current, output_air->seq);
         output_air_update_mode(output_air);
     }
     output_air_update_frequency(output_air, output_air->seq);
@@ -443,18 +436,21 @@ static bool output_air_open(void *output, void *config)
         // No pairing
         return false;
     }
-    if (!air_modes_intersect(&output_air->common_air_modes_mask, output_air->air.pairing_info.modes, output_air->air_config.modes))
+    if (!air_modes_intersect(&output_air->air_modes.common, output_air->air.pairing_info.modes, output_air->air_config.modes))
     {
         LOG_W(TAG, "No common air modules between RX and this TX");
         return false;
     }
-    output_air->air_mode_longest = air_mode_longest(output_air->common_air_modes_mask);
-    if (!air_mode_is_valid(output_air->air_mode_longest))
+    output_air->air_modes.longest = air_mode_longest(output_air->air_modes.common);
+    if (!air_mode_is_valid(output_air->air_modes.longest))
     {
         LOG_W(TAG, "Could not determine a valid air mode");
         return false;
     }
-    output_air->air_mode = output_air->air_mode_longest;
+    output_air->air_modes.current = output_air->air_modes.longest;
+    output_air->air_modes.faster = air_mode_faster(output_air->air_modes.current, output_air->air_modes.common);
+    output_air->air_modes.longer = air_mode_longer(output_air->air_modes.current, output_air->air_modes.common);
+    output_air_invalidate_mode_sw(output_air);
     LOG_I(TAG, "Open with key %u", output_air->air.pairing.key);
     output_air_config_t *config_air = config;
     output_air->tx_power = config_air->tx_power;
@@ -535,9 +531,6 @@ static void output_air_close(void *output, void *config)
 void output_air_init(output_air_t *output, air_addr_t addr, air_config_t *air_config, rmp_t *rmp)
 {
     output->air_config = *air_config;
-    output->requested_air_mode = 0;
-    output->start_switch_air_mode_faster_at = 0;
-    output->start_switch_air_mode_longer_at = 0;
     output->output.flags = OUTPUT_FLAG_REMOTE;
     output->output.vtable = (output_vtable_t){
         .open = output_air_open,

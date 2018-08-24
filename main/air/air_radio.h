@@ -8,6 +8,7 @@
 #include "util/time.h"
 
 typedef struct air_radio_s air_radio_t;
+typedef struct telemetry_s telemetry_t;
 
 typedef enum
 {
@@ -24,7 +25,11 @@ void air_radio_set_sync_word(air_radio_t *radio, uint8_t word);
 
 void air_radio_start_rx(air_radio_t *radio);
 
+bool air_radio_should_switch_to_faster_mode(air_radio_t *radio, air_mode_e current, air_mode_e faster, int telemetry_id, telemetry_t *t);
+bool air_radio_should_switch_to_longer_mode(air_radio_t *radio, air_mode_e current, air_mode_e longer, int telemetry_id, telemetry_t *t);
+unsigned air_radio_confirmations_required_for_switching_modes(air_radio_t *radio, air_mode_e current, air_mode_e to);
 void air_radio_set_mode(air_radio_t *radio, air_mode_e mode);
+
 void air_radio_set_bind_mode(air_radio_t *radio);
 void air_radio_set_powertest_mode(air_radio_t *radio);
 

@@ -23,13 +23,21 @@ typedef struct output_air_s
     output_t output;
     air_io_t air;
     air_config_t air_config;
-    air_mode_mask_t common_air_modes_mask;
-    air_mode_e air_mode_longest;
-    air_mode_e air_mode;
-    air_mode_e requested_air_mode;
-    time_micros_t start_switch_air_mode_faster_at;
-    time_micros_t start_switch_air_mode_longer_at;
-    air_cmd_switch_mode_ack_t switch_air_mode;
+    struct
+    {
+        air_mode_mask_t common; // Mask with common modes between TX and RX
+        air_mode_e current;     // Active mode
+        air_mode_e faster;      // Next mode faster than active, might be AIR_MODE_INVALID
+        air_mode_e longer;      // Next mode longer than active, might be AIR_MODE_INVALID
+        air_mode_e longest;     // Longest mode supported by the current pairing
+        struct
+        {
+            air_mode_e requested; // Requested mode while switching
+            air_cmd_switch_mode_ack_t ack;
+            time_micros_t to_faster_scheduled_at;
+            time_micros_t to_longer_scheduled_at;
+        } sw; // Mode switching
+    } air_modes;
     bool force_stream_feed;
     time_micros_t last_downlink_packet_at;
     time_micros_t cycle_time;
