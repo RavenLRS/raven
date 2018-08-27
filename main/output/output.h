@@ -148,5 +148,7 @@ typedef struct output_s
 } output_t;
 
 bool output_open(rc_data_t *data, output_t *output, void *config);
-bool output_update(output_t *output, time_micros_t now);
+// input_was_updated will be true iff the input returned new data
+// during this cycle.
+bool output_update(output_t *output, bool input_was_updated, time_micros_t now);
 void output_close(output_t *output, void *config);

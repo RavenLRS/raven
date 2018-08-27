@@ -1336,7 +1336,7 @@ void rc_update(rc_t *rc)
     // needs to process another data.
     if (LIKELY(rc_should_update_output(rc)))
     {
-        rc->state.dirty &= !output_update(rc->output, now);
+        rc->state.dirty &= !output_update(rc->output, input_new_data, now);
     }
 
     if (input_new_data)

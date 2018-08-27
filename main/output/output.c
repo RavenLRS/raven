@@ -258,7 +258,7 @@ bool output_open(rc_data_t *data, output_t *output, void *config)
     return is_open;
 }
 
-bool output_update(output_t *output, time_micros_t now)
+bool output_update(output_t *output, bool input_was_updated, time_micros_t now)
 {
     bool updated = false;
     if (output && output->is_open)
@@ -270,7 +270,7 @@ bool output_update(output_t *output, time_micros_t now)
         bool can_update_already = now > output->next_rc_update_no_earlier_than;
         bool can_update_via_max_interval = now > output->next_rc_update_no_later_than &&
                                            !failsafe_is_active(output->rc_data->failsafe.input);
-        bool can_update_via_new_data = rc_data_has_dirty_channels(output->rc_data);
+        bool can_update_via_new_data = input_was_updated || rc_data_has_dirty_channels(output->rc_data);
         if (can_update_already && (can_update_via_max_interval || can_update_via_new_data))
         {
             update_rc = true;
