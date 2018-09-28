@@ -21,8 +21,4 @@ config RAVEN_DIO5_CLK_OUTPUT
     bool "Enable LoRa CLK output on DIO 5"
     default "n"
 
-config RAVEN_AIR_MODE_1
-    bool "Enable support for Mode 1 (experimental)"
-    default "n"
-
 endmenu

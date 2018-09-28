@@ -89,17 +89,11 @@ _Static_assert(RX_RSSI_CHANNEL_COUNT == RC_CHANNELS_NUM + 2, "RX_RSSI_CHANNEL_CO
 // Used to store it as a setting, since settings need continuous
 // values starting at zero.
 
-// Mode 1 is disabled for now, since it looks like most modules
-// can't cope with it (too manu corrupt packets).
 typedef enum
 {
-#if defined(CONFIG_RAVEN_AIR_MODE_1)
     CONFIG_AIR_MODES_1_5,
-#endif
     CONFIG_AIR_MODES_2_5,
-#if defined(CONFIG_RAVEN_AIR_MODE_1)
     CONFIG_AIR_MODES_FIXED_1,
-#endif
     CONFIG_AIR_MODES_FIXED_2,
     CONFIG_AIR_MODES_FIXED_3,
     CONFIG_AIR_MODES_FIXED_4,
