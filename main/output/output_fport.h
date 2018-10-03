@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <driver/gpio.h>
+#include <hal/gpio.h>
 
 #include "output/output.h"
 
@@ -15,8 +15,8 @@
 
 typedef struct output_fport_config_s
 {
-    gpio_num_t tx_pin_num;
-    gpio_num_t rx_pin_num;
+    hal_gpio_t tx;
+    hal_gpio_t rx;
     bool inverted;
 } output_fport_config_t;
 

@@ -1,27 +1,25 @@
-#include "platform/platform_macros.h"
-
 #include "target/bands/433.h"
 
-#define PIN_BUTTON_1 0
+#define BUTTON_1_GPIO 0
 
-#define PIN_BEEPER 12
+#define BEEPER_GPIO 12
 
-#define PIN_LED_1 22
+#define LED_1_GPIO 22
 
-#define PIN_SX127X_SCK 5
-#define PIN_SX127X_MISO 19
-#define PIN_SX127X_MOSI 27
-#define PIN_SX127X_CS 18
-#define PIN_SX127X_RST 14
-#define PIN_SX127X_DIO0 26
+#define SX127X_GPIO_SCK 5
+#define SX127X_GPIO_MISO 19
+#define SX127X_GPIO_MOSI 27
+#define SX127X_GPIO_CS 18
+#define SX127X_GPIO_RST 14
+#define SX127X_GPIO_DIO0 26
 
 #define SX127X_OUTPUT_TYPE SX127X_OUTPUT_PA_BOOST
 
-#define PIN_DEFAULT_TX 22
-#define PIN_DEFAULT_RX 21
+#define TX_DEFAULT_GPIO 22
+#define RX_DEFAULT_GPIO 21
 
-#define PIN_UNUSED_TX 2
-#define PIN_UNUSED_RX 35
+#define TX_UNUSED_GPIO 2
+#define RX_UNUSED_GPIO 35
 
-#define PIN_USABLE_MASK (PIN_N(PIN_DEFAULT_TX) | PIN_N(PIN_DEFAULT_RX))
+#define HAL_GPIO_USER_MASK (HAL_GPIO_M(TX_DEFAULT_GPIO) | HAL_GPIO_M(RX_DEFAULT_GPIO))
 #define BOARD_NAME "ESP32+LoRa OMEGA"

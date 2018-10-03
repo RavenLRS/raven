@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <hal/gpio.h>
+
 #include "target.h"
 
 #include "ui/beeper.h"
@@ -25,9 +27,9 @@ typedef struct rc_s rc_t;
 
 typedef struct ui_config_s
 {
-    int8_t button;
+    hal_gpio_t button;
     bool button_is_touch;
-    int8_t beeper;
+    hal_gpio_t beeper;
 #ifdef USE_SCREEN
     screen_i2c_config_t screen;
 #endif

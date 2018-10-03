@@ -1,14 +1,16 @@
 #pragma once
 
+#include <hal/gpio.h>
+
 #include "output/output.h"
 
 #include "protocols/smartport.h"
 
 typedef struct output_sbus_config_s
 {
-    int sbus_pin_num;
+    hal_gpio_t sbus;
     bool sbus_inverted;
-    int sport_pin_num;
+    hal_gpio_t sport;
     bool sport_inverted;
 } output_sbus_config_t;
 

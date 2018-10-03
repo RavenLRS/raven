@@ -8,9 +8,9 @@
 #include <esp_heap_caps.h>
 #include <esp_system.h>
 
-#include <driver/gpio.h>
 #include <driver/spi_master.h>
 
+#include <hal/gpio.h>
 #include <hal/log.h>
 
 #include "util/macros.h"
@@ -208,13 +208,12 @@ static void IRAM_ATTR lora_handle_isr(void *arg)
 
 void sx127x_init(sx127x_t *sx127x)
 {
-    gpio_set_direction(sx127x->rst, GPIO_MODE_OUTPUT);
-    gpio_set_level(sx127x->rst, 0);
+    hal_gpio_enable(sx127x->rst);
+    hal_gpio_set_dir(sx127x->rst, HAL_GPIO_DIR_OUTPUT);
+    hal_gpio_set_level(sx127x->rst, HAL_GPIO_LOW);
     vTaskDelay(20 / portTICK_PERIOD_MS);
-    gpio_set_level(sx127x->rst, 1);
+    hal_gpio_set_level(sx127x->rst, HAL_GPIO_HIGH);
     vTaskDelay(50 / portTICK_PERIOD_MS);
-
-    gpio_set_direction(sx127x->cs, GPIO_MODE_OUTPUT);
 
     spi_bus_config_t buscfg = {
         .miso_io_num = sx127x->miso,
@@ -288,14 +287,12 @@ void sx127x_init(sx127x_t *sx127x)
     sx127x_idle(sx127x);
 
     // configure pin for ISR
-    ESP_ERROR_CHECK(gpio_set_direction(sx127x->dio0, GPIO_MODE_INPUT));
-    ESP_ERROR_CHECK(gpio_set_pull_mode(sx127x->dio0, GPIO_FLOATING));
-    ESP_ERROR_CHECK(gpio_set_intr_type(sx127x->dio0, GPIO_INTR_POSEDGE));
-    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_IRAM));
+    hal_gpio_enable(sx127x->dio0);
+    hal_gpio_set_dir(sx127x->dio0, HAL_GPIO_DIR_INPUT);
+    hal_gpio_set_pull(sx127x->dio0, HAL_GPIO_PULL_NONE);
+    hal_gpio_set_isr(sx127x->dio0, HAL_GPIO_INTR_POSEDGE, lora_handle_isr, sx127x);
 
-    ESP_ERROR_CHECK(gpio_isr_handler_add(sx127x->dio0, lora_handle_isr, sx127x));
     sx127x->state.dio0_trigger = 0;
-
     sx127x_write_reg(sx127x, REG_DIO_MAPPING_1, DIO0_NONE);
 }
 
@@ -551,7 +548,9 @@ int sx127x_rssi(sx127x_t *sx127x, int *snr, int *lq)
 void sx127x_shutdown(sx127x_t *sx127x)
 {
     sx127x_idle(sx127x);
-    gpio_set_level(sx127x->rst, 0);
+    // TODO: This probably does nothing on most boards, since SX127X
+    // resets on posedge on the reset line.
+    hal_gpio_set_level(sx127x->rst, HAL_GPIO_LOW);
 }
 
 // #pragma region LoRa specific functions

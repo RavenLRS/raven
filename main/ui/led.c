@@ -1,5 +1,6 @@
-#include <driver/gpio.h>
 #include <driver/rtc_io.h>
+
+#include <hal/gpio.h>
 
 #include "target.h"
 
@@ -11,31 +12,31 @@
 
 typedef struct led_s
 {
-    int pin;
+    hal_gpio_t gpio;
     bool is_initialized;
     time_ticks_t next_update;
     time_ticks_t period;
     int next_level;
 } led_t;
 
-#ifdef PIN_LED_1
+#ifdef LED_1_GPIO
 static led_t led1 = {
-    .pin = PIN_LED_1,
+    .gpio = LED_1_GPIO,
 };
 #endif
 
 // Guard this separately in case we add support for more than 1 led
 // and this has check check for LED_1 || LED_2 || ... || LED_N
-#if defined(PIN_LED_1)
+#if defined(LED_1_GPIO)
 
 static void led_on_led(led_t *led)
 {
-    gpio_set_level(led->pin, 1);
+    hal_gpio_set_level(led->gpio, HAL_GPIO_HIGH);
 }
 
 static void led_off_led(led_t *led)
 {
-    gpio_set_level(led->pin, 0);
+    hal_gpio_set_level(led->gpio, HAL_GPIO_LOW);
 }
 
 static void led_init_led_task(void *data)
@@ -49,7 +50,11 @@ static void led_init_led_task(void *data)
 
 static void led_init_led(led_t *led)
 {
-    gpio_set_direction(led->pin, GPIO_MODE_OUTPUT);
+    hal_gpio_cfg_t cfg = {
+        .dir = HAL_GPIO_DIR_OUTPUT,
+        .pull = HAL_GPIO_PULL_NONE,
+    };
+    hal_gpio_setup(led->gpio, &cfg);
     led_off_led(led);
     led->next_update = 0;
     led->is_initialized = false;
@@ -97,14 +102,14 @@ static void led_set_blink_period_led(led_t *led, time_ticks_t period)
 
 void led_init(void)
 {
-#ifdef PIN_LED_1
+#ifdef LED_1_GPIO
     led_init_led(&led1);
 #endif
 }
 
 void led_update(void)
 {
-#ifdef PIN_LED_1
+#ifdef LED_1_GPIO
     led_update_led(&led1);
 #endif
 }
@@ -113,7 +118,7 @@ void led_on(led_id_e led_id)
 {
     switch (led_id)
     {
-#ifdef PIN_LED_1
+#ifdef LED_1_GPIO
     case LED_ID_1:
         led_on_led(&led1);
         break;
@@ -127,7 +132,7 @@ void led_off(led_id_e led_id)
 {
     switch (led_id)
     {
-#ifdef PIN_LED_1
+#ifdef LED_1_GPIO
     case LED_ID_1:
         led_off_led(&led1);
         break;
@@ -160,7 +165,7 @@ void led_set_blink_period(led_id_e led_id, time_ticks_t period)
 {
     switch (led_id)
     {
-#ifdef PIN_LED_1
+#ifdef LED_1_GPIO
     case LED_ID_1:
         led_set_blink_period_led(&led1, period);
         break;

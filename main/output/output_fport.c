@@ -123,8 +123,8 @@ static bool output_fport_open(void *output, void *config)
 
     serial_port_config_t port_config = {
         .baud_rate = FPORT_BAUDRATE,
-        .tx_pin = cfg->tx_pin_num,
-        .rx_pin = cfg->rx_pin_num,
+        .tx_pin = cfg->tx,
+        .rx_pin = cfg->rx,
         .tx_buffer_size = FPORT_SERIAL_BUFFER_SIZE,
         .rx_buffer_size = FPORT_SERIAL_BUFFER_SIZE,
         .parity = SERIAL_PARITY_DISABLE,

@@ -1,6 +1,3 @@
-
-#include <driver/gpio.h>
-
 #include "beeper.h"
 
 #define BEEP_LENGTH_TO_TICKS(t) MILLIS_TO_TICKS(t * 10)
@@ -47,19 +44,20 @@ static const beep_pattern_t patterns[BEEPER_MODE_COUNT - 1] = {
     },
 };
 
-static void beeper_pin_init(beeper_t *beeper)
+static void beeper_gpio_init(beeper_t *beeper)
 {
-    ESP_ERROR_CHECK(gpio_set_direction(beeper->pin, GPIO_MODE_OUTPUT));
+    hal_gpio_enable(beeper->gpio);
+    hal_gpio_set_dir(beeper->gpio, HAL_GPIO_DIR_OUTPUT);
 }
 
 static void beeper_on(beeper_t *beeper)
 {
-    gpio_set_level(beeper->pin, 1);
+    hal_gpio_set_level(beeper->gpio, HAL_GPIO_HIGH);
 }
 
 static void beeper_off(beeper_t *beeper)
 {
-    gpio_set_level(beeper->pin, 0);
+    hal_gpio_set_level(beeper->gpio, HAL_GPIO_LOW);
 }
 
 static void beeper_begin_mode(beeper_t *beeper, beeper_mode_e mode)
@@ -92,11 +90,11 @@ static void beeper_set_mode_force(beeper_t *beeper, beeper_mode_e mode, bool for
     }
 }
 
-void beeper_init(beeper_t *beeper, uint8_t pin)
+void beeper_init(beeper_t *beeper, hal_gpio_t gpio)
 {
-    beeper->pin = pin;
+    beeper->gpio = gpio;
     beeper->mode = BEEPER_MODE_NONE;
-    beeper_pin_init(beeper);
+    beeper_gpio_init(beeper);
     beeper_off(beeper);
 }
 

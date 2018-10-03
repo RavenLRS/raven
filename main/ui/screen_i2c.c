@@ -38,12 +38,13 @@ static void screen_i2c_install_driver(screen_i2c_config_t *cfg)
 
 bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 {
-    if (cfg->rst > 0)
+    if (cfg->rst != HAL_GPIO_NONE)
     {
-        ESP_ERROR_CHECK(gpio_set_direction(cfg->rst, GPIO_MODE_OUTPUT))
-        ESP_ERROR_CHECK(gpio_set_level(cfg->rst, 0));
+        hal_gpio_enable(cfg->rst);
+        hal_gpio_set_dir(cfg->rst, HAL_GPIO_DIR_OUTPUT);
+        hal_gpio_set_level(cfg->rst, HAL_GPIO_LOW);
         vTaskDelay(50 / portTICK_PERIOD_MS);
-        ESP_ERROR_CHECK(gpio_set_level(cfg->rst, 1));
+        hal_gpio_set_level(cfg->rst, HAL_GPIO_HIGH);
     }
 
     screen_i2c_install_driver(cfg);
@@ -59,9 +60,9 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 
     if (ack_err != ESP_OK)
     {
-        if (cfg->rst > 0)
+        if (cfg->rst != HAL_GPIO_NONE)
         {
-            ESP_ERROR_CHECK(gpio_set_level(cfg->rst, 0));
+            hal_gpio_set_level(cfg->rst, HAL_GPIO_LOW);
         }
         ESP_ERROR_CHECK(i2c_driver_delete(SCREEN_I2C_MASTER_NUM));
         return false;
@@ -69,7 +70,7 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 
     u8g2_esp32_hal_t hal = {
         .i2c_port = SCREEN_I2C_MASTER_NUM,
-        .reset = cfg->rst,
+        .reset = cfg->rst != HAL_GPIO_NONE ? cfg->rst : U8G2_ESP32_HAL_UNDEFINED,
     };
 
     u8g2_esp32_hal_init(hal);
@@ -89,9 +90,9 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 void screen_i2c_shutdown(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 {
     LOG_I(TAG, "Screen shutdown");
-    if (cfg->rst > 0)
+    if (cfg->rst != HAL_GPIO_NONE)
     {
-        gpio_set_level(cfg->rst, 0);
+        hal_gpio_set_level(cfg->rst, HAL_GPIO_LOW);
     }
     else
     {
@@ -104,9 +105,9 @@ void screen_i2c_shutdown(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 void screen_i2c_power_on(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 {
     LOG_I(TAG, "Screen power on");
-    if (cfg->rst > 1)
+    if (cfg->rst != HAL_GPIO_NONE)
     {
-        gpio_set_level(cfg->rst, 1);
+        hal_gpio_set_level(cfg->rst, HAL_GPIO_HIGH);
     }
 
     LOG_D(TAG, "u8g2_InitDisplay");

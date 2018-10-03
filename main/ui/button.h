@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <hal/gpio.h>
+
 typedef struct button_state_s
 {
     bool is_down;
@@ -14,7 +16,7 @@ typedef struct button_state_s
 
 typedef struct button_s
 {
-    uint8_t pin;
+    hal_gpio_t gpio;
     bool is_touch;
     void *user_data;
     void (*press_callback)(void *data);

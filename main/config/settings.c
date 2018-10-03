@@ -38,8 +38,8 @@ static char settings_string_storage[2][SETTING_STRING_BUFFER_SIZE];
 
 static const char *off_on_table[] = {"Off", "On"};
 static const char *no_yes_table[] = {"No", "Yes"};
-static char pin_number_names[PIN_USABLE_COUNT][3];
-static const char *pin_names[PIN_USABLE_COUNT];
+static char gpio_name_storage[HAL_GPIO_USER_COUNT][HAL_GPIO_NAME_LENGTH];
+static const char *gpio_names[HAL_GPIO_USER_COUNT];
 
 #define FOLDER(k, n, id, p, fn) \
     (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_FOLDER, .flags = SETTING_FLAG_READONLY | SETTING_FLAG_EPHEMERAL, .folder = p, .def_val = U8(id), .data = fn }
@@ -59,11 +59,11 @@ static const char *pin_names[PIN_USABLE_COUNT];
 
 #define CMD_SETTING(k, n, p, f, c_fl) U8_SETTING(k, n, f | SETTING_FLAG_EPHEMERAL | SETTING_FLAG_CMD, p, 0, 0, c_fl)
 
-#define PIN_SETTING(k, n, p, def) U8_MAP_SETTING(k, n, 0, p, pin_names, def)
+#define GPIO_USER_SETTING(k, n, p, def) U8_MAP_SETTING(k, n, 0, p, gpio_names, def)
 
-#define RX_CHANNEL_OUTPUT_PIN_SETTING_KEY(p) (SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX #p)
-#define RX_CHANNEL_OUTPUT_PIN_SETTING(p) \
-    (setting_t) { .key = RX_CHANNEL_OUTPUT_PIN_SETTING_KEY(p), .name = NULL, .type = SETTING_TYPE_U8, .flags = SETTING_FLAG_NAME_MAP | SETTING_FLAG_DYNAMIC, .val_names = pwm_channel_names, .unit = NULL, .folder = FOLDER_ID_RX_CHANNEL_OUTPUTS, .min = U8(0), .max = U8(PWM_CHANNEL_COUNT - 1), .def_val = U8(0), .data = setting_format_rx_channel_output }
+#define RX_CHANNEL_OUTPUT_GPIO_USER_SETTING_KEY(p) (SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX #p)
+#define RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(p) \
+    (setting_t) { .key = RX_CHANNEL_OUTPUT_GPIO_USER_SETTING_KEY(p), .name = NULL, .type = SETTING_TYPE_U8, .flags = SETTING_FLAG_NAME_MAP | SETTING_FLAG_DYNAMIC, .val_names = pwm_channel_names, .unit = NULL, .folder = FOLDER_ID_RX_CHANNEL_OUTPUTS, .min = U8(0), .max = U8(PWM_CHANNEL_COUNT - 1), .def_val = U8(0), .data = setting_format_rx_channel_output }
 
 #define RX_FOLDER_ID(n) (0xFF - n)
 
@@ -151,11 +151,11 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
     {
         return SETTING_SHOW_IF(view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
-    if (SETTING_IS(setting, SETTING_KEY_TX_TX_PIN))
+    if (SETTING_IS(setting, SETTING_KEY_TX_TX_GPIO))
     {
         return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_CRSF);
     }
-    if (SETTING_IS(setting, SETTING_KEY_TX_RX_PIN))
+    if (SETTING_IS(setting, SETTING_KEY_TX_RX_GPIO))
     {
         return SETTING_VISIBILITY_HIDE;
     }
@@ -164,12 +164,12 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
 
 static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
-    if (SETTING_IS(setting, SETTING_KEY_RX_TX_PIN))
+    if (SETTING_IS(setting, SETTING_KEY_RX_TX_GPIO))
     {
         return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_RX_RX_PIN))
+    if (SETTING_IS(setting, SETTING_KEY_RX_RX_GPIO))
     {
         return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
     }
@@ -203,8 +203,8 @@ static setting_visibility_e setting_visibility_rx_channel_outputs(folder_id_e fo
     int index = setting_rx_channel_output_get_pos(setting);
     if (index >= 0)
     {
-        int pin = pin_usable_at(index);
-        if (pin >= 0 && pwm_output_can_use_pin(pin))
+        int gpio = hal_gpio_user_at(index);
+        if (gpio != HAL_GPIO_NONE && pwm_output_can_use_gpio(gpio))
         {
             return SETTING_VISIBILITY_SHOW;
         }
@@ -215,13 +215,15 @@ static setting_visibility_e setting_visibility_rx_channel_outputs(folder_id_e fo
 static int setting_format_rx_channel_output(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
 {
     int index = setting_rx_channel_output_get_pos(setting);
+    char gpio_name[HAL_GPIO_NAME_LENGTH];
     if (index >= 0)
     {
-        int pin = pin_usable_at(index);
+        int gpio = hal_gpio_user_at(index);
         switch (fmt)
         {
         case SETTING_DYNAMIC_FORMAT_NAME:
-            return snprintf(buf, size, "Pin %2d", pin);
+            hal_gpio_toa(gpio, gpio_name, sizeof(gpio_name));
+            return snprintf(buf, size, "Pin %s", gpio_name);
         case SETTING_DYNAMIC_FORMAT_VALUE:
             break;
         }
@@ -367,8 +369,8 @@ static const char *view_crsf_input_tx_settings[] = {
 
 static setting_value_t setting_values[SETTING_COUNT];
 
-#define PIN_DEFAULT_TX_IDX PIN_USABLE_GET_IDX(PIN_DEFAULT_TX)
-#define PIN_DEFAULT_RX_IDX PIN_USABLE_GET_IDX(PIN_DEFAULT_RX)
+#define TX_DEFAULT_GPIO_IDX HAL_GPIO_USER_GET_IDX(TX_DEFAULT_GPIO)
+#define RX_DEFAULT_GPIO_IDX HAL_GPIO_USER_GET_IDX(RX_DEFAULT_GPIO)
 
 static const setting_t settings[] = {
     FOLDER("", "Settings", FOLDER_ID_ROOT, 0, setting_visibility_root),
@@ -386,16 +388,16 @@ static const setting_t settings[] = {
     U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),
     STRING_SETTING(SETTING_KEY_TX_PILOT_NAME, "Pilot Name", FOLDER_ID_TX),
     U8_MAP_SETTING(SETTING_KEY_TX_INPUT, "Input", 0, FOLDER_ID_TX, tx_input_table, TX_INPUT_FIRST),
-    PIN_SETTING(SETTING_KEY_TX_TX_PIN, "TX Pin", FOLDER_ID_TX, PIN_DEFAULT_TX_IDX),
-    PIN_SETTING(SETTING_KEY_TX_RX_PIN, "RX Pin", FOLDER_ID_TX, PIN_DEFAULT_RX_IDX),
+    GPIO_USER_SETTING(SETTING_KEY_TX_TX_GPIO, "TX Pin", FOLDER_ID_TX, TX_DEFAULT_GPIO_IDX),
+    GPIO_USER_SETTING(SETTING_KEY_TX_RX_GPIO, "RX Pin", FOLDER_ID_TX, RX_DEFAULT_GPIO_IDX),
 
     FOLDER(SETTING_KEY_RX, "RX", FOLDER_ID_RX, FOLDER_ID_ROOT, setting_visibility_rx),
     U8_MAP_SETTING(SETTING_KEY_RX_SUPPORTED_MODES, "Modes", 0, FOLDER_ID_RX, config_air_modes_table, CONFIG_AIR_MODES_2_5),
     BOOL_YN_SETTING(SETTING_KEY_RX_AUTO_CRAFT_NAME, "Auto Craft Name", 0, FOLDER_ID_RX, true),
     STRING_SETTING(SETTING_KEY_RX_CRAFT_NAME, "Craft Name", FOLDER_ID_RX),
     U8_MAP_SETTING(SETTING_KEY_RX_OUTPUT, "Output", 0, FOLDER_ID_RX, rx_output_table, RX_OUTPUT_MSP),
-    PIN_SETTING(SETTING_KEY_RX_TX_PIN, "TX Pin", FOLDER_ID_RX, PIN_DEFAULT_TX_IDX),
-    PIN_SETTING(SETTING_KEY_RX_RX_PIN, "RX Pin", FOLDER_ID_RX, PIN_DEFAULT_RX_IDX),
+    GPIO_USER_SETTING(SETTING_KEY_RX_TX_GPIO, "TX Pin", FOLDER_ID_RX, TX_DEFAULT_GPIO_IDX),
+    GPIO_USER_SETTING(SETTING_KEY_RX_RX_GPIO, "RX Pin", FOLDER_ID_RX, RX_DEFAULT_GPIO_IDX),
     U8_MAP_SETTING(SETTING_KEY_RX_RSSI_CHANNEL, "RSSI Channel", 0, FOLDER_ID_RX, rssi_channel_table, RX_RSSI_CHANNEL_AUTO),
     BOOL_YN_SETTING(SETTING_KEY_RX_SBUS_INVERTED, "SBUS Inverted", 0, FOLDER_ID_RX, true),
     BOOL_YN_SETTING(SETTING_KEY_RX_SPORT_INVERTED, "S.Port Inverted", 0, FOLDER_ID_RX, true),
@@ -404,22 +406,22 @@ static const setting_t settings[] = {
 
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
     FOLDER(SETTING_KEY_RX_CHANNEL_OUTPUTS, "Channel Outputs", FOLDER_ID_RX_CHANNEL_OUTPUTS, FOLDER_ID_RX, setting_visibility_rx_channel_outputs),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(0),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(1),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(2),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(3),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(4),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(5),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(6),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(7),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(8),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(9),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(10),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(11),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(12),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(13),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(14),
-    RX_CHANNEL_OUTPUT_PIN_SETTING(15),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(0),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(1),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(2),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(3),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(4),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(5),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(6),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(7),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(8),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(9),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(10),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(11),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(12),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(13),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(14),
+    RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(15),
 #endif
 
     FOLDER(SETTING_KEY_SCREEN, "Screen", FOLDER_ID_SCREEN, FOLDER_ID_ROOT, NULL),
@@ -619,12 +621,12 @@ void settings_init(void)
 {
     storage_init(&storage, SETTINGS_STORAGE_KEY);
 
-    // Initialize the pin names
-    for (int ii = 0; ii < PIN_USABLE_COUNT; ii++)
+    // Initialize GPIO names
+    for (int ii = 0; ii < HAL_GPIO_USER_COUNT; ii++)
     {
-        int n = pin_usable_at(ii);
-        snprintf(pin_number_names[ii], sizeof(pin_number_names[ii]), "%2d", n);
-        pin_names[ii] = pin_number_names[ii];
+        hal_gpio_t x = hal_gpio_user_at(ii);
+        hal_gpio_toa(x, gpio_name_storage[ii], sizeof(gpio_name_storage[ii]));
+        gpio_names[ii] = gpio_name_storage[ii];
     }
 
     unsigned string_storage_index = 0;
@@ -727,9 +729,9 @@ uint8_t settings_get_key_u8(const char *key)
     return setting_get_u8(settings_get_key(key));
 }
 
-int settings_get_key_pin_num(const char *key)
+hal_gpio_t settings_get_key_gpio(const char *key)
 {
-    return setting_get_pin_num(settings_get_key(key));
+    return setting_get_gpio(settings_get_key(key));
 }
 
 bool settings_get_key_bool(const char *key)
@@ -928,10 +930,10 @@ void setting_set_u8(const setting_t *setting, uint8_t v)
     }
 }
 
-int setting_get_pin_num(const setting_t *setting)
+hal_gpio_t setting_get_gpio(const setting_t *setting)
 {
-    assert(setting->val_names == pin_names);
-    return pin_usable_at(setting_get_val_ptr(setting)->u8);
+    assert(setting->val_names == gpio_names);
+    return hal_gpio_user_at(setting_get_val_ptr(setting)->u8);
 }
 
 bool setting_get_bool(const setting_t *setting)
@@ -1112,7 +1114,7 @@ int setting_rx_channel_output_get_pos(const setting_t *setting)
     if (setting > folder)
     {
         int index = (setting - folder) - 1;
-        if (index <= PIN_USABLE_COUNT)
+        if (index <= HAL_GPIO_USER_COUNT)
         {
             return index;
         }

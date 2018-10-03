@@ -259,10 +259,10 @@ static void input_crsf_enable_tx(input_crsf_t *input)
     CRSF_UART.int_clr.rxfifo_full = 1;
 
     // Enable TX
-    ESP_ERROR_CHECK(gpio_set_pull_mode(input->pin_num, GPIO_FLOATING));
-    ESP_ERROR_CHECK(gpio_set_level(input->pin_num, 0));
-    ESP_ERROR_CHECK(gpio_set_direction(input->pin_num, GPIO_MODE_OUTPUT));
-    gpio_matrix_out(input->pin_num, CRSF_UART_TX_SIG, false, false);
+    ESP_ERROR_CHECK(gpio_set_pull_mode(input->gpio, GPIO_FLOATING));
+    ESP_ERROR_CHECK(gpio_set_level(input->gpio, 0));
+    ESP_ERROR_CHECK(gpio_set_direction(input->gpio, GPIO_MODE_OUTPUT));
+    gpio_matrix_out(input->gpio, CRSF_UART_TX_SIG, false, false);
 }
 
 static void input_crsf_enable_rx(input_crsf_t *input)
@@ -273,9 +273,9 @@ static void input_crsf_enable_rx(input_crsf_t *input)
     CRSF_UART.int_ena.tx_done = 0;
 
     // Enable RX mode
-    ESP_ERROR_CHECK(gpio_set_direction(input->pin_num, GPIO_MODE_INPUT));
-    ESP_ERROR_CHECK(gpio_set_pull_mode(input->pin_num, GPIO_PULLDOWN_ONLY));
-    gpio_matrix_in(input->pin_num, CRSF_UART_RX_SIG, false);
+    ESP_ERROR_CHECK(gpio_set_direction(input->gpio, GPIO_MODE_INPUT));
+    ESP_ERROR_CHECK(gpio_set_pull_mode(input->gpio, GPIO_PULLDOWN_ONLY));
+    gpio_matrix_in(input->gpio, CRSF_UART_RX_SIG, false);
 
     // Empty RX fifo
     while (CRSF_UART.status.rxfifo_cnt)
@@ -863,9 +863,9 @@ static bool input_crsf_open(void *input, void *config)
     input_crsf->next_resp_frame = TIME_MICROS_MAX;
     input_crsf->enable_rx_deadline = TIME_MICROS_MAX;
     input_crsf->bps_detect_switched = now;
-    input_crsf->pin_num = config_crsf->pin_num;
+    input_crsf->gpio = config_crsf->gpio;
 
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[config_crsf->pin_num], PIN_FUNC_GPIO);
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[config_crsf->gpio], PIN_FUNC_GPIO);
 
     input_crsf_enable_rx(input_crsf);
     // 100ms should be low enough to be detected fast and high enough that
@@ -879,6 +879,8 @@ static bool input_crsf_open(void *input, void *config)
     input_crsf->rmp_port = rmp_open_port(input_crsf->input.rc_data->rmp, 0, input_crsf_rmp_handler, input_crsf);
     memset(input_crsf->rmp_addresses, 0, sizeof(input_crsf->rmp_addresses));
     input_crsf->ping_filter = 0;
+
+    LOG_I(TAG, "Open at GPIO %d", (int)config_crsf->gpio);
 
     return true;
 }

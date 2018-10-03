@@ -98,15 +98,15 @@ static void output_crsf_ping(output_crsf_t *output_crsf)
 static bool output_crsf_open(void *output, void *config)
 {
     output_crsf_config_t *config_crsf = config;
-    LOG_I(TAG, "Open with TX %d, RX %d", (int)config_crsf->tx_pin_num, (int)config_crsf->rx_pin_num);
+    LOG_I(TAG, "Open");
     output_crsf_t *output_crsf = output;
 
-    bool half_duplex = config_crsf->tx_pin_num == config_crsf->rx_pin_num;
+    bool half_duplex = config_crsf->tx == config_crsf->rx;
 
     serial_port_config_t serial_config = {
         .baud_rate = CRSF_RX_BAUDRATE,
-        .tx_pin = config_crsf->tx_pin_num,
-        .rx_pin = config_crsf->rx_pin_num,
+        .tx_pin = config_crsf->tx,
+        .rx_pin = config_crsf->rx,
         .tx_buffer_size = half_duplex ? 0 : CRSF_SERIAL_BUFFER_SIZE,
         .rx_buffer_size = CRSF_SERIAL_BUFFER_SIZE,
         .parity = SERIAL_PARITY_DISABLE,

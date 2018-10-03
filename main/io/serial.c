@@ -5,9 +5,11 @@
 
 #include <driver/uart.h>
 
-#include "io/pins.h"
+#include "io/gpio.h"
 
 #include "util/macros.h"
+
+#include "target.h"
 
 #include "serial.h"
 
@@ -64,7 +66,7 @@ static void serial_half_duplex_enable_tx(serial_port_t *port)
     // Enable TX
     // Map the RX pin to something else, so the data we transmit
     // doesn't get into the RX fifo.
-    gpio_matrix_in(PIN_UNUSED_RX, port->rx_sig, false);
+    gpio_matrix_in(RX_UNUSED_GPIO, port->rx_sig, false);
     gpio_matrix_out(port->config.tx_pin, port->tx_sig, false, false);
 
     port->dev->int_clr.tx_done = 1;
@@ -146,12 +148,12 @@ void serial_port_do_open(serial_port_t *port)
     int tx_pin = port->config.tx_pin;
     if (tx_pin < 0)
     {
-        tx_pin = PIN_UNUSED_TX;
+        tx_pin = TX_UNUSED_GPIO;
     }
     int rx_pin = port->config.rx_pin;
     if (rx_pin < 0)
     {
-        rx_pin = PIN_UNUSED_RX;
+        rx_pin = RX_UNUSED_GPIO;
     }
     int rx_buffer_size = port->config.rx_buffer_size;
     // Must be 129 at least

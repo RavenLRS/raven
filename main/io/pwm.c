@@ -3,7 +3,7 @@
 #include "config/config.h"
 #include "config/settings.h"
 
-#include "io/pins.h"
+#include "io/gpio.h"
 
 #include "util/macros.h"
 
@@ -53,7 +53,7 @@ ARRAY_ASSERT_COUNT(pwm_channel_names, PWM_CHANNEL_COUNT, "invalid pwm_channel_na
 
 typedef struct pwm_output_s
 {
-    int pin;
+    hal_gpio_t gpio;
     int rc_channel;
     uint32_t duty;
     ledc_timer_t timer;
@@ -63,10 +63,10 @@ typedef struct pwm_output_s
 
 static bool pwm_output_is_enabled(const pwm_output_t *output)
 {
-    return output->pin >= 0 && output->rc_channel >= 0;
+    return output->gpio != HAL_GPIO_NONE && output->rc_channel >= 0;
 }
 
-static pwm_output_t pwm_outputs[PIN_USABLE_COUNT];
+static pwm_output_t pwm_outputs[HAL_GPIO_USER_MAX];
 
 void pwm_init(void)
 {
@@ -90,7 +90,7 @@ void pwm_init(void)
     // Initialize all outputs as not ledc-enabled
     for (int ii = 0; ii < ARRAY_COUNT(pwm_outputs); ii++)
     {
-        pwm_outputs[ii].pin = -1;
+        pwm_outputs[ii].gpio = HAL_GPIO_NONE;
     }
     pwm_update_config();
 }
@@ -107,7 +107,7 @@ void pwm_update_config(void)
             break;
         }
         ESP_ERROR_CHECK(ledc_stop(output->timer_mode, output->timer_channel, 0));
-        output->pin = -1;
+        output->gpio = HAL_GPIO_NONE;
     }
     int p = 0;
     ledc_timer_t timer = LEDC_TIMER_0;
@@ -123,8 +123,8 @@ void pwm_update_config(void)
         }
         int pos = setting_rx_channel_output_get_pos(setting);
         ASSERT(pos >= 0);
-        int pin = pin_usable_at(pos);
-        if (!pwm_output_can_use_pin(pin))
+        int gpio = hal_gpio_user_at(pos);
+        if (!pwm_output_can_use_gpio(gpio))
         {
             continue;
         }
@@ -132,12 +132,12 @@ void pwm_update_config(void)
         ledc_channel_config_t ledc_channel = {
             .channel = timer_channel,
             .duty = 0,
-            .gpio_num = pin,
+            .gpio_num = gpio,
             .speed_mode = timer_mode,
             .timer_sel = timer,
         };
         ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
-        output->pin = pin;
+        output->gpio = gpio;
         output->rc_channel = pwm_ch - 1;
         output->duty = 0;
         output->timer = timer;
@@ -154,7 +154,7 @@ void pwm_update_config(void)
     if (p < end)
     {
         // Mark the end
-        pwm_outputs[p].pin = -1;
+        pwm_outputs[p].gpio = HAL_GPIO_NONE;
     }
 }
 
@@ -190,16 +190,16 @@ void pwm_update(const rc_data_t *rc_data)
     }
 }
 
-bool pwm_output_can_use_pin(int pin)
+bool pwm_output_can_use_gpio(hal_gpio_t gpio)
 {
-    if ((PIN_USABLE_MASK & PIN_N(pin)) && config_get_rc_mode() == RC_MODE_RX)
+    if ((HAL_GPIO_USER_MASK & HAL_GPIO_M(gpio)) && config_get_rc_mode() == RC_MODE_RX)
     {
         // Check if the pin is being used as serial IO
         if (config_get_output_type() != RX_OUTPUT_NONE)
         {
-            int tx_pin = settings_get_key_pin_num(SETTING_KEY_RX_TX_PIN);
-            int rx_pin = settings_get_key_pin_num(SETTING_KEY_RX_RX_PIN);
-            if (pin == tx_pin || pin == rx_pin)
+            int tx_gpio = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
+            int rx_gpio = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            if (gpio == tx_gpio || gpio == rx_gpio)
             {
                 return false;
             }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <driver/gpio.h>
+#include <hal/gpio.h>
 
 #include "msp/msp.h"
 #include "msp/msp_serial.h"
@@ -9,8 +9,8 @@
 
 typedef struct output_msp_config_s
 {
-    gpio_num_t tx_pin_num;
-    gpio_num_t rx_pin_num;
+    hal_gpio_t tx;
+    hal_gpio_t rx;
     msp_serial_baudrate_e baud_rate;
 } output_msp_config_t;
 

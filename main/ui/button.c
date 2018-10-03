@@ -1,4 +1,3 @@
-#include <driver/rtc_io.h>
 #include <driver/touch_pad.h>
 
 #include <hal/log.h>
@@ -12,10 +11,10 @@ static const char *TAG = "button";
 #define LONG_PRESS_INTERVAL MILLIS_TO_TICKS(300)
 #define REALLY_LONG_PRESS_INTERVAL MILLIS_TO_TICKS(3000)
 
-static int touch_pad_num_from_pin(int pin)
+static int touch_pad_num_from_gpio(hal_gpio_t gpio)
 {
     // See touch_pad_t
-    switch (pin)
+    switch (gpio)
     {
     case TOUCH_PAD_NUM0_GPIO_NUM:
         return TOUCH_PAD_NUM0;
@@ -47,20 +46,19 @@ static bool button_is_down(button_t *button)
     {
         uint16_t touch_value;
         uint16_t touch_filter_value;
-        int touch_num = touch_pad_num_from_pin(button->pin);
+        int touch_num = touch_pad_num_from_gpio(button->gpio);
         ESP_ERROR_CHECK(touch_pad_read(touch_num, &touch_value));
         ESP_ERROR_CHECK(touch_pad_read_filtered(touch_num, &touch_filter_value));
         return touch_value < 2100;
     }
-    return gpio_get_level(button->pin) == 0;
+    return hal_gpio_get_level(button->gpio) == HAL_GPIO_LOW;
 }
 
 void button_init(button_t *button)
 {
-
     if (button->is_touch)
     {
-        int touch_num = touch_pad_num_from_pin(button->pin);
+        int touch_num = touch_pad_num_from_gpio(button->gpio);
         assert(touch_num >= 0);
         // Enable touch only on this pin
         ESP_ERROR_CHECK(touch_pad_clear_group_mask(TOUCH_PAD_BIT_MASK_MAX, TOUCH_PAD_BIT_MASK_MAX, TOUCH_PAD_BIT_MASK_MAX));
@@ -71,12 +69,9 @@ void button_init(button_t *button)
     }
     else
     {
-        // See https://github.com/espressif/esp-idf/blob/master/docs/api-reference/system/sleep_modes.rst
-        // Pins used for wakeup need to be manually unmapped from RTC
-        ESP_ERROR_CHECK(rtc_gpio_deinit(button->pin));
-
-        ESP_ERROR_CHECK(gpio_set_direction(button->pin, GPIO_MODE_INPUT));
-        ESP_ERROR_CHECK(gpio_set_pull_mode(button->pin, GPIO_PULLUP_ONLY));
+        hal_gpio_enable(button->gpio);
+        hal_gpio_set_dir(button->gpio, HAL_GPIO_DIR_INPUT);
+        hal_gpio_set_pull(button->gpio, HAL_GPIO_PULL_UP);
     }
 
     button->state.is_down = button_is_down(button);
@@ -87,6 +82,8 @@ void button_init(button_t *button)
 
 void button_update(button_t *button)
 {
+    char name[8];
+
     bool is_down = button_is_down(button);
     time_ticks_t now = time_ticks_now();
     if (button->state.ignore)
@@ -109,7 +106,8 @@ void button_update(button_t *button)
         {
             if (!button->state.long_press_sent)
             {
-                LOG_I(TAG, "Long press in %d", button->pin);
+                hal_gpio_toa(button->gpio, name, sizeof(name));
+                LOG_I(TAG, "Long press in %s", name);
                 if (button->long_press_callback)
                 {
                     button->long_press_callback(button->user_data);
@@ -120,7 +118,8 @@ void button_update(button_t *button)
             {
                 if (!button->state.really_long_press_sent)
                 {
-                    LOG_I(TAG, "Really long press in %d", button->pin);
+                    hal_gpio_toa(button->gpio, name, sizeof(name));
+                    LOG_I(TAG, "Really long press in %s", name);
                     if (button->really_long_press_callback)
                     {
                         button->really_long_press_callback(button->user_data);
@@ -134,7 +133,8 @@ void button_update(button_t *button)
     {
         if (button->state.is_down && !button->state.long_press_sent && !button->state.really_long_press_sent)
         {
-            LOG_I(TAG, "Short press in %d", button->pin);
+            hal_gpio_toa(button->gpio, name, sizeof(name));
+            LOG_I(TAG, "Short press in %s", name);
             if (button->press_callback)
             {
                 button->press_callback(button->user_data);

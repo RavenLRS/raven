@@ -5,7 +5,7 @@
 
 #include "config/config.h"
 
-#include "io/pins.h"
+#include "io/gpio.h"
 
 #define SETTING_STRING_MAX_LENGTH 32
 #define SETTING_STRING_BUFFER_SIZE (SETTING_STRING_MAX_LENGTH + 1)
@@ -13,9 +13,9 @@
 #define SETTING_STATIC_COUNT 37
 #define SETTING_RX_COUNT (5 * CONFIG_MAX_PAIRED_RX)
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
-// Use PIN_USABLE_MAX to make sure we have a setting for every possible PWM output.
+// Use HAL_GPIO_USER_MAX to make sure we have a setting for every possible PWM output.
 // +1 accounts for the folder to hold the output settings.
-#define SETTING_PWM_COUNT (1 + PIN_USABLE_MAX)
+#define SETTING_PWM_COUNT (1 + HAL_GPIO_USER_MAX)
 #else
 #define SETTING_PWM_COUNT 0
 #endif
@@ -31,8 +31,8 @@
 #define SETTING_KEY_TX_RF_POWER SETTING_KEY_TX_PREFIX "rf_power"
 #define SETTING_KEY_TX_INPUT SETTING_KEY_TX_PREFIX "input"
 #define SETTING_KEY_TX_PILOT_NAME SETTING_KEY_TX_PREFIX "pilot_name"
-#define SETTING_KEY_TX_TX_PIN SETTING_KEY_TX_PREFIX "tx"
-#define SETTING_KEY_TX_RX_PIN SETTING_KEY_TX_PREFIX "rx"
+#define SETTING_KEY_TX_TX_GPIO SETTING_KEY_TX_PREFIX "tx"
+#define SETTING_KEY_TX_RX_GPIO SETTING_KEY_TX_PREFIX "rx"
 
 #define SETTING_KEY_RX "rx"
 #define SETTING_KEY_RX_PREFIX SETTING_KEY_RX "."
@@ -40,8 +40,8 @@
 #define SETTING_KEY_RX_AUTO_CRAFT_NAME SETTING_KEY_RX_PREFIX "auto_craft_name"
 #define SETTING_KEY_RX_CRAFT_NAME SETTING_KEY_RX_PREFIX "craft_name"
 #define SETTING_KEY_RX_OUTPUT SETTING_KEY_RX_PREFIX "output"
-#define SETTING_KEY_RX_TX_PIN SETTING_KEY_RX_PREFIX "tx"
-#define SETTING_KEY_RX_RX_PIN SETTING_KEY_RX_PREFIX "rx"
+#define SETTING_KEY_RX_TX_GPIO SETTING_KEY_RX_PREFIX "tx"
+#define SETTING_KEY_RX_RX_GPIO SETTING_KEY_RX_PREFIX "rx"
 #define SETTING_KEY_RX_RSSI_CHANNEL SETTING_KEY_RX_PREFIX "rssi_ch"
 #define SETTING_KEY_RX_SBUS_INVERTED SETTING_KEY_RX_PREFIX "sbus_inverted"
 #define SETTING_KEY_RX_SPORT_INVERTED SETTING_KEY_RX_PREFIX "sport_inverted"
@@ -188,7 +188,7 @@ int settings_get_count(void);
 const setting_t *settings_get_setting_at(int idx);
 const setting_t *settings_get_key(const char *key);
 uint8_t settings_get_key_u8(const char *key);
-int settings_get_key_pin_num(const char *key);
+hal_gpio_t settings_get_key_gpio(const char *key);
 bool settings_get_key_bool(const char *key);
 const char *settings_get_key_string(const char *key);
 const setting_t *settings_get_key_idx(const char *key, int *idx);
@@ -203,7 +203,7 @@ int32_t setting_get_max(const setting_t *setting);
 int32_t setting_get_default(const setting_t *setting);
 uint8_t setting_get_u8(const setting_t *setting);
 void setting_set_u8(const setting_t *setting, uint8_t v);
-int setting_get_pin_num(const setting_t *setting);
+hal_gpio_t setting_get_gpio(const setting_t *setting);
 bool setting_get_bool(const setting_t *setting);
 void setting_set_bool(const setting_t *setting, bool v);
 const char *setting_get_string(const setting_t *setting);

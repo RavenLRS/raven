@@ -6,6 +6,7 @@
 
 #include "config/settings.h"
 
+#include "io/gpio.h"
 #include "io/serial.h"
 
 #include "input/input.h"
@@ -28,7 +29,7 @@ typedef enum
 typedef struct input_crsf_config_s
 {
     // CRSF input from radio is always half duplex inverted
-    int pin_num;
+    hal_gpio_t gpio;
 } input_crsf_config_t;
 
 // Used to map air_addr_t to just one byte for CRSF and storing
@@ -56,7 +57,7 @@ typedef struct input_crsf_s
     unsigned baud_rate;
     crsf_port_t crsf;
     uart_isr_handle_t isr_handle;
-    int pin_num;
+    hal_gpio_t gpio;
     unsigned telemetry_pos;
     const rmp_port_t *rmp_port;
     input_crsf_addr_t rmp_addresses[CRSF_INPUT_ADDR_LIST_SIZE];

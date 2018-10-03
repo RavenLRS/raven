@@ -262,8 +262,8 @@ static bool output_msp_open(void *output, void *config)
 
     serial_port_config_t serial_config = {
         .baud_rate = msp_serial_baudrate_get(cfg->baud_rate),
-        .tx_pin = cfg->tx_pin_num,
-        .rx_pin = cfg->rx_pin_num,
+        .tx_pin = cfg->tx,
+        .rx_pin = cfg->rx,
         .tx_buffer_size = 256,
         .rx_buffer_size = MSP_MAX_PAYLOAD_SIZE * 2,
         .parity = SERIAL_PARITY_DISABLE,

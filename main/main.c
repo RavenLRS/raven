@@ -1,11 +1,10 @@
 #include <stdio.h>
 
+#include <hal/init.h>
 #include <hal/log.h>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-
-#include <driver/dac.h>
 
 #include <esp_ota_ops.h>
 #include <esp_task_wdt.h>
@@ -43,12 +42,12 @@
 static const char *TAG = "main";
 
 static air_radio_t radio = {
-    .sx127x.mosi = PIN_SX127X_MOSI,
-    .sx127x.miso = PIN_SX127X_MISO,
-    .sx127x.sck = PIN_SX127X_SCK,
-    .sx127x.cs = PIN_SX127X_CS,
-    .sx127x.rst = PIN_SX127X_RST,
-    .sx127x.dio0 = PIN_SX127X_DIO0,
+    .sx127x.mosi = SX127X_GPIO_MOSI,
+    .sx127x.miso = SX127X_GPIO_MISO,
+    .sx127x.sck = SX127X_GPIO_SCK,
+    .sx127x.cs = SX127X_GPIO_CS,
+    .sx127x.rst = SX127X_GPIO_RST,
+    .sx127x.dio0 = SX127X_GPIO_DIO0,
     .sx127x.output_type = SX127X_OUTPUT_TYPE,
 };
 
@@ -75,17 +74,17 @@ static void setting_changed(const setting_t *setting, void *user_data)
 void raven_ui_init(void)
 {
     ui_config_t cfg = {
-        .button = PIN_BUTTON_1,
-#if defined(PIN_BUTTON_1_IS_TOUCH)
+        .button = BUTTON_1_GPIO,
+#if defined(BUTTON_1_GPIO_IS_TOUCH)
         .button_is_touch = true,
 #else
         .button_is_touch = false,
 #endif
-        .beeper = PIN_BEEPER,
+        .beeper = BEEPER_GPIO,
 #ifdef USE_SCREEN
-        .screen.sda = PIN_SCREEN_SDA,
-        .screen.scl = PIN_SCREEN_SCL,
-        .screen.rst = PIN_SCREEN_RST,
+        .screen.sda = SCREEN_GPIO_SDA,
+        .screen.scl = SCREEN_GPIO_SCL,
+        .screen.rst = SCREEN_GPIO_RST,
         .screen.addr = SCREEN_I2C_ADDR,
 #endif
     };
@@ -140,6 +139,8 @@ void task_rc_update(void *arg)
 
 void app_main()
 {
+    hal_init();
+
     const esp_partition_t *boot_partition = esp_ota_get_boot_partition();
     if (boot_partition)
     {
@@ -150,11 +151,6 @@ void app_main()
 
     config_init();
     settings_add_listener(setting_changed, NULL);
-
-    // Disable DAC output on GPIO25 and GPIO26. It's enabled by default and
-    // can alter the output levels otherwise.
-    ESP_ERROR_CHECK(dac_output_disable(DAC_CHANNEL_1));
-    ESP_ERROR_CHECK(dac_output_disable(DAC_CHANNEL_2));
 
     air_addr_t addr = config_get_addr();
     rmp_init(&rmp, &addr);
