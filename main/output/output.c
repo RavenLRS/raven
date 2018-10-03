@@ -261,7 +261,7 @@ bool output_open(rc_data_t *data, output_t *output, void *config)
 bool output_update(output_t *output, time_micros_t now)
 {
     bool updated = false;
-    if (output)
+    if (output && output->is_open)
     {
         // Update RC control
         bool update_rc = false;
