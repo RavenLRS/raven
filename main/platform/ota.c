@@ -41,6 +41,12 @@ static ota_status_t status;
 
 void ota_init(void)
 {
+    const esp_partition_t *boot_partition = esp_ota_get_boot_partition();
+    if (boot_partition)
+    {
+        LOG_I(TAG, "Booted from partition %s", boot_partition->label);
+    }
+
     memset(&status, 0, sizeof(status));
 }
 

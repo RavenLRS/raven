@@ -6,7 +6,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <esp_ota_ops.h>
 #include <esp_task_wdt.h>
 
 #include <soc/timer_group_reg.h>
@@ -38,8 +37,6 @@
 #include "ui/ui.h"
 
 #include "util/time.h"
-
-static const char *TAG = "main";
 
 static air_radio_t radio = {
     .sx127x.mosi = SX127X_GPIO_MOSI,
@@ -140,12 +137,6 @@ void task_rc_update(void *arg)
 void app_main()
 {
     hal_init();
-
-    const esp_partition_t *boot_partition = esp_ota_get_boot_partition();
-    if (boot_partition)
-    {
-        LOG_I(TAG, "Booted from partition %s", boot_partition->label);
-    }
 
     ota_init();
 
