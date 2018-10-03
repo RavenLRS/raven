@@ -153,7 +153,9 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
     }
     if (SETTING_IS(setting, SETTING_KEY_TX_TX_GPIO))
     {
-        return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_CRSF);
+        // Don't allow changing the TX pin from the CRSF configuration scripts
+        // since it will break communication.
+        return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_CRSF && view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
     if (SETTING_IS(setting, SETTING_KEY_TX_RX_GPIO))
     {
