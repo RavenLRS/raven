@@ -2,8 +2,6 @@
 
 #include <stdint.h>
 
-#include <driver/uart.h>
-
 #include "config/settings.h"
 
 #include "io/gpio.h"
@@ -49,14 +47,13 @@ typedef struct input_crsf_s
     input_t input;
     serial_port_t *serial_port;
     crsf_input_bps_e bps;
-    time_micros_t last_isr;
+    time_micros_t last_byte_at;
     time_micros_t last_frame_recv;
     time_micros_t next_resp_frame;
     time_micros_t enable_rx_deadline;
     time_micros_t bps_detect_switched;
     unsigned baud_rate;
     crsf_port_t crsf;
-    uart_isr_handle_t isr_handle;
     hal_gpio_t gpio;
     unsigned telemetry_pos;
     const rmp_port_t *rmp_port;
