@@ -15,6 +15,9 @@ GIT_REVISION := $(shell git rev-parse --short HEAD)
 
 CPPFLAGS += -DGIT_REVISION=\"$(GIT_REVISION)\" -DVERSION=\"$(VERSION)\"
 
+PLATFORM_VARIANT_SEPARATOR 	:= _
+INVALID_TARGET 				:= <invalid>
+
 # Platform/targets setup
 ROOT           			:= $(abspath $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST)))))
 export ROOT
@@ -31,8 +34,12 @@ VALID_VARIANTS	 		= $(dir $(wildcard $(VARIANTS_DIR)/*/sdkconfig))
 VALID_VARIANTS			:= $(subst /,,$(subst $(VARIANTS_DIR)/,,$(VALID_VARIANTS)))
 VALID_VARIANTS			:= $(sort $(VALID_VARIANTS))
 
-make_target				= $(platform)_$(variant)
+# By default, all platforms support all variants. Platforms that support only some variants
+# can include a variants file with one supported variant per line.
+variants_file			= $(PLATFORMS_DIR)/$(platform)/variants
+make_target				= $(if $(shell grep ^$(variant)$$ $(variants_file) 2> /dev/null || (test ! -f $(variants_file) && echo $(variant))),$(platform)$(PLATFORM_VARIANT_SEPARATOR)$(variant),$(INVALID_TARGET))
 VALID_TARGETS			:= $(foreach platform,$(VALID_PLATFORMS),$(foreach variant,$(VALID_VARIANTS),$(make_target)))
+VALID_TARGETS			:= $(filter-out $(INVALID_TARGET),$(VALID_TARGETS))
 
 TARGETS_FILTER ?=
 
@@ -52,6 +59,9 @@ CPPFLAGS += -I$(TARGET_DIR)
 .PHONY: raven-help $(TARGET)
 
 ifneq ($(TARGET),)
+ifeq ($(filter $(TARGET),$(VALID_TARGETS)),)
+$(error $(TARGET) is not a valid target. See make help.)
+endif
 TARGET_COMPONENTS	:= $(subst _, ,$(TARGET))
 BASE_PLATFORM 		:= $(firstword $(TARGET_COMPONENTS))
 VARIANT				:= $(lastword $(TARGET_COMPONENTS))
