@@ -2,14 +2,10 @@
 
 #include <hal/init.h>
 #include <hal/log.h>
+#include <hal/wd.h>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-
-#include <esp_task_wdt.h>
-
-#include <soc/timer_group_reg.h>
-#include <soc/timer_group_struct.h>
 
 #include "target.h"
 
@@ -122,15 +118,11 @@ void task_rc_update(void *arg)
     // are fired in the same CPU as this task.
     air_radio_init(&radio);
     // Enable the WDT for this task
-    ESP_ERROR_CHECK(esp_task_wdt_add(NULL));
+    hal_wd_add_task(NULL);
     for (;;)
     {
         rc_update(&rc);
-        // Feed the WTD using the registers directly. Otherwise
-        // we take too long here.
-        TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
-        TIMERG0.wdt_feed = 1;
-        TIMERG0.wdt_wprotect = 0;
+        hal_wd_feed();
     }
 }
 
