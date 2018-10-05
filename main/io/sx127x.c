@@ -2,13 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-
-#include <esp_heap_caps.h>
-#include <esp_system.h>
-
-#include <driver/spi_master.h>
+#include <os/os.h>
 
 #include <hal/gpio.h>
 #include <hal/log.h>
@@ -155,40 +149,17 @@ static void sx127x_set_fsk_parameters(sx127x_t *sx127x);
 static void sx127x_fsk_wait_for_mode_ready(sx127x_t *sx127x);
 static void sx127x_set_fsk_sync_word(sx127x_t *sx127x);
 
-static esp_err_t spi_device_transmit_sync(spi_device_handle_t handle, spi_transaction_t *trans_desc)
-{
-    // Just a wrapper for now
-    return spi_device_transmit(handle, trans_desc);
-}
-
 static uint8_t sx127x_read_reg(sx127x_t *sx127x, uint8_t addr)
 {
-    spi_transaction_t t;
-    t.cmd = 0;
-    t.addr = addr;
-    t.length = 8; // Send 8 arbitrary bits to get one byte back in full duplex
-    t.rxlength = 0;
-    t.flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA;
-    ESP_ERROR_CHECK(spi_device_transmit_sync(sx127x->state.spi, &t));
-    return t.rx_data[0];
-}
-
-static inline void sx127x_write_prepare_spi_transaction(spi_transaction_t *t, uint8_t addr, uint8_t value)
-{
-    t->cmd = 1;
-    t->addr = addr;
-    t->length = 8; // Value byte is 8 bits
-    t->rxlength = 0;
-    t->flags = SPI_TRANS_USE_TXDATA;
-    t->tx_data[0] = value;
-    t->rx_buffer = NULL;
+    // Send 8 arbitrary bits to get one byte back in full duplex
+    uint8_t out;
+    HAL_ERR_ASSERT_OK(hal_spi_device_transmit_u8(&sx127x->state.spi, 0, addr, 0, &out));
+    return out;
 }
 
 static void sx127x_write_reg(sx127x_t *sx127x, uint8_t addr, uint8_t value)
 {
-    spi_transaction_t t;
-    sx127x_write_prepare_spi_transaction(&t, addr, value);
-    ESP_ERROR_CHECK(spi_device_transmit_sync(sx127x->state.spi, &t));
+    HAL_ERR_ASSERT_OK(hal_spi_device_transmit_u8(&sx127x->state.spi, 1, addr, value, NULL));
 }
 
 static void sx127x_set_mode(sx127x_t *sx127x, uint8_t mode)
@@ -270,10 +241,7 @@ static void IRAM_ATTR lora_handle_isr(void *arg)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     vTaskNotifyGiveFromISR(callback_task_handle, &xHigherPriorityTaskWoken);
-    if (xHigherPriorityTaskWoken)
-    {
-        portYIELD_FROM_ISR();
-    }
+    portYIELD_FROM_ISR_IF(xHigherPriorityTaskWoken);
 }
 
 static void sx127x_disable_dio0(sx127x_t *sx127x)
@@ -294,33 +262,25 @@ static void sx127x_disable_dio0(sx127x_t *sx127x)
 
 void sx127x_init(sx127x_t *sx127x)
 {
-    hal_gpio_enable(sx127x->rst);
-    hal_gpio_set_dir(sx127x->rst, HAL_GPIO_DIR_OUTPUT);
-    hal_gpio_set_level(sx127x->rst, HAL_GPIO_LOW);
+    HAL_ERR_ASSERT_OK(hal_gpio_enable(sx127x->rst));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_dir(sx127x->rst, HAL_GPIO_DIR_OUTPUT));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rst, HAL_GPIO_LOW));
     vTaskDelay(20 / portTICK_PERIOD_MS);
-    hal_gpio_set_level(sx127x->rst, HAL_GPIO_HIGH);
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rst, HAL_GPIO_HIGH));
     vTaskDelay(50 / portTICK_PERIOD_MS);
 
-    spi_bus_config_t buscfg = {
-        .miso_io_num = sx127x->miso,
-        .mosi_io_num = sx127x->mosi,
-        .sclk_io_num = sx127x->sck,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 0,
-    };
-    spi_device_interface_config_t devcfg;
-    memset(&devcfg, 0, sizeof(devcfg));
-    devcfg.command_bits = 1;                 // 1 command bit, 1 => write, 0 => read
-    devcfg.address_bits = 7;                 // 7 addr bits
-    devcfg.clock_speed_hz = 9 * 1000 * 1000; // Clock out at 9 MHz: XXX => 10Mhz will cause incorrect reads from REG_MODEM_CONFIG_1
-    devcfg.mode = 0;                         // SPI mode 0
-    devcfg.spics_io_num = sx127x->cs;        // CS pin
-    devcfg.queue_size = 4;
     //Initialize the SPI bus
-    ESP_ERROR_CHECK(spi_bus_initialize(VSPI_HOST, &buscfg, 1));
+    HAL_ERR_ASSERT_OK(hal_spi_bus_init(sx127x->spi_bus, sx127x->miso, sx127x->mosi, sx127x->sck));
+
     // Attach the device
-    ESP_ERROR_CHECK(spi_bus_add_device(VSPI_HOST, &devcfg, &sx127x->state.spi));
+    hal_spi_device_config_t cfg = {
+        .command_bits = 1,                 // 1 command bit, 1 => write, 0 => read
+        .address_bits = 7,                 // 7 addr bits
+        .clock_speed_hz = 9 * 1000 * 1000, // Clock out at 9 MHz: XXX => 10Mhz will cause incorrect reads from REG_MODEM_CONFIG_1
+        .cs = sx127x->cs,                  // CS pin
+    };
+
+    HAL_ERR_ASSERT_OK(hal_spi_bus_add_device(sx127x->spi_bus, &cfg, &sx127x->state.spi));
 
     sx127x->state.tx_done = false;
     sx127x->state.rx_done = false;
@@ -380,10 +340,10 @@ void sx127x_init(sx127x_t *sx127x)
     sx127x_idle(sx127x);
 
     // configure pin for ISR
-    hal_gpio_enable(sx127x->dio0);
-    hal_gpio_set_dir(sx127x->dio0, HAL_GPIO_DIR_INPUT);
-    hal_gpio_set_pull(sx127x->dio0, HAL_GPIO_PULL_NONE);
-    hal_gpio_set_isr(sx127x->dio0, HAL_GPIO_INTR_POSEDGE, lora_handle_isr, sx127x);
+    HAL_ERR_ASSERT_OK(hal_gpio_enable(sx127x->dio0));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_dir(sx127x->dio0, HAL_GPIO_DIR_INPUT));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_pull(sx127x->dio0, HAL_GPIO_PULL_NONE));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_isr(sx127x->dio0, HAL_GPIO_INTR_POSEDGE, lora_handle_isr, sx127x));
 
     sx127x_disable_dio0(sx127x);
 }
@@ -579,15 +539,7 @@ void sx127x_send(sx127x_t *sx127x, const void *buf, size_t size)
     }
 
     // Write payload
-    spi_transaction_t t;
-    t.cmd = 1;
-    t.addr = REG_FIFO;
-    t.length = ptr_size * 8;
-    t.rxlength = 0;
-    t.rx_buffer = NULL;
-    t.tx_buffer = ptr;
-    t.flags = 0;
-    ESP_ERROR_CHECK(spi_device_transmit_sync(sx127x->state.spi, &t));
+    HAL_ERR_ASSERT_OK(hal_spi_device_transmit(&sx127x->state.spi, 1, REG_FIFO, ptr, ptr_size, NULL, 0));
 
     // Update length
     sx127x_set_payload_size(sx127x, size);
@@ -636,17 +588,7 @@ size_t sx127x_read(sx127x_t *sx127x, void *buf, size_t size)
         ptr = data;
         ptr_size = FEC_ENCODED_SIZE(size);
     }
-    // For these small transfers, allocating DMA enabled
-    // memory actually makes things a bit slower.
-    spi_transaction_t t;
-    t.flags = 0;
-    t.cmd = 0;
-    t.addr = REG_FIFO;
-    t.length = ptr_size * 8;
-    t.rxlength = 0;
-    t.tx_buffer = NULL;
-    t.rx_buffer = ptr;
-    ESP_ERROR_CHECK(spi_device_transmit_sync(sx127x->state.spi, &t));
+    HAL_ERR_ASSERT_OK(hal_spi_device_transmit(&sx127x->state.spi, 0, REG_FIFO, NULL, ptr_size, ptr, 0));
     sx127x->state.rx_done = false;
 
     switch (sx127x->state.op_mode)
@@ -707,7 +649,7 @@ void sx127x_set_callback(sx127x_t *sx127x, air_radio_callback_t callback, void *
 
 int sx127x_frequency_error(sx127x_t *sx127x)
 {
-    spi_transaction_t t;
+    uint8_t rx_data[3];
     switch (sx127x->state.op_mode)
     {
     case SX127X_OP_MODE_FSK:
@@ -715,15 +657,8 @@ int sx127x_frequency_error(sx127x_t *sx127x)
         return 0;
         // This doesn't work properly in FSK mode
 #if 0
-        t.cmd = 0;
-        t.addr = REG_FSK_FEI_MSB;
-        t.length = 16;
-        t.rxlength = 0;
-        t.tx_buffer = NULL;
-        t.flags = SPI_TRANS_USE_RXDATA;
-        ESP_ERROR_CHECK(spi_device_transmit_sync(sx127x->state.spi, &t));
-
-        int16_t err = t.rx_data[0] << 8 | t.rx_data[1];
+        HAL_ERR_ASSERT_OK(hal_spi_device_transmit(&sx127x->state.spi, 0, REG_FSK_FEI_MSB, NULL, 2, rx_data, 0));
+        int16_t err = rx_data[0] << 8 | rx_data[1];
         float ferr = err * SX127X_FSK_FREQ_STEP;
         // Sometimes we get values like +-2MHz, which seem
         // incorrect. To workaround this, ignore values bigger
@@ -734,16 +669,9 @@ int sx127x_frequency_error(sx127x_t *sx127x)
     case SX127X_OP_MODE_LORA:
     {
         // Read all 3 registers in a single SPI transaction
-        t.cmd = 0;
-        t.addr = REG_LORA_FEI_MSB;
-        t.length = 24;
-        t.rxlength = 0;
-        t.tx_buffer = NULL;
-        t.flags = SPI_TRANS_USE_RXDATA;
-        ESP_ERROR_CHECK(spi_device_transmit_sync(sx127x->state.spi, &t));
+        HAL_ERR_ASSERT_OK(hal_spi_device_transmit(&sx127x->state.spi, 0, REG_LORA_FEI_MSB, NULL, 3, rx_data, 0));
 
-        int32_t err = t.rx_data[0] << 16 | t.rx_data[1] << 8 | t.rx_data[2];
-        // Sign extend 20 bit 2's complement to 32 bit
+        int32_t err = rx_data[0] << 16 | rx_data[1] << 8 | rx_data[2];
         if (err & 0x80000)
         {
             err |= 0xfff00000;
@@ -793,6 +721,8 @@ int sx127x_rx_sensitivity(sx127x_t *sx127x)
 
 int sx127x_rssi(sx127x_t *sx127x, int *snr, int *lq)
 {
+    uint8_t rx_data[2];
+
     int rssi_max_dbm = 0;
     int rssi_value = 0;
     int snr_value = 0;
@@ -809,16 +739,10 @@ int sx127x_rssi(sx127x_t *sx127x, int *snr, int *lq)
     case SX127X_OP_MODE_LORA:
     {
         rssi_max_dbm = 1;
-        spi_transaction_t t;
-        t.cmd = 0;
-        t.addr = REG_LORA_PKT_SNR_VALUE;
-        t.length = 16;
-        t.rxlength = 0;
-        t.tx_buffer = NULL;
-        t.flags = SPI_TRANS_USE_RXDATA;
-        ESP_ERROR_CHECK(spi_device_transmit_sync(sx127x->state.spi, &t));
-        snr_value = (int8_t)t.rx_data[0];
-        uint8_t raw_rssi = t.rx_data[1];
+        HAL_ERR_ASSERT_OK(hal_spi_device_transmit(&sx127x->state.spi, 0, REG_LORA_PKT_SNR_VALUE, NULL, sizeof(rx_data), rx_data, 0));
+
+        snr_value = (int8_t)rx_data[0];
+        uint8_t raw_rssi = rx_data[1];
         int min_rssi = sx127x_lora_min_rssi(sx127x);
         if (snr_value >= 0)
         {

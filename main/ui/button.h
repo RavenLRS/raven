@@ -5,6 +5,8 @@
 
 #include <hal/gpio.h>
 
+#include "target.h"
+
 typedef struct button_state_s
 {
     bool is_down;
@@ -17,7 +19,9 @@ typedef struct button_state_s
 typedef struct button_s
 {
     hal_gpio_t gpio;
+#if defined(USE_TOUCH_BUTTON)
     bool is_touch;
+#endif
     void *user_data;
     void (*press_callback)(void *data);
     void (*long_press_callback)(void *data);

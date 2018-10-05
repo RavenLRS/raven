@@ -301,17 +301,7 @@ uint8_t crsf_frame_total_size(crsf_frame_t *frame);
 uint8_t crsf_ext_frame_payload_size(crsf_ext_frame_t *frame);
 inline crsf_ext_frame_t *crsf_frame_to_ext(crsf_frame_t *frame) { return (crsf_ext_frame_t *)frame; }
 inline crsf_frame_t *crsf_ext_frame_to_frame(crsf_ext_frame_t *frame) { return (crsf_frame_t *)frame; }
-inline crsf_device_info_tail_t *crsf_device_info_get_tail(crsf_device_info_t *info)
-{
-    for (int ii = 0; ii < sizeof(info->name); ii++)
-    {
-        if (info->name[ii] == '\0')
-        {
-            return (crsf_device_info_tail_t *)&info->name[ii + 1];
-        }
-    }
-    return NULL;
-}
+crsf_device_info_tail_t *crsf_device_info_get_tail(crsf_device_info_t *info);
 
 inline unsigned channel_from_crsf_value(unsigned crsf_val) { return crsf_val; }
 inline unsigned channel_to_crsf_value(unsigned val) { return val; }
@@ -330,25 +320,7 @@ typedef struct crsf_port_s
 void crsf_port_init(crsf_port_t *port, io_t *io, crsf_frame_f frame_callback, void *callback_data);
 int crsf_port_write(crsf_port_t *port, crsf_frame_t *frame);
 bool crsf_port_read(crsf_port_t *port);
-
-inline bool crsf_port_push(crsf_port_t *port, uint8_t c)
-{
-    if (port->buf_pos < sizeof(port->buf))
-    {
-        port->buf[port->buf_pos++] = c;
-        return true;
-    }
-    return false;
-}
-
+bool crsf_port_push(crsf_port_t *port, uint8_t c);
 bool crsf_port_decode(crsf_port_t *port);
-
-inline bool crsf_port_has_buffered_data(crsf_port_t *port)
-{
-    return port->buf_pos > 0 && port->buf_pos < sizeof(port->buf);
-}
-
-inline void crsf_port_reset(crsf_port_t *port)
-{
-    port->buf_pos = 0;
-}
+bool crsf_port_has_buffered_data(crsf_port_t *port);
+void crsf_port_reset(crsf_port_t *port);

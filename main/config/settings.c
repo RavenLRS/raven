@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -37,7 +38,9 @@ static char settings_string_storage[2][SETTING_STRING_BUFFER_SIZE];
 #define SETTING_SHOW_IF_SCREEN(view_id) SETTING_SHOW_IF(view_id == SETTINGS_VIEW_MENU && system_has_flag(SYSTEM_FLAG_SCREEN))
 
 static const char *off_on_table[] = {"Off", "On"};
+#if defined(USE_RX_SUPPORT)
 static const char *no_yes_table[] = {"No", "Yes"};
+#endif
 static char gpio_name_storage[HAL_GPIO_USER_COUNT][HAL_GPIO_NAME_LENGTH];
 static const char *gpio_names[HAL_GPIO_USER_COUNT];
 
@@ -145,6 +148,7 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
     return SETTING_VISIBILITY_SHOW;
 }
 
+#if defined(USE_TX_SUPPORT)
 static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     if (SETTING_IS(setting, SETTING_KEY_TX_INPUT))
@@ -163,7 +167,9 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
     }
     return SETTING_VISIBILITY_SHOW;
 }
+#endif
 
+#if defined(USE_RX_SUPPORT)
 static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     if (SETTING_IS(setting, SETTING_KEY_RX_TX_GPIO))
@@ -198,6 +204,7 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
 
     return SETTING_VISIBILITY_SHOW;
 }
+#endif
 
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
 static setting_visibility_e setting_visibility_rx_channel_outputs(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
@@ -235,6 +242,7 @@ static int setting_format_rx_channel_output(char *buf, size_t size, const settin
 
 #endif
 
+#if defined(USE_TX_SUPPORT)
 static setting_visibility_e setting_visibility_receivers(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     int rx_num = setting_receiver_get_rx_num(setting);
@@ -274,6 +282,7 @@ static int setting_format_rx_addr(char *buf, size_t size, const setting_t *setti
     }
     return 0;
 }
+#endif
 
 #if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
 static const char *mode_table[] = {"TX", "RX"};
@@ -304,7 +313,9 @@ static const char *air_band_table[] = {
 #endif
 };
 _Static_assert(ARRAY_COUNT(air_band_table) == CONFIG_AIR_BAND_COUNT, "Invalid air band names table");
+#if defined(USE_TX_SUPPORT)
 static const char *tx_input_table[] = {"CRSF", "Test"};
+#endif
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");
 // Keep in sync with config_air_mode_e
@@ -318,6 +329,7 @@ static const char *config_air_modes_table[] = {
     "5 (9Hz)",
 };
 _Static_assert(ARRAY_COUNT(config_air_modes_table) == CONFIG_AIR_MODES_COUNT, "CONFIG_AIR_MODES_COUNT is invalid");
+#if defined(USE_RX_SUPPORT)
 static const char *rx_output_table[] = {"MSP", "CRSF", "FPort", "SBUS/Smartport", "Channels"};
 static const char *msp_baudrate_table[] = {"115200"};
 static const char *rssi_channel_table[] = {
@@ -350,9 +362,12 @@ static const char *rssi_channel_table[] = {
 #endif
 #endif
 };
+#endif
+#if defined(USE_SCREEN)
 static const char *screen_orientation_table[] = {"Horizontal", "Horizontal (buttons at the right)", "Vertical", "Vertical (buttons on top)"};
 static const char *screen_brightness_table[] = {"Low", "Medium", "High"};
 static const char *screen_autopoweroff_table[] = {"Disabled", "30 sec", "1 min", "5 min", "10 min"};
+#endif
 
 static const char *view_crsf_input_tx_settings[] = {
     "",
@@ -382,13 +397,16 @@ static const setting_t settings[] = {
     BOOL_SETTING(SETTING_KEY_BIND, "Bind", SETTING_FLAG_EPHEMERAL, FOLDER_ID_ROOT, false),
     U8_MAP_SETTING(SETTING_KEY_AIR_BAND, "Band", 0, FOLDER_ID_ROOT, air_band_table, CONFIG_AIR_BAND_DEFAULT),
 
+#if defined(USE_TX_SUPPORT)
     FOLDER(SETTING_KEY_TX, "TX", FOLDER_ID_TX, FOLDER_ID_ROOT, setting_visibility_tx),
     U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),
     STRING_SETTING(SETTING_KEY_TX_PILOT_NAME, "Pilot Name", FOLDER_ID_TX),
     U8_MAP_SETTING(SETTING_KEY_TX_INPUT, "Input", 0, FOLDER_ID_TX, tx_input_table, TX_INPUT_FIRST),
     GPIO_USER_SETTING(SETTING_KEY_TX_TX_GPIO, "TX Pin", FOLDER_ID_TX, TX_DEFAULT_GPIO_IDX),
     GPIO_USER_SETTING(SETTING_KEY_TX_RX_GPIO, "RX Pin", FOLDER_ID_TX, RX_DEFAULT_GPIO_IDX),
+#endif
 
+#if defined(USE_RX_SUPPORT)
     FOLDER(SETTING_KEY_RX, "RX", FOLDER_ID_RX, FOLDER_ID_ROOT, setting_visibility_rx),
     U8_MAP_SETTING(SETTING_KEY_RX_SUPPORTED_MODES, "Modes", 0, FOLDER_ID_RX, config_air_modes_table, CONFIG_AIR_MODES_2_5),
     BOOL_YN_SETTING(SETTING_KEY_RX_AUTO_CRAFT_NAME, "Auto Craft Name", 0, FOLDER_ID_RX, true),
@@ -401,6 +419,7 @@ static const setting_t settings[] = {
     BOOL_YN_SETTING(SETTING_KEY_RX_SPORT_INVERTED, "S.Port Inverted", 0, FOLDER_ID_RX, true),
     U8_MAP_SETTING(SETTING_KEY_RX_MSP_BAUDRATE, "MSP Baudrate", 0, FOLDER_ID_RX, msp_baudrate_table, MSP_SERIAL_BAUDRATE_FIRST),
     BOOL_YN_SETTING(SETTING_KEY_RX_FPORT_INVERTED, "FPort Inverted", 0, FOLDER_ID_RX, false),
+#endif
 
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
     FOLDER(SETTING_KEY_RX_CHANNEL_OUTPUTS, "Channel Outputs", FOLDER_ID_RX_CHANNEL_OUTPUTS, FOLDER_ID_RX, setting_visibility_rx_channel_outputs),
@@ -422,11 +441,14 @@ static const setting_t settings[] = {
     RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(15),
 #endif
 
+#if defined(USE_SCREEN)
     FOLDER(SETTING_KEY_SCREEN, "Screen", FOLDER_ID_SCREEN, FOLDER_ID_ROOT, NULL),
     U8_MAP_SETTING(SETTING_KEY_SCREEN_ORIENTATION, "Orientation", 0, FOLDER_ID_SCREEN, screen_orientation_table, SCREEN_ORIENTATION_DEFAULT),
     U8_MAP_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, "Brightness", 0, FOLDER_ID_SCREEN, screen_brightness_table, SCREEN_BRIGHTNESS_DEFAULT),
     U8_MAP_SETTING(SETTING_KEY_SCREEN_AUTO_OFF, "Auto Off", 0, FOLDER_ID_SCREEN, screen_autopoweroff_table, UI_SCREEN_AUTOOFF_DEFAULT),
+#endif
 
+#if defined(USE_TX_SUPPORT)
     FOLDER(SETTING_KEY_RECEIVERS, "Receivers", FOLDER_ID_RECEIVERS, FOLDER_ID_ROOT, setting_visibility_receivers),
 
     RX_FOLDER(0),
@@ -463,6 +485,7 @@ static const setting_t settings[] = {
     RX_FOLDER(29),
     RX_FOLDER(30),
     RX_FOLDER(31),
+#endif
 #endif
 #endif
 

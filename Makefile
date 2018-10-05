@@ -10,10 +10,16 @@ VERSION_PATCH := 0
 VERSION_SUFFIX :=
 
 VERSION := $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH)$(VERSION_SUFFIX)
+export VERSION
 
 GIT_REVISION := $(shell git rev-parse --short HEAD)
 
 CPPFLAGS += -DGIT_REVISION=\"$(GIT_REVISION)\" -DVERSION=\"$(VERSION)\"
+
+WERROR ?=
+ifeq ($(WERROR),1)
+CPPFLAGS += -Werror
+endif
 
 PLATFORM_VARIANT_SEPARATOR 	:= _
 INVALID_TARGET 				:= <invalid>
@@ -24,7 +30,7 @@ export ROOT
 TARGET_DIR				:= $(ROOT)/main/target
 PLATFORMS_DIR 			= $(TARGET_DIR)/platforms
 export PLATFORMS_DIR
-VALID_PLATFORMS 		= $(dir $(wildcard $(PLATFORMS_DIR)/*/sdkconfig))
+VALID_PLATFORMS 		= $(dir $(wildcard $(PLATFORMS_DIR)/*/platform.h))
 VALID_PLATFORMS			:= $(subst /,,$(subst $(PLATFORMS_DIR)/,,$(VALID_PLATFORMS)))
 VALID_PLATFORMS			:= $(sort $(VALID_PLATFORMS))
 
@@ -72,10 +78,13 @@ VARIANT			:=
 endif
 
 export TARGET
+export BASE_PLATFORM
 export PLATFORM
 export VARIANT
 export CPPFLAGS
 export PORT
+
+PLATFORM_MAKEFILE              := Makefile.$(BASE_PLATFORM)
 
 help:
 	@echo "No target specified"
@@ -89,25 +98,28 @@ help-esp32:
 	@ $(MAKE) -f Makefile.esp32 help
 
 $(TARGET):
-	@ $(MAKE) -f Makefile.$(BASE_PLATFORM)
+	@ $(MAKE) -f $(PLATFORM_MAKEFILE)
 
 clean:
-	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) clean
+ifneq (,$(wildcard $(PLATFORM_MAKEFILE)))
+	@ $(MAKE) -f $(PLATFORM_MAKEFILE) clean
+endif
+	@ $(RM) -r build-*
 
 erase: $(TARGET)
-	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) erase
+	@ $(MAKE) -f $(PLATFORM_MAKEFILE) erase
 
 flash: $(TARGET)
-	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) flash
+	@ $(MAKE) -f $(PLATFORM_MAKEFILE) flash
 
 monitor: $(TARGET)
-	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) monitor
+	@ $(MAKE) -f $(PLATFORM_MAKEFILE) monitor
 
 menuconfig:
-	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) menuconfig
+	@ $(MAKE) -f $(PLATFORM_MAKEFILE) menuconfig
 
 size:
-	@ $(MAKE) -f Makefile.$(BASE_PLATFORM) size
+	@ $(MAKE) -f $(PLATFORM_MAKEFILE) size
 
 all:
 	@ for target in $(VALID_TARGETS); do \
@@ -122,3 +134,12 @@ ci-build:
 		TARGET=$$target $(MAKE) 1> /dev/null ; \
 		TARGET=$$target $(MAKE) clean 1> /dev/null; \
 	done
+
+base-platform-%:
+	@ $(MAKE) -f $(PLATFORM_MAKEFILE) $*
+
+show-targets:
+	@echo "Valid targets are $(VALID_TARGETS)"
+
+show-platforms:
+	@echo "Valid platforms are $(VALID_PLATFORMS)"

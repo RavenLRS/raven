@@ -4,10 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
+#include <os/os.h>
 
-#include <esp_timer.h>
+#include <hal/time.h>
 
 #define MILLIS_PER_SEC (1000)
 #define MICROS_PER_SEC (1000000)
@@ -49,7 +48,11 @@ inline bool time_ticks_ellapsed(time_ticks_t since, time_ticks_t now, time_ticks
     return since == 0 || now - since >= duration;
 }
 
-inline time_micros_t time_micros_now(void) { return esp_timer_get_time(); }
+inline time_micros_t time_micros_now(void)
+{
+    return hal_time_micros_now();
+}
+
 inline void time_micros_delay(time_micros_t delay)
 {
     time_micros_t end = time_micros_now() + delay;

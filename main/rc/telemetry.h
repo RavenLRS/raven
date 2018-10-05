@@ -2,7 +2,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "time.h"
 
@@ -130,129 +129,18 @@ bool telemetry_has_value(const telemetry_t *val);
 
 bool telemetry_value_is_equal(const telemetry_t *val, int id, const telemetry_val_t *new_val);
 
-inline uint8_t telemetry_get_u8(const telemetry_t *val, int id)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_UINT8);
-    return val->val.u8;
-}
-
-inline int8_t telemetry_get_i8(const telemetry_t *val, int id)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_INT8);
-    return val->val.i8;
-}
-
-inline uint16_t telemetry_get_u16(const telemetry_t *val, int id)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_UINT16);
-    return val->val.u16;
-}
-
-inline int16_t telemetry_get_i16(const telemetry_t *val, int id)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_INT16);
-    return val->val.i16;
-}
-
-inline uint32_t telemetry_get_u32(const telemetry_t *val, int id)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_UINT32);
-    return val->val.u32;
-}
-
-inline int32_t telemetry_get_i32(const telemetry_t *val, int id)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_INT32);
-    return val->val.i32;
-}
-
-inline const char *telemetry_get_str(const telemetry_t *val, int id)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_STRING);
-    return val->val.s;
-}
-
-inline bool telemetry_set_u8(telemetry_t *val, int id, uint8_t v, time_micros_t now)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_UINT8);
-    bool changed = v != val->val.u8;
-    val->val.u8 = v;
-    data_state_update(&val->data_state, changed, now);
-    return changed;
-}
-
-inline bool telemetry_set_i8(telemetry_t *val, int id, int8_t v, time_micros_t now)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_INT8);
-    bool changed = v != val->val.i8;
-    val->val.i8 = v;
-    data_state_update(&val->data_state, changed, now);
-    return changed;
-}
-
-inline bool telemetry_set_u16(telemetry_t *val, int id, uint16_t v, time_micros_t now)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_UINT16);
-    bool changed = v != val->val.u16;
-    val->val.u16 = v;
-    data_state_update(&val->data_state, changed, now);
-    return changed;
-}
-
-inline bool telemetry_set_i16(telemetry_t *val, int id, int16_t v, time_micros_t now)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_INT16);
-    bool changed = v != val->val.i16;
-    val->val.i16 = v;
-    data_state_update(&val->data_state, changed, now);
-    return changed;
-}
-
-inline bool telemetry_set_u32(telemetry_t *val, int id, uint32_t v, time_micros_t now)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_UINT32);
-    bool changed = v != val->val.u32;
-    val->val.u32 = v;
-    data_state_update(&val->data_state, changed, now);
-    return changed;
-}
-
-inline bool telemetry_set_i32(telemetry_t *val, int id, int32_t v, time_micros_t now)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_INT32);
-    bool changed = v != val->val.i32;
-    val->val.i32 = v;
-    data_state_update(&val->data_state, changed, now);
-    return changed;
-}
-
-inline bool telemetry_set_str(telemetry_t *val, int id, const char *str, time_micros_t now)
-{
-    TELEMETRY_ASSERT_TYPE(id, TELEMETRY_TYPE_STRING);
-    const char empty = '\0';
-    bool changed = false;
-    if (!str)
-    {
-        str = &empty;
-    }
-    if (strcmp(str, val->val.s) != 0)
-    {
-        strncpy(val->val.s, str, sizeof(val->val.s));
-        val->val.s[sizeof(val->val.s) - 1] = '\0';
-        changed = true;
-    }
-    data_state_update(&val->data_state, changed, now);
-    return changed;
-}
-
-inline bool telemetry_set_bytes(telemetry_t *val, const void *data, size_t size, time_micros_t now)
-{
-    bool changed = false;
-    if (memcmp(&val->val, data, size) != 0)
-    {
-        memcpy(&val->val, data, size);
-        changed = true;
-    }
-    data_state_update(&val->data_state, changed, now);
-    return changed;
-}
+uint8_t telemetry_get_u8(const telemetry_t *val, int id);
+int8_t telemetry_get_i8(const telemetry_t *val, int id);
+uint16_t telemetry_get_u16(const telemetry_t *val, int id);
+int16_t telemetry_get_i16(const telemetry_t *val, int id);
+uint32_t telemetry_get_u32(const telemetry_t *val, int id);
+int32_t telemetry_get_i32(const telemetry_t *val, int id);
+const char *telemetry_get_str(const telemetry_t *val, int id);
+bool telemetry_set_u8(telemetry_t *val, int id, uint8_t v, time_micros_t now);
+bool telemetry_set_i8(telemetry_t *val, int id, int8_t v, time_micros_t now);
+bool telemetry_set_u16(telemetry_t *val, int id, uint16_t v, time_micros_t now);
+bool telemetry_set_i16(telemetry_t *val, int id, int16_t v, time_micros_t now);
+bool telemetry_set_u32(telemetry_t *val, int id, uint32_t v, time_micros_t now);
+bool telemetry_set_i32(telemetry_t *val, int id, int32_t v, time_micros_t now);
+bool telemetry_set_str(telemetry_t *val, int id, const char *str, time_micros_t now);
+bool telemetry_set_bytes(telemetry_t *val, const void *data, size_t size, time_micros_t now);

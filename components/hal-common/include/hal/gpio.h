@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <hal/err.h>
+
 typedef uint8_t hal_gpio_t;
 typedef uint64_t hal_gpio_mask_t;
 
@@ -52,12 +54,12 @@ typedef struct hal_gpio_cfg_s
     hal_gpio_pull_t pull;
 } hal_gpio_cfg_t;
 
-int hal_gpio_enable(hal_gpio_t gpio);
-int hal_gpio_set_dir(hal_gpio_t gpio, hal_gpio_dir_t dir);
-int hal_gpio_set_pull(hal_gpio_t gpio, hal_gpio_pull_t pull);
-int hal_gpio_setup(hal_gpio_t gpio, hal_gpio_cfg_t *cfg);
-int hal_gpio_set_level(hal_gpio_t gpio, uint32_t level);
-int hal_gpio_get_level(hal_gpio_t gpio);
+hal_err_t hal_gpio_enable(hal_gpio_t gpio);
+hal_err_t hal_gpio_set_dir(hal_gpio_t gpio, hal_gpio_dir_t dir);
+hal_err_t hal_gpio_set_pull(hal_gpio_t gpio, hal_gpio_pull_t pull);
+hal_err_t hal_gpio_setup(hal_gpio_t gpio, hal_gpio_cfg_t *cfg);
+hal_err_t hal_gpio_set_level(hal_gpio_t gpio, uint32_t level);
+hal_err_t hal_gpio_get_level(hal_gpio_t gpio);
 
 typedef void (*hal_gpio_isr_t)(void *);
 int hal_gpio_set_isr(hal_gpio_t gpio, hal_gpio_intr_t intr, hal_gpio_isr_t isr, const void *data);

@@ -7,6 +7,7 @@
 
 // User button. Since boards ship without a button, we also support using them as touchpad.
 #if defined(BUTTON_1_TOUCH_GPIO)
+#define USE_TOUCH_BUTTON
 #define BUTTON_1_GPIO BUTTON_1_TOUCH_GPIO
 #define BUTTON_1_GPIO_IS_TOUCH
 #else
@@ -17,6 +18,7 @@
 #define BEEPER_GPIO 12 // This seems appropriate for v1 boards, since it can't be pulled low during boot
 
 // SX127X
+#define SX127X_SPI_BUS VSPI_HOST
 #define SX127X_GPIO_SCK 5
 #define SX127X_GPIO_MISO 19
 #define SX127X_GPIO_MOSI 27

@@ -2,8 +2,6 @@
 
 #include <stdbool.h>
 
-#include <driver/gpio.h>
-
 typedef enum
 {
     SYSTEM_FLAG_SCREEN = 1 << 0,  // Screen support is available and screen is detected

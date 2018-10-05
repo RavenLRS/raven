@@ -4,11 +4,13 @@
 #include <stdint.h>
 
 #include <hal/gpio.h>
+#include <hal/i2c.h>
 
 typedef struct u8g2_struct u8g2_t;
 
 typedef struct screen_i2c_config_s
 {
+    hal_i2c_bus_t i2c_bus;
     hal_gpio_t sda;
     hal_gpio_t scl;
     hal_gpio_t rst;

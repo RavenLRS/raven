@@ -9,6 +9,10 @@
 
 #include "air/air.h"
 
+#include "ota/ota.h"
+
+#include "platform/system.h"
+
 #include "rc/rc.h"
 
 #include "rmp/rmp.h"
@@ -19,9 +23,6 @@
 
 #include "util/time.h"
 #include "util/version.h"
-
-#include "platform/ota.h"
-#include "platform/system.h"
 
 #include "screen.h"
 
@@ -258,7 +259,7 @@ static bool screen_format_binding(screen_t *screen, char *buf)
     if (rc_is_binding(screen->internal.rc))
     {
         strcpy(buf, "Binding");
-        int end = (millis() / 500) % 4;
+        int end = ((time_micros_now() / 1000) / 500) % 4;
         for (int ii = 0; ii < end; ii++)
         {
             size_t len = strlen(buf);
@@ -532,7 +533,7 @@ static void screen_draw_main_rssi(screen_t *s, int16_t x, int16_t y)
     {
         // Show the units for the first 3 seconds after animation, then
         // for 2 seconds out of every 30.
-        long m = millis();
+        long m = (time_micros_now() / 1000);
         if (m < (ANIMATION_TOTAL_DURATION_MS + 3000) || (m / 1000) % 30 <= 1)
         {
             snprintf(buf, SCREEN_DRAW_BUF_SIZE, "R: dBm|F: Hz| S: dB");

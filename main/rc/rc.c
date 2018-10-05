@@ -75,7 +75,7 @@ static void rc_data_initialize(rc_t *rc)
     air_addr_t addr;
     air_info_t air_info;
     time_micros_t now = time_micros_now();
-    int channels_num = RC_CHANNELS_NUM;
+    unsigned channels_num = RC_CHANNELS_NUM;
     switch (rc_get_mode(rc))
     {
     case RC_MODE_TX:
@@ -919,7 +919,9 @@ static inline bool rc_should_update_output(rc_t *rc)
 void rc_init(rc_t *rc, air_radio_t *radio, rmp_t *rmp)
 {
     memset(rc, 0, sizeof(*rc));
+#if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
     rc->state.rc_mode = config_get_rc_mode();
+#endif
 
     rc->radio = radio;
     rc->rmp = rmp;
@@ -963,10 +965,14 @@ void rc_init(rc_t *rc, air_radio_t *radio, rmp_t *rmp)
 
 rc_mode_e rc_get_mode(const rc_t *rc)
 {
-    // TODO: This prevents the linker from doing dead code
-    // elimination when not using both TX and RX support,
-    // wasting ~30K of flash.
+// TODO: This prevents the linker from doing dead code
+// elimination when not using both TX and RX support,
+// wasting ~30K of flash.
+#if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
     return rc->state.rc_mode;
+#else
+    return config_get_rc_mode();
+#endif
 }
 
 bool rc_is_binding(const rc_t *rc)

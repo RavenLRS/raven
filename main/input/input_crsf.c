@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include <hal/log.h>
 
 #include "config/settings_rmp.h"

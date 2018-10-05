@@ -1,4 +1,8 @@
+#include "target.h"
+
+#if defined(USE_TOUCH_BUTTON)
 #include <driver/touch_pad.h>
+#endif
 
 #include <hal/log.h>
 
@@ -11,6 +15,7 @@ static const char *TAG = "button";
 #define LONG_PRESS_INTERVAL MILLIS_TO_TICKS(300)
 #define REALLY_LONG_PRESS_INTERVAL MILLIS_TO_TICKS(3000)
 
+#if defined(USE_TOUCH_BUTTON)
 static int touch_pad_num_from_gpio(hal_gpio_t gpio)
 {
     // See touch_pad_t
@@ -39,9 +44,11 @@ static int touch_pad_num_from_gpio(hal_gpio_t gpio)
     }
     return -1;
 }
+#endif
 
 static bool button_is_down(button_t *button)
 {
+#if defined(USE_TOUCH_BUTTON)
     if (button->is_touch)
     {
         uint16_t touch_value;
@@ -51,11 +58,13 @@ static bool button_is_down(button_t *button)
         ESP_ERROR_CHECK(touch_pad_read_filtered(touch_num, &touch_filter_value));
         return touch_value < 2100;
     }
+#endif
     return hal_gpio_get_level(button->gpio) == HAL_GPIO_LOW;
 }
 
-void button_init(button_t *button)
+static void button_gpio_init(button_t *button)
 {
+#if defined(USE_TOUCH_BUTTON)
     if (button->is_touch)
     {
         int touch_num = touch_pad_num_from_gpio(button->gpio);
@@ -66,13 +75,17 @@ void button_init(button_t *button)
         ESP_ERROR_CHECK(touch_pad_set_voltage(TOUCH_HVOLT_2V7, TOUCH_LVOLT_0V5, TOUCH_HVOLT_ATTEN_1V));
         ESP_ERROR_CHECK(touch_pad_filter_start(10));
         ESP_ERROR_CHECK(touch_pad_config(touch_num, 0));
+        return;
     }
-    else
-    {
-        hal_gpio_enable(button->gpio);
-        hal_gpio_set_dir(button->gpio, HAL_GPIO_DIR_INPUT);
-        hal_gpio_set_pull(button->gpio, HAL_GPIO_PULL_UP);
-    }
+#endif
+    HAL_ERR_ASSERT_OK(hal_gpio_enable(button->gpio));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_dir(button->gpio, HAL_GPIO_DIR_INPUT));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_pull(button->gpio, HAL_GPIO_PULL_UP));
+}
+
+void button_init(button_t *button)
+{
+    button_gpio_init(button);
 
     button->state.is_down = button_is_down(button);
     button->state.ignore = button->state.is_down;

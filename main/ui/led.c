@@ -1,5 +1,3 @@
-#include <driver/rtc_io.h>
-
 #include <hal/gpio.h>
 
 #include "target.h"
@@ -31,12 +29,12 @@ static led_t led1 = {
 
 static void led_on_led(led_t *led)
 {
-    hal_gpio_set_level(led->gpio, HAL_GPIO_HIGH);
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(led->gpio, HAL_GPIO_HIGH));
 }
 
 static void led_off_led(led_t *led)
 {
-    hal_gpio_set_level(led->gpio, HAL_GPIO_LOW);
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(led->gpio, HAL_GPIO_LOW));
 }
 
 static void led_init_led_task(void *data)
@@ -54,7 +52,7 @@ static void led_init_led(led_t *led)
         .dir = HAL_GPIO_DIR_OUTPUT,
         .pull = HAL_GPIO_PULL_NONE,
     };
-    hal_gpio_setup(led->gpio, &cfg);
+    HAL_ERR_ASSERT_OK(hal_gpio_setup(led->gpio, &cfg));
     led_off_led(led);
     led->next_update = 0;
     led->is_initialized = false;

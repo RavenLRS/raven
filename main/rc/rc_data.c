@@ -96,6 +96,80 @@ void rc_data_reset_output(rc_data_t *data)
 #endif
 }
 
+void rc_data_update_channel(rc_data_t *data, unsigned ch, unsigned value, time_micros_t now)
+{
+    if (ch >= data->channels_num)
+    {
+        // An input protocol supports more channels that the
+        // ones enabled at compile time. Stop here.
+        return;
+    }
+    control_channel_t *channel = &data->channels[ch];
+    value = value < RC_CHANNEL_MAX_VALUE ? value : RC_CHANNEL_MAX_VALUE;
+    value = value > RC_CHANNEL_MIN_VALUE ? value : RC_CHANNEL_MIN_VALUE;
+    bool changed = channel->value != value;
+    channel->value = value;
+    data_state_update(&channel->data_state, changed, now);
+}
+
+uint16_t rc_data_get_channel_value(const rc_data_t *data, unsigned ch)
+{
+    if (ch >= data->channels_num)
+    {
+        // An output protocol supports more channels that the
+        // ones enabled at compile time. Return zero.
+        return 0;
+    }
+    return data->channels[ch].value;
+}
+
+bool rc_data_is_ready(rc_data_t *data)
+{
+    if (!data->ready)
+    {
+        for (unsigned ii = 0; ii < data->channels_num; ii++)
+        {
+            control_channel_t *ch = &data->channels[ii];
+            if (!data_state_has_value(&ch->data_state))
+            {
+                // Channel has no valid value yet
+                return false;
+            }
+        }
+        // All channels have a value. Cache it.
+        data->ready = true;
+    }
+    return true;
+}
+
+bool rc_data_has_dirty_channels(rc_data_t *data)
+{
+    if (rc_data_is_ready(data))
+    {
+        for (unsigned ii = 0; ii < data->channels_num; ii++)
+        {
+            control_channel_t *ch = &data->channels[ii];
+            if (data_state_is_dirty(&ch->data_state))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Used by the RX to keep track when the channels need to be flushed
+// to the FC. ACK seq is not used, since differential updates only
+// happen OTA.
+void rc_data_channels_sent(rc_data_t *data, time_micros_t now)
+{
+    for (unsigned ii = 0; ii < data->channels_num; ii++)
+    {
+        control_channel_t *ch = &data->channels[ii];
+        data_state_sent(&ch->data_state, -1, now);
+    }
+}
+
 unsigned rc_data_get_channel_percentage(const rc_data_t *data, unsigned ch)
 {
     return (data->channels[ch].value * 100) / RC_CHANNEL_MAX_VALUE;
@@ -110,6 +184,18 @@ telemetry_t *rc_data_get_telemetry(rc_data_t *data, int telemetry_id)
     return &data->telemetry_downlink[TELEMETRY_DOWNLINK_GET_IDX(telemetry_id)];
 }
 
+telemetry_t *rc_data_get_downlink_telemetry(rc_data_t *data, telemetry_downlink_id_e id)
+{
+    assert(!(id & TELEMETRY_UPLINK_MASK));
+    return &data->telemetry_downlink[id];
+}
+
+telemetry_t *rc_data_get_uplink_telemetry(rc_data_t *data, telemetry_uplink_id_e id)
+{
+    assert(id & TELEMETRY_UPLINK_MASK);
+    return &data->telemetry_uplink[TELEMETRY_UPLINK_GET_IDX(id)];
+}
+
 const char *rc_data_get_pilot_name(const rc_data_t *data)
 {
     const telemetry_t *val = &data->telemetry_uplink[TELEMETRY_UPLINK_GET_IDX(TELEMETRY_ID_PILOT_NAME)];
@@ -120,4 +206,14 @@ const char *rc_data_get_craft_name(const rc_data_t *data)
 {
     const telemetry_t *val = &data->telemetry_downlink[TELEMETRY_ID_CRAFT_NAME];
     return telemetry_has_value(val) && val->val.s[0] ? val->val.s : NULL;
+}
+
+bool rc_data_input_failsafe_is_active(const rc_data_t *data)
+{
+    return failsafe_is_active(data->failsafe.input);
+}
+
+bool rc_data_output_failsafe_is_active(const rc_data_t *data)
+{
+    return failsafe_is_active(data->failsafe.output);
 }

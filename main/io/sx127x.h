@@ -3,7 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <driver/spi_master.h>
+#include <hal/gpio.h>
+#include <hal/spi.h>
 
 #include "air/air_radio.h"
 
@@ -63,16 +64,17 @@ typedef enum {
 
 typedef struct sx127x_s
 {
-    const int miso;
-    const int mosi;
-    const int sck;
-    const int cs;
-    const int rst;
-    const int dio0;
+    const hal_spi_bus_t spi_bus;
+    const hal_gpio_t miso;
+    const hal_gpio_t mosi;
+    const hal_gpio_t sck;
+    const hal_gpio_t cs;
+    const hal_gpio_t rst;
+    const hal_gpio_t dio0;
     const sx127x_output_type_e output_type;
     struct
     {
-        spi_device_handle_t spi;
+        hal_spi_device_handle_t spi;
         sx127x_op_mode_e op_mode;
         uint8_t mode;
         int16_t sync_word;

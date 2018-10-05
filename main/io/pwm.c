@@ -1,3 +1,7 @@
+#include "target.h"
+
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+
 #include <driver/ledc.h>
 
 #include "config/config.h"
@@ -8,8 +12,6 @@
 #include "util/macros.h"
 
 #include "pwm.h"
-
-#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
 
 #define PWM_TIMER_FREQ_HZ 50
 #define PWM_RESOLUTION LEDC_TIMER_15_BIT

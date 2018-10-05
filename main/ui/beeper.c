@@ -46,18 +46,18 @@ static const beep_pattern_t patterns[BEEPER_MODE_COUNT - 1] = {
 
 static void beeper_gpio_init(beeper_t *beeper)
 {
-    hal_gpio_enable(beeper->gpio);
-    hal_gpio_set_dir(beeper->gpio, HAL_GPIO_DIR_OUTPUT);
+    HAL_ERR_ASSERT_OK(hal_gpio_enable(beeper->gpio));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_dir(beeper->gpio, HAL_GPIO_DIR_OUTPUT));
 }
 
 static void beeper_on(beeper_t *beeper)
 {
-    hal_gpio_set_level(beeper->gpio, HAL_GPIO_HIGH);
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(beeper->gpio, HAL_GPIO_HIGH));
 }
 
 static void beeper_off(beeper_t *beeper)
 {
-    hal_gpio_set_level(beeper->gpio, HAL_GPIO_LOW);
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(beeper->gpio, HAL_GPIO_LOW));
 }
 
 static void beeper_begin_mode(beeper_t *beeper, beeper_mode_e mode)

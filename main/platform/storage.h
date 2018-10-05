@@ -8,7 +8,7 @@
 
 typedef struct storage_s
 {
-    storage_hal_t hal;
+    hal_storage_t hal;
 } storage_t;
 
 void storage_init(storage_t *storage, const char *name);

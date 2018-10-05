@@ -1,16 +1,14 @@
-#include <nvs_flash.h>
-
 #include <hal/storage.h>
 
-void storage_hal_init(storage_hal_t *storage_hal, const char *name)
+void hal_storage_init(hal_storage_t *s, const char *name)
 {
     ESP_ERROR_CHECK(nvs_flash_init());
-    ESP_ERROR_CHECK(nvs_open(name, NVS_READWRITE, &storage_hal->nvs_handle));
+    ESP_ERROR_CHECK(nvs_open(name, NVS_READWRITE, &s->handle));
 }
 
-bool storage_hal_get_blob(storage_hal_t *storage_hal, const char *key, void *buf, size_t *size)
+bool hal_storage_get_blob(hal_storage_t *s, const char *key, void *buf, size_t *size)
 {
-    esp_err_t err = nvs_get_blob(storage_hal->nvs_handle, key, buf, size);
+    esp_err_t err = nvs_get_blob(s->handle, key, buf, size);
     if (err == ESP_OK)
     {
         return true;
@@ -23,15 +21,15 @@ bool storage_hal_get_blob(storage_hal_t *storage_hal, const char *key, void *buf
     return false;
 }
 
-void storage_hal_set_blob(storage_hal_t *storage_hal, const char *key, const void *buf, size_t size)
+void hal_storage_set_blob(hal_storage_t *s, const char *key, const void *buf, size_t size)
 {
     if (size > 0)
     {
-        ESP_ERROR_CHECK(nvs_set_blob(storage_hal->nvs_handle, key, buf, size));
+        ESP_ERROR_CHECK(nvs_set_blob(s->handle, key, buf, size));
     }
     else
     {
-        esp_err_t err = nvs_erase_key(storage_hal->nvs_handle, key);
+        esp_err_t err = nvs_erase_key(s->handle, key);
         if (err != ESP_ERR_NVS_NOT_FOUND)
         {
             ESP_ERROR_CHECK(err);
@@ -39,7 +37,7 @@ void storage_hal_set_blob(storage_hal_t *storage_hal, const char *key, const voi
     }
 }
 
-void storage_hal_commit(storage_hal_t *storage_hal)
+void hal_storage_commit(hal_storage_t *s)
 {
-    ESP_ERROR_CHECK(nvs_commit(storage_hal->nvs_handle));
+    ESP_ERROR_CHECK(nvs_commit(s->handle));
 }

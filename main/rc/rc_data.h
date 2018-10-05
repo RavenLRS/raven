@@ -62,7 +62,7 @@ typedef struct rc_data_s
     control_channel_t channels[RC_CHANNELS_NUM];
     // The number of channels in use. Might be lower than RC_CHANNELS_NUM
     // if the other end supports less channels, but never higher.
-    int channels_num;
+    unsigned channels_num;
     // Wether all the channels have valid values received from
     // the input.
     bool ready;
@@ -84,107 +84,26 @@ typedef struct rc_data_s
 void rc_data_reset_input(rc_data_t *data);
 void rc_data_reset_output(rc_data_t *data);
 
-inline void rc_data_update_channel(rc_data_t *data, unsigned ch, unsigned value, time_micros_t now)
-{
-    if (ch >= data->channels_num)
-    {
-        // An input protocol supports more channels that the
-        // ones enabled at compile time. Stop here.
-        return;
-    }
-    control_channel_t *channel = &data->channels[ch];
-    value = value < RC_CHANNEL_MAX_VALUE ? value : RC_CHANNEL_MAX_VALUE;
-    value = value > RC_CHANNEL_MIN_VALUE ? value : RC_CHANNEL_MIN_VALUE;
-    bool changed = channel->value != value;
-    channel->value = value;
-    data_state_update(&channel->data_state, changed, now);
-}
-
-inline uint16_t rc_data_get_channel_value(const rc_data_t *data, unsigned ch)
-{
-    if (ch >= data->channels_num)
-    {
-        // An output protocol supports more channels that the
-        // ones enabled at compile time. Return zero.
-        return 0;
-    }
-    return data->channels[ch].value;
-}
-
-inline bool rc_data_is_ready(rc_data_t *data)
-{
-    if (!data->ready)
-    {
-        for (int ii = 0; ii < data->channels_num; ii++)
-        {
-            control_channel_t *ch = &data->channels[ii];
-            if (!data_state_has_value(&ch->data_state))
-            {
-                // Channel has no valid value yet
-                return false;
-            }
-        }
-        // All channels have a value. Cache it.
-        data->ready = true;
-    }
-    return true;
-}
-
-inline bool rc_data_has_dirty_channels(rc_data_t *data)
-{
-    if (rc_data_is_ready(data))
-    {
-        for (int ii = 0; ii < data->channels_num; ii++)
-        {
-            control_channel_t *ch = &data->channels[ii];
-            if (data_state_is_dirty(&ch->data_state))
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
+void rc_data_update_channel(rc_data_t *data, unsigned ch, unsigned value, time_micros_t now);
+uint16_t rc_data_get_channel_value(const rc_data_t *data, unsigned ch);
+bool rc_data_is_ready(rc_data_t *data);
+bool rc_data_has_dirty_channels(rc_data_t *data);
 // Used by the RX to keep track when the channels need to be flushed
 // to the FC. ACK seq is not used, since differential updates only
 // happen OTA.
-inline void rc_data_channels_sent(rc_data_t *data, time_micros_t now)
-{
-    for (int ii = 0; ii < data->channels_num; ii++)
-    {
-        control_channel_t *ch = &data->channels[ii];
-        data_state_sent(&ch->data_state, -1, now);
-    }
-}
-
+void rc_data_channels_sent(rc_data_t *data, time_micros_t now);
 unsigned rc_data_get_channel_percentage(const rc_data_t *data, unsigned ch);
+
 telemetry_t *rc_data_get_telemetry(rc_data_t *data, int telemetry_id);
 
-inline telemetry_t *rc_data_get_downlink_telemetry(rc_data_t *data, telemetry_downlink_id_e id)
-{
-    assert(!(id & TELEMETRY_UPLINK_MASK));
-    return &data->telemetry_downlink[id];
-}
-
-inline telemetry_t *rc_data_get_uplink_telemetry(rc_data_t *data, telemetry_uplink_id_e id)
-{
-    assert(id & TELEMETRY_UPLINK_MASK);
-    return &data->telemetry_uplink[TELEMETRY_UPLINK_GET_IDX(id)];
-}
+telemetry_t *rc_data_get_downlink_telemetry(rc_data_t *data, telemetry_downlink_id_e id);
+telemetry_t *rc_data_get_uplink_telemetry(rc_data_t *data, telemetry_uplink_id_e id);
 
 const char *rc_data_get_pilot_name(const rc_data_t *data);
 const char *rc_data_get_craft_name(const rc_data_t *data);
 
-inline bool rc_data_input_failsafe_is_active(const rc_data_t *data)
-{
-    return failsafe_is_active(data->failsafe.input);
-}
-
-inline bool rc_data_output_failsafe_is_active(const rc_data_t *data)
-{
-    return failsafe_is_active(data->failsafe.output);
-}
+bool rc_data_input_failsafe_is_active(const rc_data_t *data);
+bool rc_data_output_failsafe_is_active(const rc_data_t *data);
 
 #define TELEMETRY_GET_DOWNLINK_U8(rc_data, id) telemetry_get_u8(rc_data_get_downlink_telemetry(rc_data, id), id)
 #define TELEMETRY_GET_DOWNLINK_I8(rc_data, id) telemetry_get_i8(rc_data_get_downlink_telemetry(rc_data, id), id)

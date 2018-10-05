@@ -10,10 +10,10 @@ static const char *TAG = "Air.Freq";
 
 void air_freq_table_init(air_freq_table_t *tbl, air_key_t key, unsigned long base_freq)
 {
-    LOG_D(TAG, "Calculating freq table with key %u, base %lu", key, base_freq);
+    LOG_D(TAG, "Calculating freq table with key %lu, base %lu", (unsigned long)key, base_freq);
     uint32_t lfsr = key;
     uint32_t b;
-    for (int ii = 0; ii < ARRAY_COUNT(tbl->freqs); ii++)
+    for (unsigned ii = 0; ii < ARRAY_COUNT(tbl->freqs); ii++)
     {
         b = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5)) & 1;
         lfsr = (lfsr >> 1) | (b << 15);

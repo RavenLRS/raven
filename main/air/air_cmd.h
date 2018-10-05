@@ -51,27 +51,11 @@ typedef struct air_cmd_switch_mode_ack_s
 
 _Static_assert(sizeof(air_cmd_switch_mode_ack_t) == 1, "invalid air_cmd_switch_mode_ack_t size");
 
-inline bool air_cmd_switch_mode_ack_in_progress(air_cmd_switch_mode_ack_t *cmd)
-{
-    return cmd->mode != 0;
-}
-
-inline void air_cmd_switch_mode_ack_reset(air_cmd_switch_mode_ack_t *cmd)
-{
-    *((uint8_t *)cmd) = 0;
-}
-
+bool air_cmd_switch_mode_ack_in_progress(air_cmd_switch_mode_ack_t *cmd);
+void air_cmd_switch_mode_ack_reset(air_cmd_switch_mode_ack_t *cmd);
 // Returns true iff the switch should be now performed
-inline bool air_cmd_switch_mode_ack_proceed(air_cmd_switch_mode_ack_t *cmd, unsigned tx_seq)
-{
-    return air_cmd_switch_mode_ack_in_progress(cmd) && cmd->at_tx_seq == tx_seq;
-}
-
-inline void air_cmd_switch_mode_ack_copy(air_cmd_switch_mode_ack_t *dst, const air_cmd_switch_mode_ack_t *src)
-{
-    *((uint8_t *)dst) = *((uint8_t *)src);
-}
-
+bool air_cmd_switch_mode_ack_proceed(air_cmd_switch_mode_ack_t *cmd, unsigned tx_seq);
+void air_cmd_switch_mode_ack_copy(air_cmd_switch_mode_ack_t *dst, const air_cmd_switch_mode_ack_t *src);
 // Command payload size. <0 means explicit length using variable length
 // encoding.
 int air_cmd_size(air_cmd_e cmd);

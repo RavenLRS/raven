@@ -28,7 +28,9 @@ typedef struct rc_s rc_t;
 typedef struct ui_config_s
 {
     hal_gpio_t button;
+#if defined(USE_TOUCH_BUTTON)
     bool button_is_touch;
+#endif
     hal_gpio_t beeper;
 #ifdef USE_SCREEN
     screen_i2c_config_t screen;

@@ -3,8 +3,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <driver/uart.h>
-
 #include "io/io.h"
 
 #include "msp/msp_telemetry.h"

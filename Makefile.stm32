@@ -1,0 +1,45 @@
+BINARY				= $(PROJECT_NAME)_$(PLATFORM)_$(VARIANT)
+OPENCM3_DIR			= lib/libopencm3
+export OPENCM3_DIR
+
+CPPFLAGS			+= -DSTM32
+PLATFORM_SOURCES	+= stm32
+export PLATFORM_SOURCES
+
+BUILDDIR			= build-$(TARGET)
+export BUILDDIR
+
+include $(VARIANTS_DIR)/$(VARIANT)/sdkconfig
+include $(ROOT)/main/component.mk
+
+FREERTOS_SOURCE			:= lib/FreeRTOSv10.1.1/FreeRTOS/Source
+FREERTOS_PORT_SOURCE	:= $(FREERTOS_SOURCE)/portable/GCC/$(FREERTOS_PORT)
+FREERTOS_HEAP_IMPL		:= $(FREERTOS_SOURCE)/portable/MemMang/heap_2.c
+
+INCLUDES			=
+INCLUDES			+= $(ROOT)/main
+INCLUDES			+= $(ROOT)/components/os/include
+INCLUDES			+= $(ROOT)/components/hal-common/include
+INCLUDES			+= $(ROOT)/components/hal-stm32/include
+INCLUDES			+= $(PLATFORMS_DIR)/stm32
+INCLUDES			+= $(FREERTOS_SOURCE)/include
+INCLUDES			+= $(FREERTOS_PORT_SOURCE)
+
+CFLAGS				+= -DUSE_FREERTOS_SOURCE $(addprefix -I,$(INCLUDES))
+
+# Sources
+
+# Remove modules not supported on STM32
+COMPONENT_SRCDIRS	:= $(filter-out bluetooth,$(COMPONENT_SRCDIRS))
+COMPONENT_SRCDIRS	:= $(filter-out ota,$(COMPONENT_SRCDIRS))
+COMPONENT_SRCDIRS	:= $(filter-out p2p,$(COMPONENT_SRCDIRS))
+
+dir_sources			= $(wildcard $(dir)/*.c)
+MAIN_DIRS			= $(addprefix main/,$(COMPONENT_SRCDIRS))
+SRC_DIRS			=
+SRC_DIRS			+= $(FREERTOS_SOURCE) $(FREERTOS_PORT_SOURCE)
+SRC_DIRS			+= components/hal-common components/hal-stm32 components/u8g2/u8g2/csrc
+SRC_DIRS			+= $(MAIN_DIRS)
+SOURCES				:= $(foreach dir,$(SRC_DIRS),$(dir_sources))
+SOURCES				+= $(FREERTOS_HEAP_IMPL)
+export SOURCES

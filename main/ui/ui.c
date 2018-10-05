@@ -198,7 +198,9 @@ void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
     ui->internal.rc = rc;
     ui->internal.button.user_data = ui;
     ui->internal.button.gpio = cfg->button;
+#if defined(USE_TOUCH_BUTTON)
     ui->internal.button.is_touch = cfg->button_is_touch;
+#endif
     beeper_init(&ui->internal.beeper, cfg->beeper);
     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
     button_init(&ui->internal.button);

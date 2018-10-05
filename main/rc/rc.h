@@ -75,7 +75,9 @@ typedef struct rc_s
 
     struct
     {
+#if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
         rc_mode_e rc_mode;
+#endif
         bool invalidate_input;
         bool invalidate_output;
         bool bind_requested;

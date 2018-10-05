@@ -197,6 +197,8 @@ void air_radio_shutdown(air_radio_t *radio)
 
 time_micros_t air_radio_cycle_time(air_radio_t *radio, air_mode_e mode)
 {
+    UNUSED(radio);
+
     switch (mode)
     {
     case AIR_MODE_1:

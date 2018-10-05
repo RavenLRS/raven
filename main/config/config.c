@@ -57,12 +57,12 @@ static storage_t storage;
 static void config_generate_addr(air_addr_t *addr)
 {
     // Generate an addr.
-    uint32_t val = rand_hal_u32();
+    uint32_t val = hal_rand_u32();
     addr->addr[0] = (val >> 0) & 0xFF;
     addr->addr[1] = (val >> 8) & 0xFF;
     addr->addr[2] = (val >> 16) & 0xFF;
     addr->addr[3] = (val >> 24) & 0xFF;
-    val = rand_hal_u32();
+    val = hal_rand_u32();
     addr->addr[4] = (val >> 0) & 0xFF;
     addr->addr[5] = (val >> 8) & 0xFF;
 }

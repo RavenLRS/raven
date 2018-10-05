@@ -3,7 +3,7 @@
 
 #include "bluetooth/bluetooth_uuid.h"
 
-#include "platform/ota.h"
+#include "ota/ota.h"
 
 #include "util/macros.h"
 

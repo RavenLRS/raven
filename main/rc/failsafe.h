@@ -24,8 +24,4 @@ void failsafe_init(failsafe_t *fs);
 void failsafe_set_max_interval(failsafe_t *fs, time_micros_t interval);
 void failsafe_reset_interval(failsafe_t *fs, time_micros_t now);
 void failsafe_update(failsafe_t *fs, time_micros_t now);
-
-inline bool failsafe_is_active(const failsafe_t *fs)
-{
-    return fs && fs->active_since > 0;
-}
+bool failsafe_is_active(const failsafe_t *fs);

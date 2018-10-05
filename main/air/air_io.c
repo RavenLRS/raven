@@ -6,6 +6,8 @@
 
 #include "rmp/rmp_air.h"
 
+#include "util/macros.h"
+
 #include "air_io.h"
 
 void air_io_init(air_io_t *io, air_addr_t addr, air_io_bind_t *bind, rmp_air_t *rmp)
@@ -108,6 +110,8 @@ void air_io_update_rssi(air_io_t *io, int rssi, int snr, int lq, time_micros_t n
 
 void air_io_reset_rssi(air_io_t *io, int rssi, int snr, int lq, time_micros_t now)
 {
+    UNUSED(now);
+
     lpf_reset(&io->rssi, rssi);
     lpf_reset(&io->snr, snr);
     lpf_reset(&io->lq, lq);
