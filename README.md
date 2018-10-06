@@ -27,7 +27,7 @@ and device.lua).
 - Low latency. 250Hz between radio and TX as well as between TX and flight
 controller. Air protocol is limited to 100Hz for now, but will support up
 to 150hz with telemetry or 200hz without telemetry in the near future.
-- Multiple RX protocols supported (SBUS+SmartPort, CRSF, MSP, CRSF, ...).
+- Multiple RX protocols supported (SBUS+SmartPort, FPort, MSP, CRSF, ...).
 - Support for backup batteries (useful for missing aircraft recovery).
 
 ![Raven TX on a Q X7](docs/images/raven_qx7.png?raw=true "Raven TX on a Q X7")
