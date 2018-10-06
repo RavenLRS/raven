@@ -24,8 +24,8 @@ dist: trusty
 jobs:
   include:
     - stage: run
-      script: ./.travis.sh _tx
+      script: ./.travis.sh tx
     -
-      script: ./.travis.sh _rx
+      script: ./.travis.sh rx
     -
-      script: ./.travis.sh _txrx
+      script: ./.travis.sh txrx
