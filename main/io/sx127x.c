@@ -130,6 +130,8 @@
 
 #define SX127X_EXPECTED_VERSION 18
 
+#define SX127X_DEFAULT_LORA_SYNC_WORD 0x12 // 6.4 LoRa register mode map, RegSyncWord
+
 enum
 {
     DIO0_TRIGGER_RX_DONE = 1,
@@ -145,8 +147,13 @@ enum
 
 static const char *TAG = "SX127X";
 
+static void sx127x_set_lora_parameters(sx127x_t *sx127x);
 static float sx127x_get_lora_signal_bw_khz(sx127x_t *sx127x, sx127x_lora_signal_bw_e sbw);
 static void sx127x_apply_bw500_sensitivity_workaround(sx127x_t *sx127x);
+static void sx127x_set_lora_sync_word(sx127x_t *sx127x);
+static void sx127x_set_fsk_parameters(sx127x_t *sx127x);
+static void sx127x_fsk_wait_for_mode_ready(sx127x_t *sx127x);
+static void sx127x_set_fsk_sync_word(sx127x_t *sx127x);
 
 static esp_err_t spi_device_transmit_sync(spi_device_handle_t handle, spi_transaction_t *trans_desc)
 {
@@ -285,36 +292,6 @@ static void sx127x_disable_dio0(sx127x_t *sx127x)
     sx127x_write_reg(sx127x, REG_DIO_MAPPING_1, reg);
 }
 
-static void sx127x_set_fsk_parameters(sx127x_t *sx127x)
-{
-    // TODO: Does this enhance transmission? It turns GFSK mode
-    // sx127x_write_reg(sx127x, REG_PA_RAMP, 0x20);
-
-    //sx127x_write_reg(sx127x, REG_FSK_RX_CONFIG, 0x10 | 0x08 | 0x06);
-    sx127x_write_reg(sx127x, REG_FSK_RX_CONFIG, /*1 << 4 |*/ 0x08 | 0x06);
-    // detector on | detector size 01 | tolerance 10
-    sx127x_write_reg(sx127x, REG_FSK_PREAMBLE_DETECT, 1 << 7 | 1 << 5 | 10);
-
-    sx127x_write_reg(sx127x, REG_FSK_RSSI_THRES, 0xFF);
-
-    // autorestart = on, wait for pll, polarity = AA, sync = ON, syncsize = 3 + 1 = 4
-    sx127x_write_reg(sx127x, REG_FSK_SYNC_CONFIG, 2 << 5 | 0 << 5 | 1 << 4 | 0x03);
-
-    sx127x_write_reg(sx127x, REG_FSK_SYNC_VALUE_1, 0x69);
-    sx127x_write_reg(sx127x, REG_FSK_SYNC_VALUE_2, 0x81);
-    sx127x_write_reg(sx127x, REG_FSK_SYNC_VALUE_3, 0x7E);
-    sx127x_write_reg(sx127x, REG_FSK_SYNC_VALUE_4, 0x96);
-
-    sx127x_write_reg(sx127x, REG_FSK_PACKET_CONFIG_1, 1 << 5);
-}
-
-static void sx127x_fsk_wait_for_mode_ready(sx127x_t *sx127x)
-{
-    while (sx127x_read_reg(sx127x, REG_FSK_IRQ_FLAGS_1) & ~IRQ_FSK_MODE_READY)
-    {
-    }
-}
-
 void sx127x_init(sx127x_t *sx127x)
 {
     hal_gpio_enable(sx127x->rst);
@@ -364,6 +341,11 @@ void sx127x_init(sx127x_t *sx127x)
         UNREACHABLE();
     }
 
+    sx127x->state.sync_word = SX127X_SYNC_WORD_DEFAULT;
+    sx127x->state.fsk.payload_length = 0;
+    sx127x->state.lora.payload_length = 0;
+    sx127x->state.callback = NULL;
+
     sx127x->state.mode = sx127x_read_reg(sx127x, REG_OP_MODE);
     if (sx127x->state.mode & MODE_LORA)
     {
@@ -373,28 +355,23 @@ void sx127x_init(sx127x_t *sx127x)
     {
         sx127x->state.op_mode = SX127X_OP_MODE_FSK;
     }
-    sx127x->state.fsk.payload_length = 0;
-    sx127x->state.lora.payload_length = 0;
-    sx127x->state.callback = NULL;
 
     // Put it in sleep mode to change some registers
     sx127x_sleep(sx127x);
 
-    sx127x_write_reg(sx127x, REG_LORA_FIFO_TX_BASE_ADDR, TX_FIFO_ADDR);
-    sx127x_write_reg(sx127x, REG_LORA_FIFO_RX_BASE_ADDR, RX_FIFO_ADDR);
+    switch (sx127x->state.op_mode)
+    {
+    case SX127X_OP_MODE_FSK:
+        sx127x_set_fsk_parameters(sx127x);
+        break;
+    case SX127X_OP_MODE_LORA:
+        sx127x_set_lora_parameters(sx127x);
+        break;
+    }
 
     // LNA boost HF
     // TODO: Should we adjust LnaGain here?
     sx127x_write_reg(sx127x, REG_LNA, sx127x_read_reg(sx127x, REG_LNA) | 0x03);
-
-    // set auto AGC
-    sx127x_write_reg(sx127x, REG_LORA_MODEM_CONFIG_3, 0x04);
-
-#if defined(CONFIG_RAVEN_DIO5_CLK_OUTPUT)
-    // Enable DIO5 as ClkOut
-    uint8_t dio_mapping_2 = sx127x_read_reg(sx127x, REG_DIO_MAPPING_2);
-    sx127x_write_reg(sx127x, REG_DIO_MAPPING_2, dio_mapping_2 | (1 << 5));
-#endif
 
     // set output power to 17 dBm
     sx127x_set_tx_power(sx127x, 17);
@@ -486,6 +463,23 @@ void sx127x_set_payload_size(sx127x_t *sx127x, uint8_t size)
     }
 }
 
+void sx127x_set_sync_word(sx127x_t *sx127x, int16_t sw)
+{
+    if (sx127x->state.sync_word != sw)
+    {
+        sx127x->state.sync_word = sw;
+        switch (sx127x->state.op_mode)
+        {
+        case SX127X_OP_MODE_FSK:
+            sx127x_set_fsk_sync_word(sx127x);
+            break;
+        case SX127X_OP_MODE_LORA:
+            sx127x_set_lora_sync_word(sx127x);
+            break;
+        }
+    }
+}
+
 void sx127x_sleep(sx127x_t *sx127x)
 {
     uint8_t mode = (sx127x->state.mode & MODE_LORA) | MODE_SLEEP;
@@ -511,6 +505,7 @@ void sx127x_set_op_mode(sx127x_t *sx127x, sx127x_op_mode_e op_mode)
             break;
         case SX127X_OP_MODE_LORA:
             sx127x_set_mode(sx127x, MODE_LORA | MODE_SLEEP);
+            sx127x_set_lora_parameters(sx127x);
             break;
         }
         sx127x->state.op_mode = op_mode;
@@ -926,6 +921,42 @@ static uint8_t sx127x_get_fsk_bandwidth_reg_value(unsigned hz)
     UNREACHABLE();
 }
 
+static void sx127x_set_fsk_parameters(sx127x_t *sx127x)
+{
+    // TODO: Does this enhance transmission? It turns GFSK mode
+    // sx127x_write_reg(sx127x, REG_PA_RAMP, 0x20);
+
+    //sx127x_write_reg(sx127x, REG_FSK_RX_CONFIG, 0x10 | 0x08 | 0x06);
+    sx127x_write_reg(sx127x, REG_FSK_RX_CONFIG, /*1 << 4 |*/ 0x08 | 0x06);
+    // detector on | detector size 01 | tolerance 10
+    sx127x_write_reg(sx127x, REG_FSK_PREAMBLE_DETECT, 1 << 7 | 1 << 5 | 10);
+
+    sx127x_write_reg(sx127x, REG_FSK_RSSI_THRES, 0xFF);
+
+    // autorestart = on, wait for pll, polarity = AA, sync = ON, syncsize = 3 + 1 = 4
+    sx127x_write_reg(sx127x, REG_FSK_SYNC_CONFIG, 2 << 5 | 0 << 5 | 1 << 4 | 0x03);
+
+    sx127x_set_fsk_sync_word(sx127x);
+
+    sx127x_write_reg(sx127x, REG_FSK_PACKET_CONFIG_1, 1 << 5);
+}
+
+static void sx127x_fsk_wait_for_mode_ready(sx127x_t *sx127x)
+{
+    while (sx127x_read_reg(sx127x, REG_FSK_IRQ_FLAGS_1) & ~IRQ_FSK_MODE_READY)
+    {
+    }
+}
+
+static void sx127x_set_fsk_sync_word(sx127x_t *sx127x)
+{
+    uint8_t mask = sx127x->state.sync_word != SX127X_SYNC_WORD_DEFAULT ? sx127x->state.sync_word : 0;
+    sx127x_write_reg(sx127x, REG_FSK_SYNC_VALUE_1, 0x69 ^ mask);
+    sx127x_write_reg(sx127x, REG_FSK_SYNC_VALUE_2, 0x81 ^ mask);
+    sx127x_write_reg(sx127x, REG_FSK_SYNC_VALUE_3, 0x7E ^ mask);
+    sx127x_write_reg(sx127x, REG_FSK_SYNC_VALUE_4, 0x96 ^ mask);
+}
+
 void sx127x_set_fsk_fdev(sx127x_t *sx127x, unsigned hz)
 {
     sx127x_prepare_write(sx127x);
@@ -966,6 +997,23 @@ void sx127x_set_fsk_preamble_length(sx127x_t *sx127x, unsigned length)
 // #pragma endregion
 
 // #pragma region LoRa specific functions
+
+static void sx127x_set_lora_parameters(sx127x_t *sx127x)
+{
+    sx127x_write_reg(sx127x, REG_LORA_FIFO_TX_BASE_ADDR, TX_FIFO_ADDR);
+    sx127x_write_reg(sx127x, REG_LORA_FIFO_RX_BASE_ADDR, RX_FIFO_ADDR);
+
+    // set auto AGC
+    sx127x_write_reg(sx127x, REG_LORA_MODEM_CONFIG_3, 0x04);
+
+#if defined(CONFIG_RAVEN_DIO5_CLK_OUTPUT)
+    // Enable DIO5 as ClkOut
+    uint8_t dio_mapping_2 = sx127x_read_reg(sx127x, REG_DIO_MAPPING_2);
+    sx127x_write_reg(sx127x, REG_DIO_MAPPING_2, dio_mapping_2 | (1 << 5));
+#endif
+
+    sx127x_set_lora_sync_word(sx127x);
+}
 
 static float sx127x_get_lora_signal_bw_khz(sx127x_t *sx127x, sx127x_lora_signal_bw_e sbw)
 {
@@ -1038,6 +1086,22 @@ static void sx127x_apply_bw500_sensitivity_workaround(sx127x_t *sx127x)
         }
         sx127x->state.lora.bw_workaround = workaround;
     }
+}
+
+static void sx127x_set_lora_sync_word(sx127x_t *sx127x)
+{
+    uint8_t sw = sx127x->state.sync_word == SX127X_SYNC_WORD_DEFAULT ? SX127X_DEFAULT_LORA_SYNC_WORD : sx127x->state.sync_word;
+    if (sw == 0)
+    {
+        // Sync word at zero won't work. See page 68 of the datasheet
+        sw = 1;
+    }
+    else if (sw == 0x34)
+    {
+        // 0x34 is reserved for LoRaWAN
+        sw = 0x35;
+    }
+    sx127x_write_reg(sx127x, REG_LORA_SYNC_WORD, sw);
 }
 
 void sx127x_set_lora_spreading_factor(sx127x_t *sx127x, int sf)
@@ -1141,21 +1205,6 @@ void sx127x_set_lora_header_mode(sx127x_t *sx127x, sx127x_lora_header_e mode)
         break;
     }
     sx127x_write_reg(sx127x, REG_LORA_MODEM_CONFIG_1, reg);
-}
-
-void sx127x_set_lora_sync_word(sx127x_t *sx127x, uint8_t sw)
-{
-    if (sw == 0)
-    {
-        // Sync word at zero won't work. See page 68 of the datasheet
-        sw = 1;
-    }
-    else if (sw == 0x34)
-    {
-        // 0x34 is reserved for LoRaWAN
-        sw = 0x35;
-    }
-    sx127x_write_reg(sx127x, REG_LORA_SYNC_WORD, sw);
 }
 
 int sx127x_lora_min_rssi(sx127x_t *sx127x)

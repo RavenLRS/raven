@@ -28,7 +28,7 @@ int air_radio_frequency_error(air_radio_t *radio)
 
 void air_radio_set_sync_word(air_radio_t *radio, uint8_t word)
 {
-    sx127x_set_lora_sync_word(&radio->sx127x, word);
+    sx127x_set_sync_word(&radio->sx127x, word);
 }
 
 void air_radio_start_rx(air_radio_t *radio)
@@ -139,7 +139,7 @@ void air_radio_set_bind_mode(air_radio_t *radio)
     // Same as fast parameters as mode 2
     air_radio_set_mode(radio, AIR_MODE_2);
     sx127x_set_tx_power(&radio->sx127x, 1);
-    sx127x_set_lora_sync_word(&radio->sx127x, SX127X_DEFAULT_LORA_SYNC_WORD);
+    sx127x_set_sync_word(&radio->sx127x, SX127X_SYNC_WORD_DEFAULT);
     sx127x_set_payload_size(&radio->sx127x, sizeof(air_bind_packet_t));
 }
 

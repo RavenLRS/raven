@@ -11,8 +11,7 @@
 
 #define SX127X_MAX_PKT_LENGTH 255
 #define SX127X_SNR_SCALE 4
-
-#define SX127X_DEFAULT_LORA_SYNC_WORD 0x12 // 6.4 LoRa register mode map, RegSyncWord
+#define SX127X_SYNC_WORD_DEFAULT -1
 
 typedef enum
 {
@@ -76,6 +75,7 @@ typedef struct sx127x_s
         spi_device_handle_t spi;
         sx127x_op_mode_e op_mode;
         uint8_t mode;
+        int16_t sync_word;
         struct
         {
             unsigned long freq;
@@ -107,6 +107,7 @@ void sx127x_set_tx_power(sx127x_t *sx127x, int dBm);
 // freq is in Hz
 void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq, int error);
 void sx127x_set_payload_size(sx127x_t *sx127x, uint8_t size);
+void sx127x_set_sync_word(sx127x_t *sx127x, int16_t sw);
 
 void sx127x_send(sx127x_t *sx127x, const void *buf, size_t size);
 size_t sx127x_read(sx127x_t *sx127x, void *buf, size_t size);
@@ -141,5 +142,4 @@ void sx127x_set_lora_coding_rate(sx127x_t *sx127x, sx127x_lora_coding_rate_e rat
 void sx127x_set_lora_preamble_length(sx127x_t *sx127x, long length);
 void sx127x_set_lora_crc(sx127x_t *sx127x, bool crc);
 void sx127x_set_lora_header_mode(sx127x_t *sx127x, sx127x_lora_header_e mode);
-void sx127x_set_lora_sync_word(sx127x_t *sx127x, uint8_t sw);
 int sx127x_lora_min_rssi(sx127x_t *sx127x);
