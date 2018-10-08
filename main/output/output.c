@@ -103,7 +103,7 @@ static void output_msp_configure_polling_common(output_t *output)
     {
         output->craft_name_setting = NULL;
     }
-    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI) && output->fc.rssi_channel_auto)
+    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI) && output->fc.rssi.channel_auto)
     {
         output_msp_configure_poll(output, MSP_RSSI_CONFIG, SECS_TO_MICROS(10));
     }
@@ -171,7 +171,7 @@ static void output_msp_callback(msp_conn_t *conn, uint16_t cmd, const void *payl
             // MSP based FCs return 0 to mean disabled, non-zero to indicate
             // that the channel number (from 1) is the RSSI channel.
             uint8_t fc_rssi_channel = *((const uint8_t *)payload);
-            output->fc.rssi_channel = fc_rssi_channel > 0 ? fc_rssi_channel - 1 : -1;
+            output->fc.rssi.channel = fc_rssi_channel > 0 ? fc_rssi_channel - 1 : -1;
         }
         break;
     }
@@ -213,6 +213,35 @@ static void output_msp_poll(output_t *output, time_micros_t now)
     }
 }
 
+static void output_configure_rssi(output_t *output)
+{
+    // TODO: This code and RSSI handling can be left out when no RX support is compiled in
+    rx_rssi_channel_e rssi_channel = RX_RSSI_CHANNEL_NONE;
+    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_REMOTE) && OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI))
+    {
+        const setting_t *rx_rssi_channel_setting = settings_get_key(SETTING_KEY_RX_RSSI_CHANNEL);
+        if (rx_rssi_channel_setting)
+        {
+            rssi_channel = setting_get_u8(rx_rssi_channel_setting);
+        }
+    }
+    switch (rssi_channel)
+    {
+    case RX_RSSI_CHANNEL_AUTO:
+        output->fc.rssi.channel_auto = true;
+        output->fc.rssi.channel = -1;
+        break;
+    case RX_RSSI_CHANNEL_NONE:
+        output->fc.rssi.channel_auto = false;
+        output->fc.rssi.channel = -1;
+        break;
+    default:
+        output->fc.rssi.channel_auto = false;
+        output->fc.rssi.channel = rx_rssi_channel_index(rssi_channel);
+        break;
+    }
+}
+
 bool output_open(rc_data_t *data, output_t *output, void *config)
 {
     bool is_open = false;
@@ -222,22 +251,7 @@ bool output_open(rc_data_t *data, output_t *output, void *config)
         rc_data_reset_output(data);
         output->rc_data = data;
         memset(&output->fc, 0, sizeof(output_fc_t));
-        rx_rssi_channel_e rssi_channel = settings_get_key_u8(SETTING_KEY_RX_RSSI_CHANNEL);
-        switch (rssi_channel)
-        {
-        case RX_RSSI_CHANNEL_AUTO:
-            output->fc.rssi_channel_auto = true;
-            output->fc.rssi_channel = -1;
-            break;
-        case RX_RSSI_CHANNEL_NONE:
-            output->fc.rssi_channel_auto = false;
-            output->fc.rssi_channel = -1;
-            break;
-        default:
-            output->fc.rssi_channel_auto = false;
-            output->fc.rssi_channel = rx_rssi_channel_index(rssi_channel);
-            break;
-        }
+        output_configure_rssi(output);
         output->telemetry_updated = telemetry_updated_callback;
         output->telemetry_calculate = telemetry_calculate_callback;
         output->craft_name_setting = NULL;
@@ -275,9 +289,9 @@ bool output_update(output_t *output, bool input_was_updated, time_micros_t now)
         {
             update_rc = true;
 
-            if (output->fc.rssi_channel >= 0 && output->fc.rssi_channel < RC_CHANNELS_NUM)
+            if (output->fc.rssi.channel >= 0 && output->fc.rssi.channel < RC_CHANNELS_NUM)
             {
-                rssi_channel = &output->rc_data->channels[output->fc.rssi_channel];
+                rssi_channel = &output->rc_data->channels[output->fc.rssi.channel];
                 uint8_t lq = CONSTRAIN(TELEMETRY_GET_I8(output->rc_data, TELEMETRY_ID_RX_LINK_QUALITY), 0, 100);
                 channel_value = rssi_channel->value;
                 rssi_channel->value = RC_CHANNEL_VALUE_FROM_PERCENTAGE(lq);

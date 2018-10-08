@@ -114,8 +114,11 @@ typedef struct output_fc_s
     bool fw_version_is_pending;
     uint8_t fw_version[3];
     time_micros_t next_fw_update;
-    int8_t rssi_channel;
-    bool rssi_channel_auto;
+    struct
+    {
+        bool channel_auto;
+        int8_t channel;
+    } rssi;
     output_msp_poll_t polls[OUTPUT_FC_MAX_NUM_POLLS];
 } output_fc_t;
 
