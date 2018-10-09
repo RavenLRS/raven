@@ -5,7 +5,7 @@
 
 #include <hal/gpio.h>
 
-hal_err_t hal_gpio_enable(hal_gpio_t gpio)
+static hal_err_t hal_gpio_enable(hal_gpio_t gpio)
 {
     hal_err_t err;
     // Disable DAC output on GPIO25 and GPIO26. It's enabled by default and
@@ -36,10 +36,11 @@ hal_err_t hal_gpio_enable(hal_gpio_t gpio)
             return err;
         }
     }
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[gpio], PIN_FUNC_GPIO);
     return HAL_ERR_NONE;
 }
 
-hal_err_t hal_gpio_set_dir(hal_gpio_t gpio, hal_gpio_dir_t dir)
+static hal_err_t hal_gpio_set_dir(hal_gpio_t gpio, hal_gpio_dir_t dir)
 {
     gpio_mode_t mode = 0;
     switch (dir)
@@ -50,6 +51,9 @@ hal_err_t hal_gpio_set_dir(hal_gpio_t gpio, hal_gpio_dir_t dir)
     case HAL_GPIO_DIR_OUTPUT:
         mode = GPIO_MODE_OUTPUT;
         break;
+    case HAL_GPIO_DIR_OUTPUT_OD:
+        mode = GPIO_MODE_OUTPUT_OD;
+        break;
     case HAL_GPIO_DIR_BIDIR:
         mode = GPIO_MODE_INPUT_OUTPUT;
         break;
@@ -57,7 +61,7 @@ hal_err_t hal_gpio_set_dir(hal_gpio_t gpio, hal_gpio_dir_t dir)
     return gpio_set_direction(gpio, mode);
 }
 
-hal_err_t hal_gpio_set_pull(hal_gpio_t gpio, hal_gpio_pull_t pull)
+static hal_err_t hal_gpio_set_pull(hal_gpio_t gpio, hal_gpio_pull_t pull)
 {
     gpio_pull_mode_t pull_mode = 0;
     switch (pull)
@@ -71,8 +75,31 @@ hal_err_t hal_gpio_set_pull(hal_gpio_t gpio, hal_gpio_pull_t pull)
     case HAL_GPIO_PULL_DOWN:
         pull_mode = GPIO_PULLDOWN_ONLY;
         break;
+    case HAL_GPIO_PULL_BOTH:
+        pull_mode = GPIO_PULLUP_PULLDOWN;
+        break;
     }
     return gpio_set_pull_mode(gpio, pull_mode);
+}
+
+hal_err_t hal_gpio_setup(hal_gpio_t gpio, hal_gpio_dir_t dir, hal_gpio_pull_t pull)
+{
+    hal_err_t err;
+
+    if ((err = hal_gpio_enable(gpio)) != HAL_ERR_NONE)
+    {
+        return err;
+    }
+
+    if ((err = hal_gpio_set_dir(gpio, dir)) != HAL_ERR_NONE)
+    {
+        return err;
+    }
+    if ((err = hal_gpio_set_pull(gpio, pull)) != HAL_ERR_NONE)
+    {
+        return err;
+    }
+    return HAL_ERR_NONE;
 }
 
 hal_err_t hal_gpio_set_level(hal_gpio_t gpio, uint32_t level)

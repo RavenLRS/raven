@@ -29,6 +29,7 @@ typedef enum
 {
     HAL_GPIO_DIR_INPUT,
     HAL_GPIO_DIR_OUTPUT,
+    HAL_GPIO_DIR_OUTPUT_OD,
     HAL_GPIO_DIR_BIDIR,
 } hal_gpio_dir_t;
 
@@ -37,6 +38,7 @@ typedef enum
     HAL_GPIO_PULL_NONE,
     HAL_GPIO_PULL_UP,
     HAL_GPIO_PULL_DOWN,
+    HAL_GPIO_PULL_BOTH,
 } hal_gpio_pull_t;
 
 typedef enum
@@ -48,16 +50,7 @@ typedef enum
     HAL_GPIO_INTR_HIGH_LEVEL,
 } hal_gpio_intr_t;
 
-typedef struct hal_gpio_cfg_s
-{
-    hal_gpio_dir_t dir;
-    hal_gpio_pull_t pull;
-} hal_gpio_cfg_t;
-
-hal_err_t hal_gpio_enable(hal_gpio_t gpio);
-hal_err_t hal_gpio_set_dir(hal_gpio_t gpio, hal_gpio_dir_t dir);
-hal_err_t hal_gpio_set_pull(hal_gpio_t gpio, hal_gpio_pull_t pull);
-hal_err_t hal_gpio_setup(hal_gpio_t gpio, hal_gpio_cfg_t *cfg);
+hal_err_t hal_gpio_setup(hal_gpio_t gpio, hal_gpio_dir_t dir, hal_gpio_pull_t pull);
 hal_err_t hal_gpio_set_level(hal_gpio_t gpio, uint32_t level);
 hal_err_t hal_gpio_get_level(hal_gpio_t gpio);
 

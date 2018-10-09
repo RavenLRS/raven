@@ -262,8 +262,7 @@ static void sx127x_disable_dio0(sx127x_t *sx127x)
 
 void sx127x_init(sx127x_t *sx127x)
 {
-    HAL_ERR_ASSERT_OK(hal_gpio_enable(sx127x->rst));
-    HAL_ERR_ASSERT_OK(hal_gpio_set_dir(sx127x->rst, HAL_GPIO_DIR_OUTPUT));
+    HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->rst, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
     HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rst, HAL_GPIO_LOW));
     vTaskDelay(20 / portTICK_PERIOD_MS);
     HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rst, HAL_GPIO_HIGH));
@@ -340,9 +339,7 @@ void sx127x_init(sx127x_t *sx127x)
     sx127x_idle(sx127x);
 
     // configure pin for ISR
-    HAL_ERR_ASSERT_OK(hal_gpio_enable(sx127x->dio0));
-    HAL_ERR_ASSERT_OK(hal_gpio_set_dir(sx127x->dio0, HAL_GPIO_DIR_INPUT));
-    HAL_ERR_ASSERT_OK(hal_gpio_set_pull(sx127x->dio0, HAL_GPIO_PULL_NONE));
+    HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->dio0, HAL_GPIO_DIR_INPUT, HAL_GPIO_PULL_NONE));
     HAL_ERR_ASSERT_OK(hal_gpio_set_isr(sx127x->dio0, HAL_GPIO_INTR_POSEDGE, lora_handle_isr, sx127x));
 
     sx127x_disable_dio0(sx127x);

@@ -82,9 +82,7 @@ static uint8_t u8g2_msg_i2c_and_delay_cb(u8x8_t *u8x8, uint8_t msg, uint8_t arg_
     case U8X8_MSG_GPIO_AND_DELAY_INIT:
         if (hal.rst != HAL_GPIO_NONE)
         {
-            HAL_ERR_ASSERT_OK(hal_gpio_enable(hal.rst));
-            HAL_ERR_ASSERT_OK(hal_gpio_set_dir(hal.rst, HAL_GPIO_DIR_OUTPUT));
-            HAL_ERR_ASSERT_OK(hal_gpio_set_pull(hal.rst, HAL_GPIO_PULL_DOWN));
+            HAL_ERR_ASSERT_OK(hal_gpio_setup(hal.rst, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_DOWN));
         }
         break;
         // Set the GPIO reset pin to the value passed in through arg_int.

@@ -48,11 +48,7 @@ static void led_init_led_task(void *data)
 
 static void led_init_led(led_t *led)
 {
-    hal_gpio_cfg_t cfg = {
-        .dir = HAL_GPIO_DIR_OUTPUT,
-        .pull = HAL_GPIO_PULL_NONE,
-    };
-    HAL_ERR_ASSERT_OK(hal_gpio_setup(led->gpio, &cfg));
+    HAL_ERR_ASSERT_OK(hal_gpio_setup(led->gpio, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
     led_off_led(led);
     led->next_update = 0;
     led->is_initialized = false;

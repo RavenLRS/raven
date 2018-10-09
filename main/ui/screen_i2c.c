@@ -26,8 +26,7 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 {
     if (cfg->rst != HAL_GPIO_NONE)
     {
-        HAL_ERR_ASSERT_OK(hal_gpio_enable(cfg->rst));
-        HAL_ERR_ASSERT_OK(hal_gpio_set_dir(cfg->rst, HAL_GPIO_DIR_OUTPUT));
+        HAL_ERR_ASSERT_OK(hal_gpio_setup(cfg->rst, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
         HAL_ERR_ASSERT_OK(hal_gpio_set_level(cfg->rst, HAL_GPIO_LOW));
         vTaskDelay(50 / portTICK_PERIOD_MS);
         HAL_ERR_ASSERT_OK(hal_gpio_set_level(cfg->rst, HAL_GPIO_HIGH));

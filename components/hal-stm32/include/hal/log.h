@@ -10,10 +10,18 @@ typedef enum
     LOG_LEVEL_ERROR,
 } log_level_e;
 
+#define LOG_TAG_DECLARE(tag) static const char *TAG = tag;
+
 #define LOG_D(tag, format, ...) log_printf(LOG_LEVEL_DEBUG, tag, format, ##__VA_ARGS__)
 #define LOG_I(tag, format, ...) log_printf(LOG_LEVEL_INFO, tag, format, ##__VA_ARGS__)
 #define LOG_W(tag, format, ...) log_printf(LOG_LEVEL_WARNING, tag, format, ##__VA_ARGS__)
 #define LOG_E(tag, format, ...) log_printf(LOG_LEVEL_ERROR, tag, format, ##__VA_ARGS__)
+#define LOG_F(tag, format, ...)                                  \
+    do                                                           \
+    {                                                            \
+        log_printf(LOG_LEVEL_ERROR, tag, format, ##__VA_ARGS__); \
+        abort();                                                 \
+    } while (0);
 
 #define LOG_BUFFER_D(tag, buf, size) log_print_buffer_hex(LOG_LEVEL_DEBUG, tag, buf, size)
 #define LOG_BUFFER_I(tag, buf, size) log_print_buffer_hex(LOG_LEVEL_INFO, tag, buf, size)

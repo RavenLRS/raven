@@ -78,9 +78,7 @@ static void button_gpio_init(button_t *button)
         return;
     }
 #endif
-    HAL_ERR_ASSERT_OK(hal_gpio_enable(button->gpio));
-    HAL_ERR_ASSERT_OK(hal_gpio_set_dir(button->gpio, HAL_GPIO_DIR_INPUT));
-    HAL_ERR_ASSERT_OK(hal_gpio_set_pull(button->gpio, HAL_GPIO_PULL_UP));
+    HAL_ERR_ASSERT_OK(hal_gpio_setup(button->gpio, HAL_GPIO_DIR_INPUT, HAL_GPIO_PULL_UP));
 }
 
 void button_init(button_t *button)
