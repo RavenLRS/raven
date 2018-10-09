@@ -53,8 +53,10 @@ static void input_air_update_air_mode(input_air_t *input_air)
 static void input_air_start(input_air_t *input_air)
 {
     air_radio_t *radio = input_air->air_config.radio;
+    unsigned long center_freq = air_band_frequency(input_air->air_config.band);
+    air_radio_calibrate(radio, center_freq);
     air_radio_set_sync_word(radio, air_sync_word(input_air->air.pairing.key));
-    air_freq_table_init(&input_air->air.freq_table, input_air->air.pairing.key, air_band_frequency(input_air->air_config.band));
+    air_freq_table_init(&input_air->air.freq_table, input_air->air.pairing.key, center_freq);
     // TODO: RX used 17dBm fixed power
     air_radio_set_tx_power(radio, 17);
     input_air_update_air_mode(input_air);

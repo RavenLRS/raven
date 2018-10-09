@@ -55,6 +55,7 @@
 #define REG_FSK_PACKET_CONFIG_2 0x31
 #define REG_FSK_PAYLOAD_LENGTH 0x32
 #define REG_FSK_FIFO_THRESH 0x35
+#define REG_FSK_IMAGE_CAL 0x3b
 #define REG_FSK_IRQ_FLAGS_1 0x3e
 #define REG_FSK_IRQ_FLAGS_2 0x3f
 
@@ -125,6 +126,11 @@
 #define SX127X_EXPECTED_VERSION 18
 
 #define SX127X_DEFAULT_LORA_SYNC_WORD 0x12 // 6.4 LoRa register mode map, RegSyncWord
+
+#define SX127X_OP_MODE_MODE_MASK (~(1 << 0 | 1 << 1 | 1 << 2))
+
+#define SX127X_IMAGE_CAL_START (1 << 6)
+#define SX127X_IMAGE_CAL_RUNNING (1 << 5)
 
 enum
 {
@@ -260,15 +266,26 @@ static void sx127x_disable_dio0(sx127x_t *sx127x)
     sx127x_write_reg(sx127x, REG_DIO_MAPPING_1, reg);
 }
 
+static void sx127x_reset(sx127x_t *sx127x)
+{
+    // SX127X resets on edge from low to high. We should wait for 5ms
+    // after the edge. However some boards don't have the actual
+    // RST pin wired but instead open and close VCC to the SX127X,
+    // so we should keep the RST line high to make those boards work
+    // (ttgov1, heltec). The POR time is also a bit higher, at 10ms
+    // until the chip is ready so we wait 15ms just to be safe.
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rst, HAL_GPIO_LOW));
+    time_millis_delay(10);
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rst, HAL_GPIO_HIGH));
+    time_millis_delay(15);
+}
+
 void sx127x_init(sx127x_t *sx127x)
 {
     HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->rst, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
-    HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rst, HAL_GPIO_LOW));
-    vTaskDelay(20 / portTICK_PERIOD_MS);
-    HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rst, HAL_GPIO_HIGH));
-    vTaskDelay(50 / portTICK_PERIOD_MS);
+    sx127x_reset(sx127x);
 
-    //Initialize the SPI bus
+    // Initialize the SPI bus
     HAL_ERR_ASSERT_OK(hal_spi_bus_init(sx127x->spi_bus, sx127x->miso, sx127x->mosi, sx127x->sck));
 
     // Attach the device
@@ -396,6 +413,22 @@ void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq, int error)
     }
 }
 
+void sx127x_calibrate(sx127x_t *sx127x, unsigned long freq)
+{
+    sx127x_set_op_mode(sx127x, SX127X_OP_MODE_FSK);
+    sx127x_set_frequency(sx127x, freq, 0);
+    sx127x_idle(sx127x);
+    sx127x_fsk_wait_for_mode_ready(sx127x);
+    // Start image calibration
+    uint8_t image_cal = sx127x_read_reg(sx127x, REG_FSK_IMAGE_CAL);
+    sx127x_write_reg(sx127x, REG_FSK_IMAGE_CAL, image_cal | SX127X_IMAGE_CAL_START);
+    // Wait for calibration to complete
+    while (sx127x_read_reg(sx127x, REG_FSK_IMAGE_CAL) & SX127X_IMAGE_CAL_RUNNING)
+    {
+        time_micros_delay(1);
+    }
+}
+
 void sx127x_set_payload_size(sx127x_t *sx127x, uint8_t size)
 {
     switch (sx127x->state.op_mode)
@@ -439,13 +472,13 @@ void sx127x_set_sync_word(sx127x_t *sx127x, int16_t sw)
 
 void sx127x_sleep(sx127x_t *sx127x)
 {
-    uint8_t mode = (sx127x->state.mode & MODE_LORA) | MODE_SLEEP;
+    uint8_t mode = (sx127x->state.mode & SX127X_OP_MODE_MODE_MASK) | MODE_SLEEP;
     sx127x_set_mode(sx127x, mode);
 }
 
 void sx127x_idle(sx127x_t *sx127x)
 {
-    uint8_t mode = (sx127x->state.mode & MODE_LORA) | MODE_STDBY;
+    uint8_t mode = (sx127x->state.mode & SX127X_OP_MODE_MODE_MASK) | MODE_STDBY;
     sx127x_set_mode(sx127x, mode);
 }
 
@@ -453,15 +486,16 @@ void sx127x_set_op_mode(sx127x_t *sx127x, sx127x_op_mode_e op_mode)
 {
     if (sx127x->state.op_mode != op_mode)
     {
-        sx127x_set_mode(sx127x, (sx127x->state.mode & MODE_LORA) | MODE_SLEEP);
+        uint8_t prev_mode = sx127x->state.mode;
+        sx127x_set_mode(sx127x, prev_mode | MODE_SLEEP);
         switch (op_mode)
         {
         case SX127X_OP_MODE_FSK:
-            sx127x_set_mode(sx127x, MODE_SLEEP);
+            sx127x_set_mode(sx127x, (prev_mode & ~MODE_LORA) | MODE_SLEEP);
             sx127x_set_fsk_parameters(sx127x);
             break;
         case SX127X_OP_MODE_LORA:
-            sx127x_set_mode(sx127x, MODE_LORA | MODE_SLEEP);
+            sx127x_set_mode(sx127x, (prev_mode | MODE_LORA) | MODE_SLEEP);
             sx127x_set_lora_parameters(sx127x);
             break;
         }

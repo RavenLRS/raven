@@ -21,6 +21,11 @@ void air_radio_set_frequency(air_radio_t *radio, unsigned long freq, int error)
     sx127x_set_frequency(&radio->sx127x, freq, error);
 }
 
+void air_radio_calibrate(air_radio_t *radio, unsigned long freq)
+{
+    sx127x_calibrate(&radio->sx127x, freq);
+}
+
 int air_radio_frequency_error(air_radio_t *radio)
 {
     return sx127x_frequency_error(&radio->sx127x);

@@ -105,11 +105,13 @@ static void output_air_stop_ack(output_air_t *output_air, rc_data_t *data)
 static void output_air_start(output_air_t *output_air)
 {
     air_radio_t *radio = output_air->air_config.radio;
+    unsigned long center_freq = air_band_frequency(output_air->air_config.band);
+    air_radio_calibrate(radio, center_freq);
     output_air_update_mode(output_air);
     air_radio_set_tx_power(radio, output_air->tx_power);
     output_air->tx_power = -1;
     air_radio_set_sync_word(radio, air_sync_word(output_air->air.pairing.key));
-    air_freq_table_init(&output_air->air.freq_table, output_air->air.pairing.key, air_band_frequency(output_air->air_config.band));
+    air_freq_table_init(&output_air->air.freq_table, output_air->air.pairing.key, center_freq);
     output_air->freq_index = 0xFF;
     output_air_update_frequency(output_air, 0);
     air_radio_set_callback(radio, output_air_radio_callback, output_air);
