@@ -165,6 +165,11 @@ bool air_radio_is_rx_done(air_radio_t *radio)
     return sx127x_is_rx_done(&radio->sx127x);
 }
 
+bool air_radio_is_rx_in_progress(air_radio_t *radio)
+{
+    return sx127x_is_rx_in_progress(&radio->sx127x);
+}
+
 void air_radio_set_payload_size(air_radio_t *radio, size_t size)
 {
     sx127x_set_payload_size(&radio->sx127x, size);

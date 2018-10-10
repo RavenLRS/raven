@@ -36,6 +36,7 @@ void air_radio_set_powertest_mode(air_radio_t *radio);
 
 bool air_radio_is_tx_done(air_radio_t *radio);
 bool air_radio_is_rx_done(air_radio_t *radio);
+bool air_radio_is_rx_in_progress(air_radio_t *radio);
 
 void air_radio_set_payload_size(air_radio_t *radio, size_t size);
 size_t air_radio_read(air_radio_t *radio, void *buf, size_t size);

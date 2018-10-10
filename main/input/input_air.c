@@ -68,6 +68,7 @@ static void input_air_start(input_air_t *input_air)
     input_air->air_state = AIR_INPUT_STATE_RX;
     input_air->tx_seq = 0;
     input_air->next_packet_deadline = TIME_MICROS_MAX;
+    input_air->next_packet_deadline_extended = false;
 }
 
 static void input_air_stream_channel_decoded(void *user, unsigned chn, unsigned value, time_micros_t now)
@@ -345,11 +346,23 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
     switch ((air_input_state_e)input_air->air_state)
     {
     case AIR_INPUT_STATE_RX:
+        if (failsafe_is_active(data->failsafe.input))
+        {
+            air_cmd_switch_mode_ack_reset(&input_air->switch_air_mode);
+            if (input_air->air_mode != input_air->air_mode_longest)
+            {
+                input_air->air_mode = input_air->air_mode_longest;
+                input_air_update_air_mode(input_air);
+            }
+            air_io_invalidate_rssi(&input_air->air, now);
+        }
+
         if (input_air_receive(input_air, &in_pkt))
         {
             input_air->last_packet_at = now;
             input_air->next_packet_expected_at = now + input_air->cycle_time;
             input_air->next_packet_deadline = input_air->next_packet_expected_at + input_air->cycle_time * CYCLE_TIME_WAIT_FACTOR;
+            input_air->next_packet_deadline_extended = false;
             input_air->consecutive_lost_packets = 0;
             input_air->rx_success++;
             input_air->tx_seq = in_pkt.seq;
@@ -381,14 +394,22 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
             rc_data_update_channel(data, 3, AIR_TO_CHANNEL_INPUT(in_pkt.ch3), now);
 
             air_stream_feed_input(&input_air->air_stream, in_pkt.seq, in_pkt.data, sizeof(in_pkt.data), now);
+            break;
         }
-        else if (now > input_air->next_packet_deadline)
+        if (now > input_air->next_packet_deadline)
         {
+            if (!input_air->next_packet_deadline_extended && air_radio_is_rx_in_progress(radio))
+            {
+                input_air->next_packet_deadline += input_air->cycle_time * CYCLE_TIME_WAIT_FACTOR;
+                input_air->next_packet_deadline_extended = true;
+                break;
+            }
             // Packet was lost
             input_air->rx_errors++;
             input_air->consecutive_lost_packets++;
             input_air->next_packet_expected_at = now + input_air->cycle_time;
             input_air->next_packet_deadline = input_air->next_packet_expected_at + input_air->cycle_time * CYCLE_TIME_WAIT_FACTOR;
+            input_air->next_packet_deadline_extended = false;
             LOG_W(TAG, "invalid or lost frame, %u consecutive, %f%% error rate",
                   input_air->consecutive_lost_packets,
                   (input_air->rx_errors * 100.0) / (input_air->rx_errors + input_air->rx_success));
@@ -401,16 +422,7 @@ static bool input_air_update(void *input, rc_data_t *data, time_micros_t now)
                 air_radio_sleep(radio);
                 air_radio_start_rx(radio);
             }
-        }
-        else if (failsafe_is_active(data->failsafe.input))
-        {
-            air_cmd_switch_mode_ack_reset(&input_air->switch_air_mode);
-            if (input_air->air_mode != input_air->air_mode_longest)
-            {
-                input_air->air_mode = input_air->air_mode_longest;
-                input_air_update_air_mode(input_air);
-            }
-            air_io_invalidate_rssi(&input_air->air, now);
+            break;
         }
         break;
     case AIR_INPUT_STATE_TX:

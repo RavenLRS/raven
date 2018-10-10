@@ -119,6 +119,7 @@ size_t sx127x_read(sx127x_t *sx127x, void *buf, size_t size);
 void sx127x_enable_continous_rx(sx127x_t *sx127x);
 bool sx127x_is_tx_done(sx127x_t *sx127x);
 bool sx127x_is_rx_done(sx127x_t *sx127x);
+bool sx127x_is_rx_in_progress(sx127x_t *sx127x);
 
 void sx127x_set_callback(sx127x_t *sx127x, air_radio_callback_t callback, void *data);
 

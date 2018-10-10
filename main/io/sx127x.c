@@ -97,15 +97,16 @@
 #define PA_BOOST 0x80
 
 // IRQ masks
-#define IRQ_FSK_MODE_READY (1 << 7)    // in REG_FSK_IRQ_FLAGS_1
-#define IRQ_FSK_RX_READY (1 << 6)      // in REG_FSK_IRQ_FLAGS_1
-#define IRQ_FSK_TX_READY (1 << 5)      // in REG_FSK_IRQ_FLAGS_1
-#define IRQ_FSK_PACKET_SENT (1 << 3)   // in REG_FSK_IRQ_FLAGS_2
-#define IRQ_FSK_PAYLOAD_READY (1 << 2) // in REG_FSK_IRQ_FLAGS_2
+#define IRQ_FSK_MODE_READY (1 << 7)         // in REG_FSK_IRQ_FLAGS_1
+#define IRQ_FSK_RX_READY (1 << 6)           // in REG_FSK_IRQ_FLAGS_1
+#define IRQ_FSK_TX_READY (1 << 5)           // in REG_FSK_IRQ_FLAGS_1
+#define IRQ_FSK_SYNC_ADDRESS_MATCH (1 << 0) // in REG_FSK_IRQ_FLAGS_1
+#define IRQ_FSK_PACKET_SENT (1 << 3)        // in REG_FSK_IRQ_FLAGS_2
+#define IRQ_FSK_PAYLOAD_READY (1 << 2)      // in REG_FSK_IRQ_FLAGS_2
 
-#define IRQ_TX_DONE_MASK 0x08
-#define IRQ_PAYLOAD_CRC_ERROR_MASK 0x20
-#define IRQ_RX_DONE_MASK 0x40
+#define IRQ_LORA_TX_DONE_MASK (1 << 3)
+#define IRQ_LORA_RX_DONE_MASK (1 << 6)
+#define IRQ_LORA_VALID_HEADER (1 << 6)
 
 // Page 46, table 18 indicates the DIO0 values,
 // page 92 indicates that DIO0 is in the most
@@ -594,7 +595,7 @@ void sx127x_send(sx127x_t *sx127x, const void *buf, size_t size)
         sx127x_set_mode(sx127x, MODE_TX);
         break;
     case SX127X_OP_MODE_LORA:
-        sx127x_write_reg(sx127x, REG_LORA_IRQ_FLAGS, IRQ_TX_DONE_MASK);
+        sx127x_write_reg(sx127x, REG_LORA_IRQ_FLAGS, IRQ_LORA_TX_DONE_MASK);
         sx127x_write_reg(sx127x, REG_DIO_MAPPING_1, DIO0_LORA_TX_DONE);
         sx127x_set_mode(sx127x, MODE_LORA | MODE_TX);
         break;
@@ -625,12 +626,12 @@ size_t sx127x_read(sx127x_t *sx127x, void *buf, size_t size)
     switch (sx127x->state.op_mode)
     {
     case SX127X_OP_MODE_FSK:
-        // No need to clear the IRQ here, it's done automatically when
-        // the FIFO is emptied.
+        // No need to clear the IRQs here, both PayloadReady and SyncAddressMatch are
+        // automatically cleared when the FIFO is emptied of when exiting RX mode.
         fec_decode(data, ptr_size, buf, size);
         break;
     case SX127X_OP_MODE_LORA:
-        sx127x_write_reg(sx127x, REG_LORA_IRQ_FLAGS, IRQ_RX_DONE_MASK);
+        sx127x_write_reg(sx127x, REG_LORA_IRQ_FLAGS, IRQ_LORA_RX_DONE_MASK | IRQ_LORA_VALID_HEADER);
         break;
     }
 
@@ -670,6 +671,18 @@ bool sx127x_is_tx_done(sx127x_t *sx127x)
 bool sx127x_is_rx_done(sx127x_t *sx127x)
 {
     return sx127x->state.rx_done;
+}
+
+bool sx127x_is_rx_in_progress(sx127x_t *sx127x)
+{
+    switch (sx127x->state.op_mode)
+    {
+    case SX127X_OP_MODE_FSK:
+        return sx127x_read_reg(sx127x, REG_FSK_IRQ_FLAGS_1) & IRQ_FSK_SYNC_ADDRESS_MATCH;
+    case SX127X_OP_MODE_LORA:
+        return sx127x_read_reg(sx127x, REG_LORA_IRQ_FLAGS) & IRQ_LORA_VALID_HEADER;
+    }
+    return false;
 }
 
 void sx127x_set_callback(sx127x_t *sx127x, air_radio_callback_t callback, void *callback_data)
