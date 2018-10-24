@@ -201,8 +201,11 @@ void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
 #if defined(USE_TOUCH_BUTTON)
     ui->internal.button.is_touch = cfg->button_is_touch;
 #endif
-    beeper_init(&ui->internal.beeper, cfg->beeper);
-    beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
+    if (cfg->beeper != HAL_GPIO_NONE)
+    {
+        beeper_init(&ui->internal.beeper, cfg->beeper);
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
+    }
     button_init(&ui->internal.button);
     system_add_flag(SYSTEM_FLAG_BUTTON);
 #ifdef USE_SCREEN
@@ -250,7 +253,10 @@ bool ui_is_animating(const ui_t *ui)
 
 void ui_update(ui_t *ui)
 {
-    ui_update_beeper(ui);
+    if (ui->internal.cfg.beeper != HAL_GPIO_NONE)
+    {
+        ui_update_beeper(ui);
+    }
     button_update(&ui->internal.button);
     led_update();
 #ifdef USE_SCREEN
