@@ -331,6 +331,7 @@ void sx127x_init(sx127x_t *sx127x)
         .address_bits = 7,                 // 7 addr bits
         .clock_speed_hz = 9 * 1000 * 1000, // Clock out at 9 MHz: XXX => 10Mhz will cause incorrect reads from REG_MODEM_CONFIG_1
         .cs = sx127x->cs,                  // CS pin
+        .mode = HAL_SPI_MODE_0,
     };
 
     HAL_ERR_ASSERT_OK(hal_spi_bus_add_device(sx127x->spi_bus, &cfg, &sx127x->state.spi));

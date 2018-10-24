@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include <hal/gpio.h>
 #include <hal/log.h>
 
@@ -29,7 +31,7 @@ static int hal_gpio_rcc(hal_gpio_t gpio)
     return 0;
 }
 
-static uint32_t hal_gpio_port(hal_gpio_t gpio)
+uint32_t hal_gpio_port(hal_gpio_t gpio)
 {
     switch (HAL_GPIO_PORT(gpio))
     {
@@ -49,7 +51,7 @@ static uint32_t hal_gpio_port(hal_gpio_t gpio)
     return 0;
 }
 
-static unsigned hal_gpio_bit(hal_gpio_t gpio)
+unsigned hal_gpio_bit(hal_gpio_t gpio)
 {
     return 1 << HAL_GPIO_NUMBER(gpio);
 }

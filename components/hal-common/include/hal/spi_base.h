@@ -5,12 +5,21 @@
 #include <hal/err.h>
 #include <hal/gpio.h>
 
+typedef enum
+{
+    HAL_SPI_MODE_0 = 0,
+    HAL_SPI_MODE_1 = 1,
+    HAL_SPI_MODE_2 = 2,
+    HAL_SPI_MODE_3 = 3,
+} hal_spi_mode_t;
+
 typedef struct hal_spi_device_config_s
 {
     uint8_t command_bits;
     uint8_t address_bits;
     uint32_t clock_speed_hz;
     hal_gpio_t cs;
+    hal_spi_mode_t mode;
 } hal_spi_device_config_t;
 
 hal_err_t hal_spi_bus_init(hal_spi_bus_t bus, hal_gpio_t miso, hal_gpio_t mosi, hal_gpio_t sck);

@@ -22,7 +22,8 @@ hal_err_t hal_spi_bus_add_device(hal_spi_bus_t bus, const hal_spi_device_config_
     devcfg.command_bits = cfg->command_bits;
     devcfg.address_bits = cfg->address_bits;
     devcfg.clock_speed_hz = cfg->clock_speed_hz;
-    devcfg.mode = 0; // SPI mode 0
+    // Modes map directly, since ESP32 uses numbers 0-3 for the mode
+    devcfg.mode = cfg->mode;
     devcfg.spics_io_num = cfg->cs;
     devcfg.queue_size = 4;
     // Attach the device

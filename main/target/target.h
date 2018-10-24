@@ -8,6 +8,11 @@
 #include "target/platforms/stm32/f1/pre_platform.h"
 #endif
 
+#if defined(STM32)
+// Needed for SPI bus defines
+#include <libopencm3/stm32/spi.h>
+#endif
+
 #include "platform.h"
 
 #if defined(ESP32)
