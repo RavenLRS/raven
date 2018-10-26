@@ -6,6 +6,26 @@
 
 #include "util/time.h"
 
+#if defined(LED_1_GPIO)
+#define USE_LED
+#endif
+
+#if defined(LED_1_GPIO) && defined(LED_1_USE_PWM)
+#define LED_USE_PWM
+#endif
+
+#if defined(LED_1_GPIO) && defined(LED_1_USE_WS2812)
+#define LED_USE_WS2812
+#endif
+
+#if defined(LED_USE_PWM) || defined(LED_USE_WS2812)
+#define LED_USE_FADING
+#endif
+
+#if defined(LED_USE_WS2812)
+#include <hal/ws2812.h>
+#endif
+
 #define LED_REPEAT_NONE 0
 #define LED_REPEAT_FOREVER 0xFF
 
@@ -22,8 +42,11 @@
 typedef struct led_stage_s
 {
     uint16_t duration;
-#if !defined(LED_USE_ONLY_GPIO)
+#if defined(LED_USE_FADING)
     uint16_t fade_duration;
+#endif
+#if defined(LED_USE_WS2812)
+    hal_ws2812_color_t color;
 #endif
     uint8_t level;
 } led_stage_t;
@@ -35,13 +58,15 @@ typedef struct led_pattern_s
     uint8_t repeat;
 } led_pattern_t;
 
-#if !defined(LED_USE_ONLY_GPIO)
-#define LED_STAGE(l, d, f) ((led_stage_t){.duration = d, .fade_duration = f, .level = l})
-#define LED_STAGE_FADE_DURATION(s) (s->fade_duration)
+#if defined(LED_USE_WS2812)
+#define LED_STAGE(l, c, d, f) ((const led_stage_t){.duration = d, .color = c, .fade_duration = f, .level = l})
+#elif defined(LED_USE_FADING)
+#define LED_STAGE(l, c, d, f) ((const led_stage_t){.duration = d, .fade_duration = f, .level = l})
 #else
-#define LED_STAGE(l, d, f) ((led_stage_t){.duration = d, .level = l})
-#define LED_STAGE_FADE_DURATION(s) 0
+#define LED_STAGE(l, c, d, f) ((const led_stage_t){.duration = d, .level = l})
 #endif
+
+#define LED_STAGE_OFF(d, f) LED_STAGE(0, HAL_WS2812_OFF, d, f)
 
 typedef enum
 {

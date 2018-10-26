@@ -1,4 +1,5 @@
 #include <hal/log.h>
+#include <hal/ws2812.h>
 
 #include "air/air.h"
 #include "air/air_radio.h"
@@ -9,16 +10,17 @@
 #include "output_air_rf_power_test.h"
 
 #define RF_TEST_LED LED_ID_1
+#define RF_TEST_LED_COLOR HAL_WS2812_RGB(75, 0, 130) // Indigo
 #define LED_BLINK_MS 500
 
 static const led_stage_t blink_stages[] = {
-    LED_STAGE(LED_LEVEL_MAX, LED_BLINK_MS, 0),
-    LED_STAGE(LED_LEVEL_MIN, LED_BLINK_MS, 0),
+    LED_STAGE(LED_LEVEL_MAX, RF_TEST_LED_COLOR, LED_BLINK_MS, 0),
+    LED_STAGE_OFF(LED_BLINK_MS, 0),
 };
 LED_PATTERN(blink_pattern, blink_stages, LED_REPEAT_FOREVER);
 
 static const led_stage_t on_stages[] = {
-    LED_STAGE(LED_LEVEL_MAX, 10000, 0),
+    LED_STAGE(LED_LEVEL_MAX, RF_TEST_LED_COLOR, 10000, 150),
 };
 LED_PATTERN(on_pattern, on_stages, LED_REPEAT_FOREVER);
 
