@@ -57,7 +57,7 @@ static bool input_air_bind_open(void *data, void *config)
         return false;
     }
     air_radio_start_rx(input->air_config.radio);
-    led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_BIND);
+    led_mode_add(LED_MODE_BIND);
     return true;
 }
 
@@ -96,6 +96,7 @@ static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t 
     switch (input->state)
     {
     case AIR_INPUT_BIND_STATE_RX:
+        led_mode_set(LED_MODE_BIND_WITH_REQUEST, input->bind_packet_expires > now);
         if (air_radio_is_rx_done(radio))
         {
             size_t n = air_radio_read(radio, &pkt, sizeof(pkt));
@@ -160,7 +161,8 @@ static void input_air_bind_close(void *data, void *config)
 {
     input_air_bind_t *input = data;
     air_radio_sleep(input->air_config.radio);
-    led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_NONE);
+    led_mode_remove(LED_MODE_BIND);
+    led_mode_remove(LED_MODE_BIND_WITH_REQUEST);
 }
 
 static bool input_air_bind_has_request(void *user_data, air_bind_packet_t *packet, air_band_e *band, bool *needs_confirmation)

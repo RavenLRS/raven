@@ -1,5 +1,7 @@
 #include "target/bands/433.h"
 
+#define LED_USE_ONLY_GPIO
+
 #define BUTTON_1_GPIO HAL_GPIO_NONE
 #define BEEPER_GPIO HAL_GPIO_NONE
 

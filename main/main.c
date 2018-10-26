@@ -36,6 +36,7 @@
 
 #include "rmp/rmp.h"
 
+#include "ui/led.h"
 #include "ui/ui.h"
 
 #include "util/macros.h"
@@ -98,6 +99,7 @@ void raven_ui_init(void)
     };
 
     ui_init(&ui, &cfg, &rc);
+    led_mode_add(LED_MODE_BOOT);
 }
 
 void task_ui(void *arg)

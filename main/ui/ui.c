@@ -258,6 +258,7 @@ void ui_update(ui_t *ui)
         ui_update_beeper(ui);
     }
     button_update(&ui->internal.button);
+    led_mode_set(LED_MODE_FAILSAFE, rc_is_failsafe_active(ui->internal.rc, NULL));
     led_update();
 #ifdef USE_SCREEN
     if (ui_screen_is_available(ui))

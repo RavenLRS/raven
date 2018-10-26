@@ -18,7 +18,7 @@ static bool output_air_bind_open(void *data, void *config)
     output->bind_packet_expires = 0;
     air_radio_set_bind_mode(output->air_config.radio);
     air_radio_set_frequency(output->air_config.radio, air_band_frequency(output->air_config.band), 0);
-    led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_BIND);
+    led_mode_add(LED_MODE_BIND);
     return true;
 }
 
@@ -26,6 +26,7 @@ static bool output_air_bind_update(void *data, rc_data_t *rc_data, bool update_r
 {
     output_air_bind_t *output = data;
     air_radio_t *radio = output->air_config.radio;
+    led_mode_set(LED_MODE_BIND_WITH_REQUEST, output->bind_packet_expires > now);
     if (output->next_bind_offer < now)
     {
         if (!air_radio_is_tx_done(radio))
@@ -82,7 +83,8 @@ static void output_air_bind_close(void *data, void *config)
 {
     output_air_bind_t *output = data;
     air_radio_sleep(output->air_config.radio);
-    led_set_blink_mode(LED_ID_1, LED_BLINK_MODE_NONE);
+    led_mode_remove(LED_MODE_BIND);
+    led_mode_remove(LED_MODE_BIND_WITH_REQUEST);
 }
 
 static bool output_air_bind_has_request(void *data, air_bind_packet_t *packet, air_band_e *band, bool *needs_confirmation)
