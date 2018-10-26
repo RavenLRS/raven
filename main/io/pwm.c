@@ -2,7 +2,7 @@
 
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
 
-#include <driver/ledc.h>
+#include <hal/pwm.h>
 
 #include "config/config.h"
 #include "config/settings.h"
@@ -13,8 +13,11 @@
 
 #include "pwm.h"
 
-#define PWM_TIMER_FREQ_HZ 50
-#define PWM_RESOLUTION LEDC_TIMER_15_BIT
+#define PWM_OUTPUT_FREQ_HZ 50
+// We have a 5% range to work with and we want that mapped
+// to at least ~1000 steps, thus 15 bits is the minimum
+// we can use (2^15)*0.05 = 1638.40
+#define PWM_RESOLUTION 15
 #define PWM_DUTY_MAX_VALUE ((1 << PWM_RESOLUTION) - 1)
 #define PWM_RC_MIN_VALUE (PWM_DUTY_MAX_VALUE * 0.05f)
 #define PWM_RC_MAX_VALUE (PWM_DUTY_MAX_VALUE * 0.10f)
@@ -31,7 +34,7 @@ const char *pwm_channel_names[] = {
     "CH 6",
     "CH 7",
     "CH 8",
-    "CH 8",
+    "CH 9",
     "CH 10",
     "CH 11",
     "CH 12",
@@ -58,9 +61,6 @@ typedef struct pwm_output_s
     hal_gpio_t gpio;
     int rc_channel;
     uint32_t duty;
-    ledc_timer_t timer;
-    ledc_mode_t timer_mode;
-    ledc_channel_t timer_channel;
 } pwm_output_t;
 
 static bool pwm_output_is_enabled(const pwm_output_t *output)
@@ -72,24 +72,8 @@ static pwm_output_t pwm_outputs[HAL_GPIO_USER_MAX];
 
 void pwm_init(void)
 {
-    // We need 2 timers, since each timer supports up to 8 channels
-    ledc_timer_config_t ledc_timer1 = {
-        .duty_resolution = PWM_RESOLUTION,
-        .freq_hz = PWM_TIMER_FREQ_HZ,
-        .speed_mode = LEDC_HIGH_SPEED_MODE,
-        .timer_num = LEDC_TIMER_0,
-    };
-    ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer1));
-
-    ledc_timer_config_t ledc_timer2 = {
-        .duty_resolution = PWM_RESOLUTION,
-        .freq_hz = PWM_TIMER_FREQ_HZ,
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .timer_num = LEDC_TIMER_1,
-    };
-    ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer2));
-
-    // Initialize all outputs as not ledc-enabled
+    HAL_ERR_ASSERT_OK(hal_pwm_init());
+    // Initialize all outputs as disabled
     for (int ii = 0; ii < ARRAY_COUNT(pwm_outputs); ii++)
     {
         pwm_outputs[ii].gpio = HAL_GPIO_NONE;
@@ -108,13 +92,10 @@ void pwm_update_config(void)
         {
             break;
         }
-        ESP_ERROR_CHECK(ledc_stop(output->timer_mode, output->timer_channel, 0));
+        HAL_ERR_ASSERT_OK(hal_pwm_close(output->gpio));
         output->gpio = HAL_GPIO_NONE;
     }
     int p = 0;
-    ledc_timer_t timer = LEDC_TIMER_0;
-    ledc_mode_t timer_mode = LEDC_HIGH_SPEED_MODE;
-    ledc_channel_t timer_channel = LEDC_CHANNEL_0;
     const setting_t *setting = settings_get_key(SETTING_KEY_RX_CHANNEL_OUTPUTS) + 1;
     for (int ii = 0; ii < end; ii++, setting++)
     {
@@ -131,27 +112,10 @@ void pwm_update_config(void)
             continue;
         }
         pwm_output_t *output = &pwm_outputs[p++];
-        ledc_channel_config_t ledc_channel = {
-            .channel = timer_channel,
-            .duty = 0,
-            .gpio_num = gpio,
-            .speed_mode = timer_mode,
-            .timer_sel = timer,
-        };
-        ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+        HAL_ERR_ASSERT_OK(hal_pwm_open(gpio, PWM_OUTPUT_FREQ_HZ, PWM_RESOLUTION));
         output->gpio = gpio;
         output->rc_channel = pwm_ch - 1;
         output->duty = 0;
-        output->timer = timer;
-        output->timer_mode = timer_mode;
-        output->timer_channel = timer_channel;
-        if (++timer_channel >= LEDC_CHANNEL_MAX)
-        {
-            // Switch to next timer
-            timer = LEDC_TIMER_1;
-            timer_mode = LEDC_LOW_SPEED_MODE;
-            timer_channel = LEDC_CHANNEL_0;
-        }
     }
     if (p < end)
     {
@@ -185,8 +149,7 @@ void pwm_update(const rc_data_t *rc_data)
         }
         if (duty != output->duty)
         {
-            ESP_ERROR_CHECK(ledc_set_duty(output->timer_mode, output->timer_channel, duty));
-            ESP_ERROR_CHECK(ledc_update_duty(output->timer_mode, output->timer_channel));
+            HAL_ERR_ASSERT_OK(hal_pwm_set_duty(output->gpio, duty));
             output->duty = duty;
         }
     }
