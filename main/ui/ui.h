@@ -59,5 +59,6 @@ bool ui_screen_is_available(const ui_t *ui);
 void ui_screen_splash(ui_t *ui);
 bool ui_is_animating(const ui_t *ui);
 void ui_update(ui_t *ui);
+void ui_yield(ui_t *ui);
 void ui_set_screen_set_autooff(ui_t *ui, ui_screen_autooff_e autooff);
 void ui_shutdown(ui_t *ui);

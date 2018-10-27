@@ -114,10 +114,7 @@ void task_ui(void *arg)
     for (;;)
     {
         ui_update(&ui);
-        if (!ui_is_animating(&ui))
-        {
-            vTaskDelay(10 / portTICK_PERIOD_MS);
-        }
+        ui_yield(&ui);
     }
 }
 

@@ -93,6 +93,8 @@ void led_update(void);
 void led_pause(void);
 void led_resume(void);
 
+bool led_is_fading(void);
+
 void led_start_pattern(led_id_e led_id, const led_pattern_t *pattern);
 
 void led_mode_set(led_mode_e mode, bool set);

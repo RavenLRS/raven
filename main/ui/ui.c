@@ -278,6 +278,15 @@ void ui_update(ui_t *ui)
 #endif
 }
 
+void ui_yield(ui_t *ui)
+{
+    if (!ui_is_animating(ui))
+    {
+        time_ticks_t sleep = led_is_fading() ? 1 : MILLIS_TO_TICKS(10);
+        vTaskDelay(sleep);
+    }
+}
+
 void ui_shutdown(ui_t *ui)
 {
 #ifdef USE_SCREEN

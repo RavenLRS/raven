@@ -374,6 +374,19 @@ void led_resume(void)
     led_update_active_mode(true);
 }
 
+bool led_is_fading(void)
+{
+#if defined(LED_USE_WS2812)
+#if defined(LED_1_GPIO)
+    if (led1.fading.active)
+    {
+        return true;
+    }
+#endif
+#endif
+    return false;
+}
+
 void led_start_pattern(led_id_e led_id, const led_pattern_t *pattern)
 {
     switch (led_id)
