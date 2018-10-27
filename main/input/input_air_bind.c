@@ -103,7 +103,6 @@ static bool input_air_bind_update(void *data, rc_data_t *rc_data, time_micros_t 
             if (n == sizeof(pkt) && air_bind_packet_validate(&pkt) && pkt.role == AIR_ROLE_TX)
             {
                 LOG_I(TAG, "Got bind request");
-                time_micros_t now = time_micros_now();
                 air_bind_packet_cpy(&input->bind_packet, &pkt);
                 input->bind_packet_expires = now + MILLIS_TO_MICROS(AIR_BIND_PACKET_EXPIRATION_MS);
                 // Wait 10ms to send a response

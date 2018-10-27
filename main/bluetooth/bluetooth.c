@@ -124,13 +124,13 @@ static gatt_server_service_t services[] = {
 #endif
 };
 
-static gatt_server_t server = {
+static gatt_server_t gatt_server = {
     .services = services,
     .services_len = ARRAY_COUNT(services),
 };
 
-GAP_EVENT_HANDLER_FUNC(server, gap_event_handler);
-GATT_EVENT_HANDLER_FUNC(server, gatts_event_handler);
+GAP_EVENT_HANDLER_FUNC(gatt_server, gap_event_handler);
+GATT_EVENT_HANDLER_FUNC(gatt_server, gatts_event_handler);
 
 #define HM_SERIAL_RB_CAPACITY MSP_MAX_PAYLOAD_SIZE
 #define HM_SERIAL_MAX_READ_SIZE 20
@@ -163,7 +163,7 @@ static int hm_serial_msp_io_write(void *data, const void *buf, size_t size)
     for (int ii = 0; ii < size; ii += HM_SERIAL_MAX_READ_SIZE)
     {
         size_t rem = MIN(HM_SERIAL_MAX_READ_SIZE, size - ii);
-        ESP_ERROR_CHECK(gatt_server_notify_char(&server, &hm10_serial_characteristic, &ptr[ii], rem));
+        ESP_ERROR_CHECK(gatt_server_notify_char(&gatt_server, &hm10_serial_characteristic, &ptr[ii], rem));
     }
     return size;
 }
@@ -238,7 +238,7 @@ static void bluetooth_update_device_name(rc_t *rc)
         name = "Raven RX";
         break;
     }
-    gatt_server_set_name(&server, name);
+    gatt_server_set_name(&gatt_server, name);
 }
 
 static esp_err_t bluetooth_init(rc_t *rc)
@@ -269,7 +269,7 @@ static esp_err_t bluetooth_init(rc_t *rc)
         return ret;
     }
 
-    gatt_server_init(&server);
+    gatt_server_init(&gatt_server);
     bluetooth_update_device_name(rc);
 
     io_t msp_io = {
@@ -322,7 +322,7 @@ static esp_err_t bluetooth_init(rc_t *rc)
         }
     }
 
-    return gatt_server_start(&server, gap_event_handler, gatts_event_handler);
+    return gatt_server_start(&gatt_server, gap_event_handler, gatts_event_handler);
 }
 
 void task_bluetooh(void *arg)

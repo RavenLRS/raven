@@ -830,7 +830,7 @@ int sx127x_rssi(sx127x_t *sx127x, int *snr, int *lq)
         // using to switch modes to extend range as needed, so
         // we're using 1 as the max and constraining the result
         // to [0, 100].
-        *lq = MAX(0, MIN(link_quality(rx_sensitivity, rssi_max_dbm, rssi_value), 100));
+        *lq = CONSTRAIN(link_quality(rx_sensitivity, rssi_max_dbm, rssi_value), 0, 100);
     }
     return rssi_value;
 }
