@@ -11,6 +11,7 @@
 
 #define BEEPER_GPIO 23 // This is Led D2 (red) on the microRX
 #define LED_1_GPIO 4   // This is Led D1 (Green)
+#define LED_1_USE_PWM
 
 #define USE_SCREEN
 #define SCREEN_I2C_BUS I2C_NUM_1

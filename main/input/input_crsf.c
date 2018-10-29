@@ -533,19 +533,19 @@ static void input_crsf_send_setting_frame(input_crsf_t *input_crsf, const settin
         case SETTING_TYPE_U8:
         {
             entry.settings_entry.type = CRSF_UINT8;
-            uint8_t bb;
+            uint8_t u8b;
             // Actual value
-            bb = settings_rmp_setting_get_value(setting);
-            ASSERT(ring_buffer_push(&rb.b, &bb));
+            u8b = settings_rmp_setting_get_value(setting);
+            ASSERT(ring_buffer_push(&rb.b, &u8b));
             // Min
-            bb = settings_rmp_setting_get_min(setting);
-            ASSERT(ring_buffer_push(&rb.b, &bb));
+            u8b = settings_rmp_setting_get_min(setting);
+            ASSERT(ring_buffer_push(&rb.b, &u8b));
             // Max
-            bb = settings_rmp_setting_get_max(setting);
-            ASSERT(ring_buffer_push(&rb.b, &bb));
+            u8b = settings_rmp_setting_get_max(setting);
+            ASSERT(ring_buffer_push(&rb.b, &u8b));
             // Default
-            bb = settings_rmp_setting_get_min(setting);
-            ASSERT(ring_buffer_push(&rb.b, &bb));
+            u8b = settings_rmp_setting_get_min(setting);
+            ASSERT(ring_buffer_push(&rb.b, &u8b));
             break;
         }
         case SETTING_TYPE_FOLDER:

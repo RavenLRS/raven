@@ -315,6 +315,12 @@ static void rc_reconfigure_input(rc_t *rc)
         break;
     case RC_MODE_RX:
     {
+        if (rc_should_enable_power_test(rc))
+        {
+            // Use no input
+            break;
+        }
+
 #if defined(CONFIG_RAVEN_FAKE_INPUT)
         input_fake_init(&rc->inputs.fake);
         rc->inputs.fake.update_interval = FREQ_TO_MICROS(100);
@@ -799,6 +805,10 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
     }
     else if (SETTING_IS(setting, SETTING_KEY_RF_POWER_TEST))
     {
+        if (rc_get_mode(rc) == RC_MODE_RX)
+        {
+            rc_invalidate_input(rc);
+        }
         rc_invalidate_output(rc);
     }
     else
@@ -1151,7 +1161,7 @@ void rc_connect_msp_input(rc_t *rc, msp_conn_t *msp)
 int rc_get_alternative_pairings(rc_t *rc, air_pairing_t *pairings, size_t size)
 {
     // Don't return any alternatives while a bind is in progress
-    if (rc_is_binding(rc))
+    if (rc_is_binding(rc) || rc_should_enable_power_test(rc))
     {
         return 0;
     }

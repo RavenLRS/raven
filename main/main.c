@@ -36,6 +36,7 @@
 
 #include "rmp/rmp.h"
 
+#include "ui/led.h"
 #include "ui/ui.h"
 
 #include "util/macros.h"
@@ -98,6 +99,7 @@ void raven_ui_init(void)
     };
 
     ui_init(&ui, &cfg, &rc);
+    led_mode_add(LED_MODE_BOOT);
 }
 
 void task_ui(void *arg)
@@ -112,10 +114,7 @@ void task_ui(void *arg)
     for (;;)
     {
         ui_update(&ui);
-        if (!ui_is_animating(&ui))
-        {
-            vTaskDelay(10 / portTICK_PERIOD_MS);
-        }
+        ui_yield(&ui);
     }
 }
 

@@ -1,4 +1,5 @@
 #include <hal/log.h>
+#include <hal/ws2812.h>
 
 #include "air/air.h"
 #include "air/air_radio.h"
@@ -8,14 +9,25 @@
 
 #include "output_air_rf_power_test.h"
 
+#define RF_TEST_LED LED_ID_1
+#define RF_TEST_LED_COLOR HAL_WS2812_RGB(75, 0, 130) // Indigo
 #define LED_BLINK_MS 500
+
+static const led_stage_t blink_stages[] = {
+    LED_STAGE(LED_LEVEL_MAX, RF_TEST_LED_COLOR, LED_BLINK_MS, 0),
+    LED_STAGE_OFF(LED_BLINK_MS, 0),
+};
+LED_PATTERN(blink_pattern, blink_stages, LED_REPEAT_FOREVER);
+
+static const led_stage_t on_stages[] = {
+    LED_STAGE(LED_LEVEL_MAX, RF_TEST_LED_COLOR, 10000, 150),
+};
+LED_PATTERN(on_pattern, on_stages, LED_REPEAT_FOREVER);
 
 #define RF_TEST_TX_MS 5000   // Transmit for 5 seconds
 #define RF_TEST_WAIT_MS 5000 // Wait for 5s between power levels
 
 #define RF_TEST_PACKET_SIZE AIR_MAX_PACKET_SIZE
-
-#define RF_TEST_LED LED_ID_1
 
 typedef enum
 {
@@ -35,6 +47,7 @@ static void output_air_rf_power_test_send(output_air_rf_power_test_t *output)
 static bool output_air_rf_power_test_open(void *data, void *config)
 {
     LOG_I(TAG, "Open");
+    led_pause();
     output_air_rf_power_test_t *output = data;
     output->state = RF_POWER_TEST_STATE_IDLE;
     output->power = AIR_RF_POWER_FIRST;
@@ -60,17 +73,16 @@ static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, bool
             {
                 output->power++;
             }
-            led_set_blink_period(RF_TEST_LED, MILLIS_TO_TICKS(LED_BLINK_MS));
+            led_start_pattern(RF_TEST_LED, &blink_pattern);
             output->state = RF_POWER_TEST_STATE_BLINK;
-            output->next_switch = now + MILLIS_TO_MICROS(LED_BLINK_MS * 2 * output->power);
+            output->next_switch = now + MILLIS_TO_MICROS(LED_BLINK_MS * 2 * (output->power - 1));
             break;
         case RF_POWER_TEST_STATE_BLINK:
         {
             LOG_I(TAG, "TX starting at power %d (%d dBm / %f MHz)", output->power,
                   air_rf_power_to_dbm(output->power), air_band_frequency(output->air_config.band) / 1e6);
             // Start transmitting. Turn the led on during transmission.
-            led_set_blink_mode(RF_TEST_LED, LED_BLINK_MODE_NONE);
-            led_on(RF_TEST_LED);
+            led_start_pattern(RF_TEST_LED, &on_pattern);
             air_radio_sleep(radio);
             air_radio_set_tx_power(radio, air_rf_power_to_dbm(output->power));
             air_radio_set_frequency(radio, air_band_frequency(output->air_config.band), 0);
@@ -85,7 +97,7 @@ static bool output_air_rf_power_test_update(void *data, rc_data_t *rc_data, bool
             LOG_I(TAG, "Test done at power %d", output->power);
             output->state = RF_POWER_TEST_STATE_IDLE;
             output->next_switch = now + MILLIS_TO_MICROS(RF_TEST_WAIT_MS);
-            led_off(RF_TEST_LED);
+            led_start_pattern(RF_TEST_LED, NULL);
             air_radio_sleep(radio);
             output->power++;
             break;
@@ -102,7 +114,7 @@ static void output_air_rf_power_test_close(void *data, void *config)
 {
     output_air_rf_power_test_t *output = data;
     air_radio_sleep(output->air_config.radio);
-    led_set_blink_mode(RF_TEST_LED, LED_BLINK_MODE_NONE);
+    led_resume();
     LOG_I(TAG, "Close");
 }
 

@@ -60,7 +60,3 @@ inline void time_micros_delay(time_micros_t delay)
     {
     }
 }
-
-unsigned long millis(void);
-bool millis_ellapsed(unsigned long since_ms, unsigned long now_ms, unsigned long interval_ms);
-bool millis_ellapsed_secs(unsigned long since_ms, unsigned long now_ms, float interval_secs);

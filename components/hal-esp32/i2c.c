@@ -14,7 +14,7 @@ hal_err_t hal_i2c_bus_init(hal_i2c_bus_t bus, hal_gpio_t sda, hal_gpio_t scl, ui
     {
         return err;
     }
-#warning tx_buf?
+    // Buffers are only used in slave mode
     return i2c_driver_install(bus, conf.mode, 0, 0, 0);
 }
 

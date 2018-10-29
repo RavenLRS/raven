@@ -201,8 +201,11 @@ void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
 #if defined(USE_TOUCH_BUTTON)
     ui->internal.button.is_touch = cfg->button_is_touch;
 #endif
-    beeper_init(&ui->internal.beeper, cfg->beeper);
-    beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
+    if (cfg->beeper != HAL_GPIO_NONE)
+    {
+        beeper_init(&ui->internal.beeper, cfg->beeper);
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
+    }
     button_init(&ui->internal.button);
     system_add_flag(SYSTEM_FLAG_BUTTON);
 #ifdef USE_SCREEN
@@ -250,8 +253,12 @@ bool ui_is_animating(const ui_t *ui)
 
 void ui_update(ui_t *ui)
 {
-    ui_update_beeper(ui);
+    if (ui->internal.cfg.beeper != HAL_GPIO_NONE)
+    {
+        ui_update_beeper(ui);
+    }
     button_update(&ui->internal.button);
+    led_mode_set(LED_MODE_FAILSAFE, rc_is_failsafe_active(ui->internal.rc, NULL));
     led_update();
 #ifdef USE_SCREEN
     if (ui_screen_is_available(ui))
@@ -269,6 +276,15 @@ void ui_update(ui_t *ui)
         }
     }
 #endif
+}
+
+void ui_yield(ui_t *ui)
+{
+    if (!ui_is_animating(ui))
+    {
+        time_ticks_t sleep = led_is_fading() ? 1 : MILLIS_TO_TICKS(10);
+        vTaskDelay(sleep);
+    }
 }
 
 void ui_shutdown(ui_t *ui)
