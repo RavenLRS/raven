@@ -3,6 +3,8 @@
  *
  *  Created on: Jul 23, 2018
  *      Author: hdphilip
+ *      board for this target located at:
+ *      https://github.com/RavenLRS/raven-hardware/tree/master/RX/MicroRX_RFM
  */
 
 #include "target/bands/433.h"
