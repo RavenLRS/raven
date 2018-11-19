@@ -2,6 +2,8 @@
 
 #include <hal/log.h>
 
+#include "util/macros.h"
+
 #include "msp_transport.h"
 
 #include "msp.h"
@@ -10,7 +12,7 @@ static const char *TAG = "MSP";
 
 void msp_conn_init(msp_conn_t *conn, msp_transport_t *transport)
 {
-    assert(transport);
+    ASSERT(transport);
     RING_BUFFER_INIT(&conn->rb, msp_callback_req_t, MSP_QUEUE_MAX_SIZE);
     conn->transport = transport;
     msp_conn_set_global_callback(conn, NULL, NULL);

@@ -1,3 +1,5 @@
+#include "util/macros.h"
+
 #include "failsafe.h"
 
 #include <hal/log.h>
@@ -59,7 +61,7 @@ void failsafe_set_max_interval(failsafe_t *fs, time_micros_t interval)
 
 void failsafe_reset_interval(failsafe_t *fs, time_micros_t now)
 {
-    assert(fs->max_reset_interval > 0);
+    ASSERT(fs->max_reset_interval > 0);
     fs->enable_at = now + fs->max_reset_interval;
 
     if (fs->active_since > 0)

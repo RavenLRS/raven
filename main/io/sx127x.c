@@ -175,6 +175,7 @@ static uint8_t sx127x_read_reg(sx127x_t *sx127x, uint8_t addr)
     // Send 8 arbitrary bits to get one byte back in full duplex
     uint8_t out;
     HAL_ERR_ASSERT_OK(hal_spi_device_transmit_u8(&sx127x->state.spi, 0, addr, 0, &out));
+    printf("REG %x = %x\n", addr, out);
     return out;
 }
 
@@ -342,7 +343,7 @@ void sx127x_init(sx127x_t *sx127x)
     sx127x->state.lora.freq = 0;
     sx127x->state.lora.ppm_correction = 0;
 
-    xTaskCreatePinnedToCore(sx127x_callback_task, "SX127X-CALLBACK", 4096, sx127x, 1000, &callback_task_handle, 1);
+    xTaskCreatePinnedToCore(sx127x_callback_task, "SX127X-CALLBACK", configMINIMAL_STACK_SIZE, sx127x, 1000, &callback_task_handle, 1);
 
     uint8_t version = sx127x_read_reg(sx127x, REG_VERSION);
     if (version == SX127X_EXPECTED_VERSION)

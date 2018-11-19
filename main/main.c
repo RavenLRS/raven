@@ -254,13 +254,14 @@ void app_main(void)
 
     raven_ui_init();
 
-    xTaskCreatePinnedToCore(task_rc_update, "RC", 4096, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(task_rc_update, "RC", RC_TASK_STACK_SIZE, NULL, 1, NULL, 1);
 
 #if defined(USE_BLUETOOTH)
     xTaskCreatePinnedToCore(task_bluetooh, "BLUETOOTH", 4096, &rc, 2, NULL, 0);
 #endif
-    xTaskCreatePinnedToCore(task_rmp, "RMP", 4096, NULL, 2, NULL, 0);
+#warning enable
+    // xTaskCreatePinnedToCore(task_rmp, "RMP", configMINIMAL_STACK_SIZE, NULL, 2, NULL, 0);
 
     // Start updating the UI after everything else is set up, since it queries other subsystems
-    xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 0);
+    //xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 0);
 }
