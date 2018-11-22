@@ -306,6 +306,11 @@ static void rc_reconfigure_input(rc_t *rc)
             input_config.crsf.gpio = settings_get_key_gpio(SETTING_KEY_TX_TX_GPIO);
             rc->input_config = &input_config.crsf;
             break;
+        case TX_INPUT_IBUS:
+            input_fake_init(&rc->inputs.fake);
+            rc->input = (input_t *)&rc->inputs.fake;
+            rc->input_config = NULL;
+            break;
         case TX_INPUT_FAKE:
             input_fake_init(&rc->inputs.fake);
             rc->input = (input_t *)&rc->inputs.fake;

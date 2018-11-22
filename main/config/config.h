@@ -24,6 +24,7 @@ typedef enum
 typedef enum
 {
     TX_INPUT_CRSF,
+    TX_INPUT_IBUS,
     TX_INPUT_FAKE,
     TX_INPUT_FIRST = TX_INPUT_CRSF,
 #if defined(CONFIG_RAVEN_FAKE_INPUT)
