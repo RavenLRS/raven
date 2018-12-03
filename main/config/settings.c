@@ -25,6 +25,8 @@
 
 static const char *TAG = "Settings";
 
+#define MAX_SETTING_KEY_LENGTH 15
+
 // clang-format off
 #define NO_VALUE {0}
 #define BOOL(v) {.u8 = (v ? 1 : 0)}
@@ -654,12 +656,21 @@ void settings_init(void)
 
     for (int ii = 0; ii < ARRAY_COUNT(settings); ii++)
     {
-        bool found = true;
         const setting_t *setting = &settings[ii];
+        // Checking this at compile time is tricky, since most strings are
+        // assembled via macros. Do it a runtime instead, impact should be
+        // pretty minimal.
+        if (strlen(setting->key) > MAX_SETTING_KEY_LENGTH)
+        {
+            LOG_E(TAG, "Setting key '%s' is too long (%d, max is %d)", setting->key,
+                  strlen(setting->key), MAX_SETTING_KEY_LENGTH);
+            abort();
+        }
         if (setting->flags & SETTING_FLAG_READONLY)
         {
             continue;
         }
+        bool found = true;
         size_t size;
         switch (setting->type)
         {
