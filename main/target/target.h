@@ -5,6 +5,8 @@
 #define USE_P2P
 #define USE_BLUETOOTH
 #define USE_OTA
+#define USE_DEVELOPER_MENU
+#define USE_IDF_WMONITOR
 #endif
 
 #include "platform.h"

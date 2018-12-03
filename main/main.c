@@ -8,6 +8,11 @@
 
 #include "target.h"
 
+#if defined(USE_IDF_WMONITOR)
+#include <esp_event_loop.h>
+#include <idf_wmonitor/idf_wmonitor.h>
+#endif
+
 #include "air/air_radio.h"
 #include "air/air_radio_sx127x.h"
 
@@ -67,9 +72,41 @@ static void shutdown(void)
     system_shutdown();
 }
 
+#if defined(USE_IDF_WMONITOR)
+static esp_err_t system_event_callback(void *ctx, system_event_t *event)
+{
+    esp_err_t err;
+    if (settings_get_key_bool(SETTING_KEY_DEVELOPER_REMOTE_DEBUGGING))
+    {
+        if ((err = idf_wmonitor_event_handler(ctx, event)) != ESP_OK)
+        {
+            return err;
+        }
+    }
+    return ESP_OK;
+}
+#endif
+
+#if defined(USE_P2P)
+static bool should_start_p2p(void)
+{
+#if defined(USE_IDF_WMONITOR)
+    return !settings_get_key_bool(SETTING_KEY_DEVELOPER_REMOTE_DEBUGGING);
+#endif
+    return true;
+}
+#endif
+
 static void setting_changed(const setting_t *setting, void *user_data)
 {
     UNUSED(user_data);
+
+#if defined(USE_DEVELOPER_MENU)
+    if (SETTING_IS(setting, SETTING_KEY_DEVELOPER_REBOOT))
+    {
+        system_reboot();
+    }
+#endif
 
     if (SETTING_IS(setting, SETTING_KEY_POWER_OFF))
     {
@@ -123,7 +160,10 @@ void task_rmp(void *arg)
     UNUSED(arg);
 
 #if defined(USE_P2P)
-    p2p_start(&p2p);
+    if (should_start_p2p())
+    {
+        p2p_start(&p2p);
+    }
 #endif
     for (;;)
     {
@@ -164,8 +204,23 @@ void app_main(void)
 
     settings_rmp_init(&rmp);
 
+#if defined(USE_IDF_WMONITOR)
+    if (settings_get_key_bool(SETTING_KEY_DEVELOPER_REMOTE_DEBUGGING))
+    {
+        ESP_ERROR_CHECK(esp_event_loop_init(system_event_callback, NULL));
+        idf_wmonitor_opts_t opts = {
+            .config = IDF_WMONITOR_CONFIG_DEFAULT(),
+            .flags = IDF_WMONITOR_WAIT_FOR_CLIENT_IF_COREDUMP,
+        };
+        idf_wmonitor_start(&opts);
+    }
+#endif
+
 #if defined(USE_P2P)
-    p2p_init(&p2p, &rmp);
+    if (should_start_p2p())
+    {
+        p2p_init(&p2p, &rmp);
+    }
 #endif
 
     rc_init(&rc, &radio, &rmp);
