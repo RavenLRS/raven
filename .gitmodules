@@ -4,3 +4,6 @@
 [submodule "lib/libopencm3"]
 	path = lib/libopencm3
 	url = https://github.com/libopencm3/libopencm3
+[submodule "lib/esp-idf"]
+	path = lib/esp-idf
+	url = https://github.com/espressif/esp-idf.git
