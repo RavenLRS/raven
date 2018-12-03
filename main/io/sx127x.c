@@ -13,6 +13,10 @@
 
 #include "sx127x.h"
 
+#include "target.h"
+
+#if defined(USE_RADIO_SX127X)
+
 // constants
 #define SX127X_FXOSC 32000000            // 32Mhz
 #define SX127X_FSK_FREQ_STEP 61.03515625 // 61khz
@@ -1188,3 +1192,5 @@ int sx127x_lora_min_rssi(sx127x_t *sx127x)
 }
 
 // #pragma endregion
+
+#endif

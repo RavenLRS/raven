@@ -1,3 +1,5 @@
+#include "target.h"
+
 #include "air/air.h"
 
 #include "io/sx127x.h"
@@ -5,6 +7,8 @@
 #include "rc/telemetry.h"
 
 #include "air_radio_sx127x.h"
+
+#if defined(USE_RADIO_SX127X)
 
 void air_radio_init(air_radio_t *radio)
 {
@@ -249,3 +253,5 @@ time_micros_t air_radio_rx_failsafe_interval(air_radio_t *radio, air_mode_e mode
     UNREACHABLE();
     return 0;
 }
+
+#endif

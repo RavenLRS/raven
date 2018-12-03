@@ -18,6 +18,7 @@
 #define BEEPER_GPIO 12 // This seems appropriate for v1 boards, since it can't be pulled low during boot
 
 // SX127X
+#define USE_RADIO_SX127X
 #define SX127X_SPI_BUS VSPI_HOST
 #define SX127X_GPIO_SCK 5
 #define SX127X_GPIO_MISO 19

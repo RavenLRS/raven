@@ -6,6 +6,7 @@
 
 #define LED_1_GPIO 22
 
+#define USE_RADIO_SX127X
 #define SX127X_GPIO_SCK 5
 #define SX127X_GPIO_MISO 19
 #define SX127X_GPIO_MOSI 27
