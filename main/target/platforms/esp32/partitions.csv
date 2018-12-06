@@ -5,3 +5,5 @@ otadata,  data, ota,    ,           0x2000
 phy_init, data, phy,    ,           0x1000
 ota_0,    app,  ota_0,  0x30000,    1536K
 ota_1,    app,  ota_1,  ,           1536K
+coredump, data, coredump,   ,       128K
+storage,  data, spiffs,     ,       512K

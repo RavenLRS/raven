@@ -1,0 +1,7 @@
+LDSCRIPT 		= $(OPENCM3_DIR)/lib/stm32/f1/stm32f103xb.ld
+FREERTOS_PORT		= ARM_CM3
+CPPFLAGS		+= -DSTM32F1
+PLATFORM_SOURCES	= stm32/f1
+
+include $(ROOT)/Makefile.stm32
+include $(PLATFORMS_DIR)/stm32/f1/libopencm3.target.mk

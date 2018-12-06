@@ -9,6 +9,10 @@
 
 #include "air/air.h"
 
+#include "ota/ota.h"
+
+#include "platform/system.h"
+
 #include "rc/rc.h"
 
 #include "rmp/rmp.h"
@@ -19,9 +23,6 @@
 
 #include "util/time.h"
 #include "util/version.h"
-
-#include "platform/ota.h"
-#include "platform/system.h"
 
 #include "screen.h"
 
@@ -258,7 +259,7 @@ static bool screen_format_binding(screen_t *screen, char *buf)
     if (rc_is_binding(screen->internal.rc))
     {
         strcpy(buf, "Binding");
-        int end = (millis() / 500) % 4;
+        int end = ((time_micros_now() / 1000) / 500) % 4;
         for (int ii = 0; ii < end; ii++)
         {
             size_t len = strlen(buf);
@@ -527,19 +528,29 @@ static void screen_draw_main_rssi(screen_t *s, int16_t x, int16_t y)
 
     char *buf = SCREEN_BUF(s);
 
+    float snr = rc_get_snr(rc);
     if (SCREEN_DIRECTION(s) == SCREEN_DIRECTION_HORIZONTAL)
     {
         // Show the units for the first 3 seconds after animation, then
         // for 2 seconds out of every 30.
-        long m = millis();
+        long m = (time_micros_now() / 1000);
         if (m < (ANIMATION_TOTAL_DURATION_MS + 3000) || (m / 1000) % 30 <= 1)
         {
             snprintf(buf, SCREEN_DRAW_BUF_SIZE, "R: dBm|F: Hz| S: dB");
         }
         else
         {
-            snprintf(buf, SCREEN_DRAW_BUF_SIZE, "R:%+3d |F:%3u| S:%+0.1f",
-                     rc_get_rssi_db(rc), rc_get_update_frequency(rc), rc_get_snr(rc));
+            char snr_str[8];
+            if (snr >= 10 || snr <= -10)
+            {
+                snprintf(snr_str, sizeof(snr_str), "%+d", (int)snr);
+            }
+            else
+            {
+                snprintf(snr_str, sizeof(snr_str), "%+0.1f", snr);
+            }
+            snprintf(buf, SCREEN_DRAW_BUF_SIZE, "R:%+3d |F:%3u| S:%s",
+                     rc_get_rssi_db(rc), rc_get_update_frequency(rc), snr_str);
         }
         u8g2_DrawStr(&u8g2, x, y + bar_y + 20, buf);
     }
@@ -549,7 +560,6 @@ static void screen_draw_main_rssi(screen_t *s, int16_t x, int16_t y)
         screen_draw_label_value(s, "R:", buf, SCREEN_W(s), y + bar_y + 26, 3);
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%uHz", rc_get_update_frequency(rc));
         screen_draw_label_value(s, "F:", buf, SCREEN_W(s), y + bar_y + 38, 3);
-        float snr = rc_get_snr(rc);
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%+.2fdB", snr);
         screen_draw_label_value(s, "S:", buf, SCREEN_W(s), y + bar_y + 50, 3);
     }
@@ -750,12 +760,13 @@ static unsigned screen_draw_telemetry_val(screen_t *s, const telemetry_t *val, i
     uint16_t max_value_width = 0;
     uint16_t value_y_offset = 0;
     uint16_t value_indentation_vert = 0;
+    uint16_t update_indicator_width = 10;
     unsigned total_height = 0;
 
     switch (SCREEN_DIRECTION(s))
     {
     case SCREEN_DIRECTION_HORIZONTAL:
-        max_value_width = SCREEN_W(s) - name_width - 10 - 5;
+        max_value_width = SCREEN_W(s) - name_width - update_indicator_width - 5;
         value_y_offset = 0;
         total_height = TELEMETRY_LINE_HEIGHT;
         break;
@@ -784,7 +795,26 @@ static unsigned screen_draw_telemetry_val(screen_t *s, const telemetry_t *val, i
     // its value.
     if (data_state_get_last_update(&val->data_state) + MILLIS_TO_MICROS(200) > time_micros_now())
     {
-        u8g2_DrawStr(&u8g2, value_x - 10, y + 2, "*");
+        switch (SCREEN_DIRECTION(s))
+        {
+        case SCREEN_DIRECTION_HORIZONTAL:
+            // Draw at the left of the value
+            u8g2_DrawStr(&u8g2, value_x - update_indicator_width, y + 2, "*");
+            break;
+        case SCREEN_DIRECTION_VERTICAL:
+            // Draw at right of the label, if possible. Otherwise draw at the
+            // right of the value.
+            {
+                uint16_t indicator_x = SCREEN_W(s) - update_indicator_width;
+                uint16_t offset = 0;
+                if (name_width >= indicator_x)
+                {
+                    offset = value_y_offset;
+                }
+                u8g2_DrawStr(&u8g2, indicator_x, y + offset + 2, "*");
+                break;
+            }
+        }
     }
     // Draw a separator if we're in vertical mode
     if (SCREEN_DIRECTION(s) == SCREEN_DIRECTION_VERTICAL)

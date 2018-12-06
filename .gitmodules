@@ -1,3 +1,12 @@
 [submodule "components/u8g2/u8g2"]
 	path = components/u8g2/u8g2
 	url = https://github.com/olikraus/u8g2.git
+[submodule "lib/libopencm3"]
+	path = lib/libopencm3
+	url = https://github.com/libopencm3/libopencm3
+[submodule "lib/esp-idf"]
+	path = lib/esp-idf
+	url = https://github.com/espressif/esp-idf.git
+[submodule "components/idf_wmonitor_lib"]
+	path = components/idf_wmonitor_lib
+	url = https://github.com/fiam/idf_wmonitor_lib.git

@@ -29,6 +29,11 @@ typedef enum
 #define RAVEN_EXPLICIT_PKT_MARKER "RVN" // Used for packets with explicit header
 #define RAVEN_EXPLICIT_PKT_MARKER_LEN 3
 
+void air_pairing_cpy(air_pairing_t *dst, const air_pairing_t *src)
+{
+    memmove(dst, src, sizeof(*dst));
+}
+
 void air_pairing_format(const air_pairing_t *pairing, char *buf, size_t bufsize)
 {
     air_addr_format(&pairing->addr, buf, bufsize);
@@ -42,9 +47,42 @@ void air_addr_format(const air_addr_t *addr, char *buf, size_t bufsize)
     buf[bufsize - 1] = '\0';
 }
 
+bool air_addr_equals(const air_addr_t *addr1, const air_addr_t *addr2)
+{
+    return memcmp(addr1->addr, addr2->addr, AIR_ADDR_LENGTH) == 0;
+}
+
+static bool air_addr_is_byte(const air_addr_t *addr, uint8_t b)
+{
+    for (int ii = 0; ii < AIR_ADDR_LENGTH; ii++)
+    {
+        if (addr->addr[ii] != b)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Returns true iff addr is not all zeros
+bool air_addr_is_valid(const air_addr_t *addr)
+{
+    return !air_addr_is_byte(addr, 0);
+}
+
+bool air_addr_is_broadcast(const air_addr_t *addr)
+{
+    return air_addr_is_byte(addr, 0xFF);
+}
+
+void air_addr_cpy(air_addr_t *dst, const air_addr_t *src)
+{
+    memmove(dst, src, sizeof(*dst));
+}
+
 air_key_t air_key_generate(void)
 {
-    return rand_hal_u32();
+    return hal_rand_u32();
 }
 
 void air_bind_packet_prepare(air_bind_packet_t *packet)

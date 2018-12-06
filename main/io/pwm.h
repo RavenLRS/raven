@@ -2,6 +2,8 @@
 
 #include <stdbool.h>
 
+#include "io/gpio.h"
+
 #include "rc/rc_data.h"
 
 extern const char *pwm_channel_names[];
@@ -43,4 +45,4 @@ _Static_assert(RC_CHANNELS_NUM == 12 || RC_CHANNELS_NUM == 16 || RC_CHANNELS_NUM
 void pwm_init(void);
 void pwm_update_config(void);
 void pwm_update(const rc_data_t *rc_data);
-bool pwm_output_can_use_pin(int pin);
+bool pwm_output_can_use_gpio(hal_gpio_t gpio);

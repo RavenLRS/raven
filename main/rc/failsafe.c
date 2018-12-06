@@ -59,3 +59,8 @@ void failsafe_update(failsafe_t *fs, time_micros_t now)
         fs->resets_since_active = 0;
     }
 }
+
+bool failsafe_is_active(const failsafe_t *fs)
+{
+    return fs && fs->active_since > 0;
+}

@@ -103,7 +103,7 @@ static void output_msp_configure_polling_common(output_t *output)
     {
         output->craft_name_setting = NULL;
     }
-    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI) && output->fc.rssi_channel_auto)
+    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI) && output->fc.rssi.channel_auto)
     {
         output_msp_configure_poll(output, MSP_RSSI_CONFIG, SECS_TO_MICROS(10));
     }
@@ -171,7 +171,7 @@ static void output_msp_callback(msp_conn_t *conn, uint16_t cmd, const void *payl
             // MSP based FCs return 0 to mean disabled, non-zero to indicate
             // that the channel number (from 1) is the RSSI channel.
             uint8_t fc_rssi_channel = *((const uint8_t *)payload);
-            output->fc.rssi_channel = fc_rssi_channel > 0 ? fc_rssi_channel - 1 : 0;
+            output->fc.rssi.channel = fc_rssi_channel > 0 ? fc_rssi_channel - 1 : -1;
         }
         break;
     }
@@ -213,6 +213,35 @@ static void output_msp_poll(output_t *output, time_micros_t now)
     }
 }
 
+static void output_configure_rssi(output_t *output)
+{
+    // TODO: This code and RSSI handling can be left out when no RX support is compiled in
+    rx_rssi_channel_e rssi_channel = RX_RSSI_CHANNEL_NONE;
+    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_REMOTE) && OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI))
+    {
+        const setting_t *rx_rssi_channel_setting = settings_get_key(SETTING_KEY_RX_RSSI_CHANNEL);
+        if (rx_rssi_channel_setting)
+        {
+            rssi_channel = setting_get_u8(rx_rssi_channel_setting);
+        }
+    }
+    switch (rssi_channel)
+    {
+    case RX_RSSI_CHANNEL_AUTO:
+        output->fc.rssi.channel_auto = true;
+        output->fc.rssi.channel = -1;
+        break;
+    case RX_RSSI_CHANNEL_NONE:
+        output->fc.rssi.channel_auto = false;
+        output->fc.rssi.channel = -1;
+        break;
+    default:
+        output->fc.rssi.channel_auto = false;
+        output->fc.rssi.channel = rx_rssi_channel_index(rssi_channel);
+        break;
+    }
+}
+
 bool output_open(rc_data_t *data, output_t *output, void *config)
 {
     bool is_open = false;
@@ -222,27 +251,17 @@ bool output_open(rc_data_t *data, output_t *output, void *config)
         rc_data_reset_output(data);
         output->rc_data = data;
         memset(&output->fc, 0, sizeof(output_fc_t));
-        rx_rssi_channel_e rssi_channel = settings_get_key_u8(SETTING_KEY_RX_RSSI_CHANNEL);
-        switch (rssi_channel)
-        {
-        case RX_RSSI_CHANNEL_AUTO:
-            output->fc.rssi_channel_auto = true;
-            output->fc.rssi_channel = -1;
-            break;
-        case RX_RSSI_CHANNEL_NONE:
-            output->fc.rssi_channel_auto = false;
-            output->fc.rssi_channel = -1;
-            break;
-        default:
-            output->fc.rssi_channel_auto = false;
-            output->fc.rssi_channel = rx_rssi_channel_index(rssi_channel);
-            break;
-        }
+        output_configure_rssi(output);
         output->telemetry_updated = telemetry_updated_callback;
         output->telemetry_calculate = telemetry_calculate_callback;
         output->craft_name_setting = NULL;
         if (!output->is_open && output->vtable.open)
         {
+            output->min_rc_update_interval = 0;
+            // If the data is slower than 5hz, repeat frames
+            output->max_rc_update_interval = FREQ_TO_MICROS(5);
+            output->next_rc_update_no_earlier_than = 0;
+            output->next_rc_update_no_later_than = TIME_MICROS_MAX;
             is_open = output->is_open = output->vtable.open(output, config);
             if (is_open)
             {
@@ -253,45 +272,52 @@ bool output_open(rc_data_t *data, output_t *output, void *config)
     return is_open;
 }
 
-bool output_update(output_t *output, time_micros_t now)
+bool output_update(output_t *output, bool input_was_updated, time_micros_t now)
 {
-    /*
-        TODO: Call update only when needed. Make the output
-        declare its minimum interval between updates and a
-        maximum (FC might expect a packet from time to time)
-        and call it only when needed.
-    */
     bool updated = false;
-    if (output)
+    if (output && output->is_open)
     {
         // Update RC control
-        if (output->vtable.update)
+        bool update_rc = false;
+        uint16_t channel_value;
+        control_channel_t *rssi_channel = NULL;
+        bool can_update_already = now > output->next_rc_update_no_earlier_than;
+        bool can_update_via_max_interval = now > output->next_rc_update_no_later_than &&
+                                           !failsafe_is_active(output->rc_data->failsafe.input);
+        bool can_update_via_new_data = input_was_updated || rc_data_has_dirty_channels(output->rc_data);
+        if (can_update_already && (can_update_via_max_interval || can_update_via_new_data))
         {
-            if (output->next_update < now)
+            update_rc = true;
+
+            if (output->fc.rssi.channel >= 0 && output->fc.rssi.channel < RC_CHANNELS_NUM)
             {
-                uint16_t channel_value;
-                control_channel_t *rssi_channel = NULL;
-                if (output->fc.rssi_channel >= 0 && output->fc.rssi_channel < RC_CHANNELS_NUM)
-                {
-                    rssi_channel = &output->rc_data->channels[output->fc.rssi_channel];
-                    uint8_t lq = TELEMETRY_GET_I8(output->rc_data, TELEMETRY_ID_RX_LINK_QUALITY);
-                    lq = MIN(MAX(0, lq), 100);
-                    channel_value = rssi_channel->value;
-                    rssi_channel->value = RC_CHANNEL_VALUE_FROM_PERCENTAGE(lq);
-                }
-                updated = output->vtable.update(output, output->rc_data, now);
-                if (updated)
-                {
-                    output->next_update = now + output->min_update_interval;
-                }
-                // Restore the channel data we ovewrote
-                if (rssi_channel)
-                {
-                    rssi_channel->value = channel_value;
-                }
+                rssi_channel = &output->rc_data->channels[output->fc.rssi.channel];
+                uint8_t lq = CONSTRAIN(TELEMETRY_GET_I8(output->rc_data, TELEMETRY_ID_RX_LINK_QUALITY), 0, 100);
+                channel_value = rssi_channel->value;
+                rssi_channel->value = RC_CHANNEL_VALUE_FROM_PERCENTAGE(lq);
             }
-            failsafe_update(&output->failsafe, time_micros_now());
         }
+        updated = output->vtable.update(output, output->rc_data, update_rc, now);
+        if (updated && update_rc)
+        {
+            rc_data_channels_sent(output->rc_data, now);
+            output->next_rc_update_no_earlier_than = now + output->min_rc_update_interval;
+            if (output->max_rc_update_interval > 0)
+            {
+                output->next_rc_update_no_later_than = now + output->max_rc_update_interval;
+            }
+            else
+            {
+                output->next_rc_update_no_later_than = TIME_MICROS_MAX;
+            }
+        }
+        // Restore the channel data we ovewrote
+        if (rssi_channel)
+        {
+            rssi_channel->value = channel_value;
+        }
+        failsafe_update(&output->failsafe, time_micros_now());
+
         // Read MSP transport responses (if any)
         if (msp_io_is_connected(&output->msp))
         {

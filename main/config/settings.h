@@ -5,21 +5,44 @@
 
 #include "config/config.h"
 
-#include "io/pins.h"
+#include "io/gpio.h"
+
+#include "target.h"
 
 #define SETTING_STRING_MAX_LENGTH 32
 #define SETTING_STRING_BUFFER_SIZE (SETTING_STRING_MAX_LENGTH + 1)
 #define SETTING_NAME_BUFFER_SIZE SETTING_STRING_BUFFER_SIZE
-#define SETTING_STATIC_COUNT 37
-#define SETTING_RX_COUNT (5 * CONFIG_MAX_PAIRED_RX)
+#define SETTING_STATIC_COUNT 14
+#if defined(USE_TX_SUPPORT)
+#define SETTING_TX_FOLDER_COUNT 6
+#define SETTING_TX_RECEIVERS_COUNT (1 + (5 * CONFIG_MAX_PAIRED_RX))
+#else
+#define SETTING_TX_RECEIVERS_COUNT 0
+#define SETTING_TX_FOLDER_COUNT 0
+#endif
+#if defined(USE_RX_SUPPORT)
+#define SETTING_RX_FOLDER_COUNT 12
+#else
+#define SETTING_RX_FOLDER_COUNT 0
+#endif
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
-// Use PIN_USABLE_MAX to make sure we have a setting for every possible PWM output.
+// Use HAL_GPIO_USER_MAX to make sure we have a setting for every possible PWM output.
 // +1 accounts for the folder to hold the output settings.
-#define SETTING_PWM_COUNT (1 + PIN_USABLE_MAX)
+#define SETTING_PWM_COUNT (1 + HAL_GPIO_USER_MAX)
 #else
 #define SETTING_PWM_COUNT 0
 #endif
-#define SETTING_COUNT (SETTING_STATIC_COUNT + SETTING_RX_COUNT + SETTING_PWM_COUNT)
+#if defined(USE_SCREEN)
+#define SETTING_SCREEN_FOLDER_COUNT 4
+#else
+#define SETTING_SCREEN_FOLDER_COUNT 0
+#endif
+#if defined(USE_DEVELOPER_MENU)
+#define SETTING_DEVELOPER_FOLDER_COUNT 3
+#else
+#define SETTING_DEVELOPER_FOLDER_COUNT 0
+#endif
+#define SETTING_COUNT (SETTING_STATIC_COUNT + SETTING_TX_FOLDER_COUNT + SETTING_RX_FOLDER_COUNT + SETTING_TX_RECEIVERS_COUNT + SETTING_PWM_COUNT + SETTING_SCREEN_FOLDER_COUNT + SETTING_DEVELOPER_FOLDER_COUNT)
 
 #define SETTING_KEY_RC_MODE "rc_mode"
 #define SETTING_KEY_BIND "bind"
@@ -31,22 +54,22 @@
 #define SETTING_KEY_TX_RF_POWER SETTING_KEY_TX_PREFIX "rf_power"
 #define SETTING_KEY_TX_INPUT SETTING_KEY_TX_PREFIX "input"
 #define SETTING_KEY_TX_PILOT_NAME SETTING_KEY_TX_PREFIX "pilot_name"
-#define SETTING_KEY_TX_TX_PIN SETTING_KEY_TX_PREFIX "tx"
-#define SETTING_KEY_TX_RX_PIN SETTING_KEY_TX_PREFIX "rx"
+#define SETTING_KEY_TX_TX_GPIO SETTING_KEY_TX_PREFIX "tx"
+#define SETTING_KEY_TX_RX_GPIO SETTING_KEY_TX_PREFIX "rx"
 
 #define SETTING_KEY_RX "rx"
 #define SETTING_KEY_RX_PREFIX SETTING_KEY_RX "."
 #define SETTING_KEY_RX_SUPPORTED_MODES SETTING_KEY_RX_PREFIX "modes"
-#define SETTING_KEY_RX_AUTO_CRAFT_NAME SETTING_KEY_RX_PREFIX "auto_craft_name"
+#define SETTING_KEY_RX_AUTO_CRAFT_NAME SETTING_KEY_RX_PREFIX "auto_c_name"
 #define SETTING_KEY_RX_CRAFT_NAME SETTING_KEY_RX_PREFIX "craft_name"
 #define SETTING_KEY_RX_OUTPUT SETTING_KEY_RX_PREFIX "output"
-#define SETTING_KEY_RX_TX_PIN SETTING_KEY_RX_PREFIX "tx"
-#define SETTING_KEY_RX_RX_PIN SETTING_KEY_RX_PREFIX "rx"
+#define SETTING_KEY_RX_TX_GPIO SETTING_KEY_RX_PREFIX "tx"
+#define SETTING_KEY_RX_RX_GPIO SETTING_KEY_RX_PREFIX "rx"
 #define SETTING_KEY_RX_RSSI_CHANNEL SETTING_KEY_RX_PREFIX "rssi_ch"
-#define SETTING_KEY_RX_SBUS_INVERTED SETTING_KEY_RX_PREFIX "sbus_inverted"
-#define SETTING_KEY_RX_SPORT_INVERTED SETTING_KEY_RX_PREFIX "sport_inverted"
+#define SETTING_KEY_RX_SBUS_INVERTED SETTING_KEY_RX_PREFIX "sbus_invert"
+#define SETTING_KEY_RX_SPORT_INVERTED SETTING_KEY_RX_PREFIX "sport_invert"
 #define SETTING_KEY_RX_MSP_BAUDRATE SETTING_KEY_RX_PREFIX "msp_baudrate"
-#define SETTING_KEY_RX_FPORT_INVERTED SETTING_KEY_RX_PREFIX "fport_inverted"
+#define SETTING_KEY_RX_FPORT_INVERTED SETTING_KEY_RX_PREFIX "fport_invert"
 
 #define SETTING_KEY_RX_CHANNEL_OUTPUTS "rx-chs"
 #define SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX SETTING_KEY_RX_CHANNEL_OUTPUTS "."
@@ -57,28 +80,33 @@
 #define SETTING_KEY_SCREEN_BRIGHTNESS SETTING_KEY_SCREEN_PREFIX "brightness"
 #define SETTING_KEY_SCREEN_AUTO_OFF SETTING_KEY_SCREEN_PREFIX "auto_off"
 
-#define SETTING_KEY_RECEIVERS "receivers"
+#define SETTING_KEY_RECEIVERS "rxs"
 #define SETTING_KEY_RECEIVERS_PREFIX SETTING_KEY_RECEIVERS "."
 #define SETTING_KEY_RECEIVERS_RX_PREFIX SETTING_KEY_RECEIVERS_PREFIX "rx-"
 #define SETTING_KEY_RECEIVERS_RX_NAME_PREFIX SETTING_KEY_RECEIVERS_PREFIX "rx-name-"
 #define SETTING_KEY_RECEIVERS_RX_ADDR_PREFIX SETTING_KEY_RECEIVERS_PREFIX "rx-addr-"
-#define SETTING_KEY_RECEIVERS_RX_SELECT_PREFIX SETTING_KEY_RECEIVERS_PREFIX "rx-select-"
-#define SETTING_KEY_RECEIVERS_RX_DELETE_PREFIX SETTING_KEY_RECEIVERS_PREFIX "rx-delete-"
+#define SETTING_KEY_RECEIVERS_RX_SELECT_PREFIX SETTING_KEY_RECEIVERS_PREFIX "rx-sel-"
+#define SETTING_KEY_RECEIVERS_RX_DELETE_PREFIX SETTING_KEY_RECEIVERS_PREFIX "rx-del-"
 
 #define SETTING_KEY_DEVICES "devices"
 
 #define SETTING_KEY_POWER_OFF "poweroff"
 
-#define SETTING_KEY_ABOUT "about"
+#define SETTING_KEY_ABOUT "abt"
 #define SETTING_KEY_ABOUT_PREFIX SETTING_KEY_ABOUT "."
-#define SETTING_KEY_ABOUT_VERSION SETTING_KEY_ABOUT_PREFIX "version"
-#define SETTING_KEY_ABOUT_BUILD_DATE SETTING_KEY_ABOUT_PREFIX "build_date"
-#define SETTING_KEY_ABOUT_BOARD SETTING_KEY_ABOUT_PREFIX "board"
+#define SETTING_KEY_ABOUT_VERSION SETTING_KEY_ABOUT_PREFIX "v"
+#define SETTING_KEY_ABOUT_BUILD_DATE SETTING_KEY_ABOUT_PREFIX "bd"
+#define SETTING_KEY_ABOUT_BOARD SETTING_KEY_ABOUT_PREFIX "brd"
 
-#define SETTING_KEY_DIAGNOSTICS "diagnostics"
+#define SETTING_KEY_DIAGNOSTICS "diag"
 #define SETTING_KEY_DIAGNOSTICS_PREFIX SETTING_KEY_DIAGNOSTICS "."
-#define SETTING_KEY_DIAGNOSTICS_FREQUENCIES SETTING_KEY_DIAGNOSTICS_PREFIX "frequencies"
-#define SETTING_KEY_DIAGNOSTICS_DEBUG_INFO SETTING_KEY_DIAGNOSTICS_PREFIX "debug-info"
+#define SETTING_KEY_DIAGNOSTICS_FREQUENCIES SETTING_KEY_DIAGNOSTICS_PREFIX "freqs"
+#define SETTING_KEY_DIAGNOSTICS_DEBUG_INFO SETTING_KEY_DIAGNOSTICS_PREFIX "dbg-i"
+
+#define SETTING_KEY_DEVELOPER "dev"
+#define SETTING_KEY_DEVELOPER_PREFIX SETTING_KEY_DEVELOPER "."
+#define SETTING_KEY_DEVELOPER_REMOTE_DEBUGGING SETTING_KEY_DEVELOPER_PREFIX "dbg"
+#define SETTING_KEY_DEVELOPER_REBOOT SETTING_KEY_DEVELOPER_PREFIX "rbt"
 
 #define SETTING_IS(setting, k) STR_EQUAL(setting->key, k)
 
@@ -93,6 +121,7 @@ typedef enum
     FOLDER_ID_DEVICES,
     FOLDER_ID_ABOUT,
     FOLDER_ID_DIAGNOSTICS,
+    FOLDER_ID_DEVELOPER,
 } folder_id_e;
 
 typedef enum
@@ -188,7 +217,7 @@ int settings_get_count(void);
 const setting_t *settings_get_setting_at(int idx);
 const setting_t *settings_get_key(const char *key);
 uint8_t settings_get_key_u8(const char *key);
-int settings_get_key_pin_num(const char *key);
+hal_gpio_t settings_get_key_gpio(const char *key);
 bool settings_get_key_bool(const char *key);
 const char *settings_get_key_string(const char *key);
 const setting_t *settings_get_key_idx(const char *key, int *idx);
@@ -203,7 +232,7 @@ int32_t setting_get_max(const setting_t *setting);
 int32_t setting_get_default(const setting_t *setting);
 uint8_t setting_get_u8(const setting_t *setting);
 void setting_set_u8(const setting_t *setting, uint8_t v);
-int setting_get_pin_num(const setting_t *setting);
+hal_gpio_t setting_get_gpio(const setting_t *setting);
 bool setting_get_bool(const setting_t *setting);
 void setting_set_bool(const setting_t *setting, bool v);
 const char *setting_get_string(const setting_t *setting);

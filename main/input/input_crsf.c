@@ -1,5 +1,4 @@
-#include <driver/uart.h>
-#include <soc/uart_struct.h>
+#include <stdio.h>
 
 #include <hal/log.h>
 
@@ -20,11 +19,6 @@ static const char *TAG = "CRSF.Input";
 #define BPS_DETECT_SWITCH_INTERVAL_US MILLIS_TO_MICROS(1000)
 #define BPS_FALLBACK_INTERVAL SECS_TO_MICROS(1)
 #define RESPONSE_WAIT_INTERVAL_US (500)
-
-#define CRSF_UART_NUM UART_NUM_2
-#define CRSF_UART UART2
-#define CRSF_UART_TX_SIG U2TXD_OUT_IDX
-#define CRSF_UART_RX_SIG U2RXD_IN_IDX
 
 #define CRSF_INPUT_SETTINGS_VIEW ((settings_rmp_view_t){.id = SETTINGS_VIEW_CRSF_INPUT, .folder_id = FOLDER_ID_ROOT, .recursive = true})
 
@@ -52,34 +46,17 @@ static const crsf_frame_type_e radio_telemetry_frames[] = {
     CRSF_FRAMETYPE_FLIGHT_MODE,
 };
 
-static void input_crsf_enable_rx(input_crsf_t *input);
-static void input_crsf_enable_tx(input_crsf_t *input);
-
-static void input_crsf_isr(void *arg)
+static void input_crsf_isr(const serial_port_t *port, uint8_t b, void *user_data)
 {
-    input_crsf_t *input = arg;
-    if (CRSF_UART.int_st.rxfifo_full)
+    input_crsf_t *input = user_data;
+    // OpenTX will always send the frames starting with CRSF_ADDRESS_CRSF_TRANSMITTER
+    // so we can use that to synchronize frames in case of some input error.
+    if (crsf_port_has_buffered_data(&input->crsf) || b == CRSF_ADDRESS_CRSF_TRANSMITTER)
     {
         // Received byte in RX mode
         time_micros_t now = time_micros_now();
-        input->last_isr = now;
-        uint32_t cnt = CRSF_UART.status.rxfifo_cnt;
-        while (cnt--)
-        {
-            uint8_t c = CRSF_UART.fifo.rw_byte;
-            // OpenTX will always send the frames starting with CRSF_ADDRESS_CRSF_TRANSMITTER
-            // so we can use that to synchronize frames in case of some input error.
-            if (crsf_port_has_buffered_data(&input->crsf) || c == CRSF_ADDRESS_CRSF_TRANSMITTER)
-            {
-                crsf_port_push(&input->crsf, c);
-            }
-        }
-        CRSF_UART.int_clr.rxfifo_full = 1;
-    }
-    else if (CRSF_UART.int_st.tx_done)
-    {
-        // Transmit done in TX MODE
-        input_crsf_enable_rx(input);
+        input->last_byte_at = now;
+        crsf_port_push(&input->crsf, b);
     }
 }
 
@@ -252,55 +229,13 @@ static void input_crsf_frame_callback(void *data, crsf_frame_t *frame)
     input_crsf->last_frame_recv = now;
 }
 
-static void input_crsf_enable_tx(input_crsf_t *input)
-{
-    // Disable RX interrupts
-    CRSF_UART.int_ena.rxfifo_full = 0;
-    CRSF_UART.int_clr.rxfifo_full = 1;
-
-    // Enable TX
-    ESP_ERROR_CHECK(gpio_set_pull_mode(input->pin_num, GPIO_FLOATING));
-    ESP_ERROR_CHECK(gpio_set_level(input->pin_num, 0));
-    ESP_ERROR_CHECK(gpio_set_direction(input->pin_num, GPIO_MODE_OUTPUT));
-    gpio_matrix_out(input->pin_num, CRSF_UART_TX_SIG, false, false);
-}
-
-static void input_crsf_enable_rx(input_crsf_t *input)
-{
-    // Disable TX interrupts
-
-    CRSF_UART.int_clr.tx_done = 1;
-    CRSF_UART.int_ena.tx_done = 0;
-
-    // Enable RX mode
-    ESP_ERROR_CHECK(gpio_set_direction(input->pin_num, GPIO_MODE_INPUT));
-    ESP_ERROR_CHECK(gpio_set_pull_mode(input->pin_num, GPIO_PULLDOWN_ONLY));
-    gpio_matrix_in(input->pin_num, CRSF_UART_RX_SIG, false);
-
-    // Empty RX fifo
-    while (CRSF_UART.status.rxfifo_cnt)
-    {
-        READ_PERI_REG(UART_FIFO_REG(CRSF_UART_NUM));
-    }
-
-    CRSF_UART.conf1.rxfifo_full_thrhd = 1; // RX interrupt after 1 byte
-    CRSF_UART.int_clr.rxfifo_full = 1;
-    CRSF_UART.int_ena.rxfifo_full = 1;
-}
-
 static int input_crsf_write(void *arg, const void *buf, size_t size)
 {
     // UART_FIFO_LEN is 128, while CRSF_FRAME_SIZE_MAX is 64. Since we're
     // sending one frame at a time every cycle, we should
     // be fine not handling the case when the buffer is full.
-    uint8_t tx_fifo_rem = (UART_FIFO_LEN - CRSF_UART.status.txfifo_cnt);
-    assert(size <= tx_fifo_rem);
-    const uint8_t *ptr = buf;
-    for (unsigned ii = 0; ii < size; ii++)
-    {
-        WRITE_PERI_REG(UART_FIFO_AHB_REG(CRSF_UART_NUM), ptr[ii]);
-    }
-    return size;
+    input_crsf_t *input_crsf = arg;
+    return serial_port_write(input_crsf->serial_port, buf, size);
 }
 
 static crsf_rf_power_e input_crsf_get_tx_power(input_crsf_t *input)
@@ -441,10 +376,8 @@ static bool input_crsf_send_pending_resp_frame(input_crsf_t *input)
 
 static void input_crsf_send_response(input_crsf_t *input)
 {
-    // Enable TX mode now, since it takes a bit for it to be effectively active
-    input_crsf_enable_tx(input);
-
     crsf_frame_type_e frame_type = radio_telemetry_frames[input->telemetry_pos];
+    serial_port_begin_write(input->serial_port);
     // If we're not sending the link stats, check if we have a pending response data to send
     if (frame_type == CRSF_FRAMETYPE_LINK_STATISTICS || !input_crsf_send_pending_resp_frame(input))
     {
@@ -455,10 +388,7 @@ static void input_crsf_send_response(input_crsf_t *input)
     {
         input->telemetry_pos = 0;
     }
-
-    // Enable interrupt when TX is done
-    CRSF_UART.int_clr.tx_done = 1;
-    CRSF_UART.int_ena.tx_done = 1;
+    serial_port_end_write(input->serial_port);
 }
 
 static void input_crsf_update_baud_rate(input_crsf_t *input, unsigned baud_rate)
@@ -468,7 +398,7 @@ static void input_crsf_update_baud_rate(input_crsf_t *input, unsigned baud_rate)
     // xtal frequency
     input->baud_rate = baud_rate;
     LOG_D(TAG, "Switching to baud rate %u", baud_rate);
-    uart_set_baudrate(CRSF_UART_NUM, baud_rate);
+    serial_port_set_baudrate(input->serial_port, baud_rate);
 }
 
 static void input_crsf_send_setting_frame(input_crsf_t *input_crsf, const settings_rmp_setting_t *setting, uint8_t crsf_src_addr)
@@ -603,19 +533,19 @@ static void input_crsf_send_setting_frame(input_crsf_t *input_crsf, const settin
         case SETTING_TYPE_U8:
         {
             entry.settings_entry.type = CRSF_UINT8;
-            uint8_t bb;
+            uint8_t u8b;
             // Actual value
-            bb = settings_rmp_setting_get_value(setting);
-            ASSERT(ring_buffer_push(&rb.b, &bb));
+            u8b = settings_rmp_setting_get_value(setting);
+            ASSERT(ring_buffer_push(&rb.b, &u8b));
             // Min
-            bb = settings_rmp_setting_get_min(setting);
-            ASSERT(ring_buffer_push(&rb.b, &bb));
+            u8b = settings_rmp_setting_get_min(setting);
+            ASSERT(ring_buffer_push(&rb.b, &u8b));
             // Max
-            bb = settings_rmp_setting_get_max(setting);
-            ASSERT(ring_buffer_push(&rb.b, &bb));
+            u8b = settings_rmp_setting_get_max(setting);
+            ASSERT(ring_buffer_push(&rb.b, &u8b));
             // Default
-            bb = settings_rmp_setting_get_min(setting);
-            ASSERT(ring_buffer_push(&rb.b, &bb));
+            u8b = settings_rmp_setting_get_min(setting);
+            ASSERT(ring_buffer_push(&rb.b, &u8b));
             break;
         }
         case SETTING_TYPE_FOLDER:
@@ -827,6 +757,8 @@ static bool input_crsf_open(void *input, void *config)
     input_crsf_t *input_crsf = input;
     input_crsf->bps = CRSF_INPUT_BPS_DETECT;
 
+    LOG_I(TAG, "Open");
+
     io_t crsf_io = {
         .read = NULL,
         .write = input_crsf_write,
@@ -835,39 +767,30 @@ static bool input_crsf_open(void *input, void *config)
 
     crsf_port_init(&input_crsf->crsf, &crsf_io, input_crsf_frame_callback, input);
 
-    uart_config_t uart_config = {
+    serial_port_config_t serial_config = {
         .baud_rate = CRSF_OPENTX_BAUDRATE,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .tx_pin = config_crsf->gpio,
+        .rx_pin = config_crsf->gpio,
+        .tx_buffer_size = 128,
+        .parity = SERIAL_PARITY_DISABLE,
+        .stop_bits = SERIAL_STOP_BITS_1,
+        .inverted = true,
+        .byte_callback = input_crsf_isr,
+        .byte_callback_data = input_crsf,
     };
 
-    input_crsf->baud_rate = uart_config.baud_rate;
+    input_crsf->serial_port = serial_port_open(&serial_config);
+    input_crsf->baud_rate = serial_config.baud_rate;
 
-    ESP_ERROR_CHECK(uart_param_config(CRSF_UART_NUM, &uart_config));
-    ESP_ERROR_CHECK(uart_isr_register(CRSF_UART_NUM, input_crsf_isr, input, 0, &input_crsf->isr_handle));
-    ESP_ERROR_CHECK(uart_set_line_inverse(CRSF_UART_NUM, UART_INVERSE_TXD | UART_INVERSE_RXD));
-#if 0
-    ESP_ERROR_CHECK(uart_set_baudrate(CRSF_UART, 400000));
-    UART2.conf0.parity_en = 0;         // no HW parity
-    UART2.conf0.stop_bit_num = 1;      // 1 stop bit
-    UART2.conf0.bit_num = 3;           // 8 bit
-    UART2.conf0.rxd_inv = 1;           // invert RX
-    UART2.conf0.txd_inv = 1;           // intert TX
-#endif
     time_micros_t now = time_micros_now();
     input_crsf->telemetry_pos = 0;
-    input_crsf->last_isr = 0;
+    input_crsf->last_byte_at = 0;
     input_crsf->last_frame_recv = now;
     input_crsf->next_resp_frame = TIME_MICROS_MAX;
     input_crsf->enable_rx_deadline = TIME_MICROS_MAX;
     input_crsf->bps_detect_switched = now;
-    input_crsf->pin_num = config_crsf->pin_num;
+    input_crsf->gpio = config_crsf->gpio;
 
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[config_crsf->pin_num], PIN_FUNC_GPIO);
-
-    input_crsf_enable_rx(input_crsf);
     // 100ms should be low enough to be detected fast and high enough that
     // it's not accidentally triggered in 115200bps mode.
     failsafe_set_max_interval(&input_crsf->input.failsafe, MILLIS_TO_MICROS(100));
@@ -887,7 +810,7 @@ static bool input_crsf_update(void *input, rc_data_t *data, time_micros_t now)
 {
     input_crsf_t *input_crsf = input;
     bool updated = false;
-    if (input_crsf->last_isr > 0 && now > input_crsf->last_isr && (now - input_crsf->last_isr) > input_crsf_tx_done_timeout_us(input_crsf))
+    if (input_crsf->last_byte_at > 0 && now > input_crsf->last_byte_at && (now - input_crsf->last_byte_at) > input_crsf_tx_done_timeout_us(input_crsf))
     {
         // Transmission from radio has ended. We either got a frame
         // or corrupted data.
@@ -923,7 +846,7 @@ static bool input_crsf_update(void *input, rc_data_t *data, time_micros_t now)
         // when using RMP we might end up with several frames in the queue.
         crsf_port_reset(&input_crsf->crsf);
 
-        input_crsf->last_isr = 0;
+        input_crsf->last_byte_at = 0;
     }
     if (input_crsf->last_frame_recv + BPS_FALLBACK_INTERVAL < now && input_crsf->bps != CRSF_INPUT_BPS_DETECT)
     {
@@ -943,10 +866,13 @@ static bool input_crsf_update(void *input, rc_data_t *data, time_micros_t now)
     }
     // The TX_DONE interrupt won't fire if there's a collision, so we use a timer
     // as a fallback to avoid leaving the pin in the TX state.
-    if (now > input_crsf->enable_rx_deadline && CRSF_UART.int_ena.rxfifo_full == 0)
+    if (now > input_crsf->enable_rx_deadline)
     {
+        if (serial_port_half_duplex_mode(input_crsf->serial_port) == SERIAL_HALF_DUPLEX_MODE_TX)
+        {
+            serial_port_set_half_duplex_mode(input_crsf->serial_port, SERIAL_HALF_DUPLEX_MODE_RX);
+        }
         input_crsf->enable_rx_deadline = TIME_MICROS_MAX;
-        input_crsf_enable_rx(input_crsf);
     }
     if (input_crsf->bps == CRSF_INPUT_BPS_DETECT && input_crsf->bps_detect_switched + BPS_DETECT_SWITCH_INTERVAL_US < now)
     {
@@ -971,13 +897,12 @@ static bool input_crsf_update(void *input, rc_data_t *data, time_micros_t now)
 static void input_crsf_close(void *input, void *config)
 {
     input_crsf_t *input_crsf = input;
-    ESP_ERROR_CHECK(esp_intr_free(input_crsf->isr_handle));
-    serial_port_destroy(&input_crsf->serial_port);
     if (input_crsf->rmp_port)
     {
         rmp_close_port(input_crsf->input.rc_data->rmp, input_crsf->rmp_port);
         input_crsf->rmp_port = NULL;
     }
+    serial_port_destroy(&input_crsf->serial_port);
 }
 
 void input_crsf_init(input_crsf_t *input)

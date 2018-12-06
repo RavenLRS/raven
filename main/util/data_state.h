@@ -24,6 +24,7 @@ uint32_t data_state_score(data_state_t *ds, time_micros_t now);
 void data_state_update(data_state_t *ds, bool changed, time_micros_t now);
 inline time_micros_t data_state_get_last_update(const data_state_t *ds) { return ds->last_update; }
 inline bool data_state_has_value(const data_state_t *ds) { return ds->last_update > 0; }
+inline bool data_state_is_dirty(const data_state_t *ds) { return ds->dirty_since > 0; }
 void data_state_sent(data_state_t *ds, int ack_at_seq, time_micros_t now);
 // Stop the ACK if it's in progress
 void data_state_stop_ack(data_state_t *ds);

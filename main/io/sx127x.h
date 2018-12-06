@@ -3,15 +3,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <driver/spi_master.h>
+#include <hal/gpio.h>
+#include <hal/spi.h>
 
 #include "air/air_radio.h"
 
 #include "util/time.h"
 
 #define SX127X_MAX_PKT_LENGTH 255
-
-#define SX127X_DEFAULT_LORA_SYNC_WORD 0x12 // 6.4 LoRa register mode map, RegSyncWord
+#define SX127X_SNR_SCALE 4
+#define SX127X_SYNC_WORD_DEFAULT -1
 
 typedef enum
 {
@@ -24,6 +25,12 @@ typedef enum
     SX127X_OUTPUT_RFO = 1,
     SX127X_OUTPUT_PA_BOOST,
 } sx127x_output_type_e;
+
+typedef enum
+{
+    SX127X_OP_MODE_FSK = 1,
+    SX127X_OP_MODE_LORA = 2,
+} sx127x_op_mode_e;
 
 typedef enum
 {
@@ -57,50 +64,68 @@ typedef enum {
 
 typedef struct sx127x_s
 {
-    const int miso;
-    const int mosi;
-    const int sck;
-    const int cs;
-    const int rst;
-    const int dio0;
+    const hal_spi_bus_t spi_bus;
+    const hal_gpio_t miso;
+    const hal_gpio_t mosi;
+    const hal_gpio_t sck;
+    const hal_gpio_t cs;
+    const hal_gpio_t rst;
+    const hal_gpio_t dio0;
     const sx127x_output_type_e output_type;
     struct
     {
-        spi_device_handle_t spi;
-        unsigned long freq;
-        uint8_t ppm_correction;
+        hal_spi_device_handle_t spi;
+        sx127x_op_mode_e op_mode;
         uint8_t mode;
-        uint8_t payload_size;
+        int16_t sync_word;
+        struct
+        {
+            unsigned long freq;
+            uint8_t payload_length;
+            unsigned rx_bandwidth;
+        } fsk;
+        struct
+        {
+            unsigned long freq;
+            uint8_t payload_length;
+            uint8_t ppm_correction;
+            sx127x_lora_signal_bw_e signal_bw;
+            uint8_t bw_workaround;
+            int sf;
+        } lora;
         bool rx_done;
         bool tx_done;
         int dio0_trigger;
         void *callback;
         void *callback_data;
-        unsigned tx_start;
-        unsigned tx_end;
-        sx127x_lora_signal_bw_e signal_bw;
-        uint8_t bw_workaround;
-        int sf;
     } state;
 } sx127x_t;
 
 void sx127x_init(sx127x_t *sx127x);
 
+void sx127x_set_op_mode(sx127x_t *sx127x, sx127x_op_mode_e op_mode);
+
 void sx127x_set_tx_power(sx127x_t *sx127x, int dBm);
 // freq is in Hz
 void sx127x_set_frequency(sx127x_t *sx127x, unsigned long freq, int error);
+// Should be called with center-ish frequency
+void sx127x_calibrate(sx127x_t *sx127x, unsigned long freq);
+
 void sx127x_set_payload_size(sx127x_t *sx127x, uint8_t size);
+void sx127x_set_sync_word(sx127x_t *sx127x, int16_t sw);
 
 void sx127x_send(sx127x_t *sx127x, const void *buf, size_t size);
 size_t sx127x_read(sx127x_t *sx127x, void *buf, size_t size);
 void sx127x_enable_continous_rx(sx127x_t *sx127x);
 bool sx127x_is_tx_done(sx127x_t *sx127x);
 bool sx127x_is_rx_done(sx127x_t *sx127x);
+bool sx127x_is_rx_in_progress(sx127x_t *sx127x);
 
 void sx127x_set_callback(sx127x_t *sx127x, air_radio_callback_t callback, void *data);
 
 int sx127x_frequency_error(sx127x_t *sx127x);
 
+int sx127x_rx_sensitivity(sx127x_t *sx127x);
 // SNR is multiplied by 4
 int sx127x_rssi(sx127x_t *sx127x, int *snr, int *lq);
 
@@ -109,6 +134,13 @@ void sx127x_sleep(sx127x_t *sx127x);
 
 void sx127x_shutdown(sx127x_t *sx127x);
 
+// FSK specific functions
+void sx127x_set_fsk_fdev(sx127x_t *sx127x, unsigned hz);
+void sx127x_set_fsk_bitrate(sx127x_t *sx127x, unsigned long bps);
+void sx127x_set_fsk_rx_bandwidth(sx127x_t *sx127x, unsigned hz);
+void sx127x_set_fsk_rx_afc_bandwidth(sx127x_t *sx127x, unsigned hz);
+void sx127x_set_fsk_preamble_length(sx127x_t *sx127x, unsigned length);
+
 // LoRa specific functions
 void sx127x_set_lora_spreading_factor(sx127x_t *sx127x, int sf);
 void sx127x_set_lora_signal_bw(sx127x_t *sx127x, sx127x_lora_signal_bw_e sbw);
@@ -116,6 +148,4 @@ void sx127x_set_lora_coding_rate(sx127x_t *sx127x, sx127x_lora_coding_rate_e rat
 void sx127x_set_lora_preamble_length(sx127x_t *sx127x, long length);
 void sx127x_set_lora_crc(sx127x_t *sx127x, bool crc);
 void sx127x_set_lora_header_mode(sx127x_t *sx127x, sx127x_lora_header_e mode);
-void sx127x_set_lora_sync_word(sx127x_t *sx127x, uint8_t sw);
-int sx127x_lora_rx_sensitivity(sx127x_t *sx127x);
 int sx127x_lora_min_rssi(sx127x_t *sx127x);

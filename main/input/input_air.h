@@ -30,10 +30,12 @@ typedef struct input_air_s
     unsigned air_state;
     unsigned consecutive_lost_packets;
     unsigned telemetry_fed_index;
-    time_micros_t full_cycle_time;
-    time_micros_t uplink_cycle_time;
+    time_micros_t cycle_time;
     time_micros_t last_packet_at;
+    time_micros_t next_packet_expected_at;
     time_micros_t next_packet_deadline;
+    bool next_packet_deadline_extended;
+    bool reset_rssi;
     unsigned freq_index;
 
     msp_air_t msp_air;

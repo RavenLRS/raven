@@ -27,20 +27,22 @@ and device.lua).
 - Low latency. 250Hz between radio and TX as well as between TX and flight
 controller. Air protocol is limited to 100Hz for now, but will support up
 to 150hz with telemetry or 200hz without telemetry in the near future.
-- Multiple RX protocols supported (SBUS+SmartPort, CRSF, MSP, CRSF, ...).
+- Multiple RX protocols supported (SBUS+SmartPort, FPort, MSP, CRSF, ...).
 - Support for backup batteries (useful for missing aircraft recovery).
 
 ![Raven TX on a Q X7](docs/images/raven_qx7.png?raw=true "Raven TX on a Q X7")
 
 ## Compiling Raven
 
-Raven is built on top of [esp-idf V3.0](https://github.com/espressif/esp-idf), so as a first step to compile
+Raven is built on top of [esp-idf](https://github.com/espressif/esp-idf), but it includes it
+as a submodule, so you should only need to install the [Xtensa toolchain](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)
+
 Raven you should install and configure it. Make sure to install version 3.0 by running
 `git checkout v3.0` (their instructions will give you the development version, not a stable one).
-Download the required submodules by running `git submodule init` followed by `git submodule update -r` in the same directory that you have cloned the esp-idf repository.
+Download the required submodules by running `git submodule init` followed by `git submodule update -r` in the same directory that you have cloned the esp-idf repository (i.e. no need to clone the master esp-idf repository).
 
-Clone the Raven repository by running `git clone --recursive https://github.com/RavenLRS/raven.git`. Don't
-forget the `--recursive` option, since Raven uses submodules.
+Then, clone the Raven repository by running `git clone --recursive https://github.com/RavenLRS/raven.git`. Don't forget the `--recursive` option, since Raven
+uses submodules.
 
 From the directory where you've cloned Raven, run `PORT=<port> TARGET=<target> make erase flash` to flash a new module. For
 updating a board which is already running Raven, omit the `erase` part to avoid wiping your configuration. The `erase` is only

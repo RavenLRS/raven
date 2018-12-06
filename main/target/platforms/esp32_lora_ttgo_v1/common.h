@@ -1,10 +1,10 @@
-#include "platform/platform_macros.h"
-
 // User button
-#define PIN_BUTTON_1 0
+#define BUTTON_1_GPIO 0
 
 // Buzzer
-#define PIN_BEEPER 12 // This seems appropriate for TTGO v1 boards, since 12 can't be pulled low during boot and it's not connected to anything
+#define BEEPER_GPIO 12 // This seems appropriate for TTGO v1 boards, since 12 can't be pulled low during boot and it's not connected to anything
+
+#define USE_RADIO_SX127X
 
 // SX127X connection
 // GPIO5  -- SX1278's SCK
@@ -14,12 +14,13 @@
 // GPIO14 -- SX1278's RESET
 // GPIO26 -- SX1278's DIO0
 
-#define PIN_SX127X_SCK 5
-#define PIN_SX127X_MISO 19
-#define PIN_SX127X_MOSI 27
-#define PIN_SX127X_CS 18
-#define PIN_SX127X_RST 14
-#define PIN_SX127X_DIO0 26
+#define SX127X_SPI_BUS VSPI_HOST
+#define SX127X_GPIO_SCK 5
+#define SX127X_GPIO_MISO 19
+#define SX127X_GPIO_MOSI 27
+#define SX127X_GPIO_CS 18
+#define SX127X_GPIO_RST 14
+#define SX127X_GPIO_DIO0 26
 
 // All v1 boards use PA_BOOST
 #define SX127X_OUTPUT_TYPE SX127X_OUTPUT_PA_BOOST
@@ -39,10 +40,10 @@
 // 26 is SX127X IRQ
 // 27 is SX127X MOSI
 // 34..39 is input only
-#define PIN_USABLE_BASE_MASK (PIN_N(1) | PIN_N(3) | PIN_N(4) | PIN_N(13) | PIN_N(15) | PIN_N(16) | PIN_N(17) | PIN_N(21) | PIN_N(22) | PIN_N(23) | PIN_N(32) | PIN_N(33))
+#define HAL_GPIO_USER_BASE_MASK (HAL_GPIO_M(1) | HAL_GPIO_M(3) | HAL_GPIO_M(4) | HAL_GPIO_M(13) | HAL_GPIO_M(15) | HAL_GPIO_M(16) | HAL_GPIO_M(17) | HAL_GPIO_M(21) | HAL_GPIO_M(22) | HAL_GPIO_M(23) | HAL_GPIO_M(32) | HAL_GPIO_M(33))
 
-#define PIN_DEFAULT_TX 13
-#define PIN_DEFAULT_RX 21
+#define TX_DEFAULT_GPIO 13
+#define RX_DEFAULT_GPIO 21
 
-#define PIN_UNUSED_TX 2
-#define PIN_UNUSED_RX 35
+#define TX_UNUSED_GPIO 2
+#define RX_UNUSED_GPIO 35

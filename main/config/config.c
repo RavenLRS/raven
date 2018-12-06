@@ -57,12 +57,12 @@ static storage_t storage;
 static void config_generate_addr(air_addr_t *addr)
 {
     // Generate an addr.
-    uint32_t val = rand_hal_u32();
+    uint32_t val = hal_rand_u32();
     addr->addr[0] = (val >> 0) & 0xFF;
     addr->addr[1] = (val >> 8) & 0xFF;
     addr->addr[2] = (val >> 16) & 0xFF;
     addr->addr[3] = (val >> 24) & 0xFF;
-    val = rand_hal_u32();
+    val = hal_rand_u32();
     addr->addr[4] = (val >> 0) & 0xFF;
     addr->addr[5] = (val >> 8) & 0xFF;
 }
@@ -500,16 +500,12 @@ air_supported_modes_e config_get_air_modes(config_air_mode_e modes)
 {
     switch (modes)
     {
-#if defined(USE_AIR_MODE_1)
     case CONFIG_AIR_MODES_1_5:
         return AIR_SUPPORTED_MODES_1_TO_5;
-#endif
     case CONFIG_AIR_MODES_2_5:
         return AIR_SUPPORTED_MODES_2_TO_5;
-#if defined(USE_AIR_MODE_1)
     case CONFIG_AIR_MODES_FIXED_1:
         return AIR_SUPPORTED_MODES_FIXED_1;
-#endif
     case CONFIG_AIR_MODES_FIXED_2:
         return AIR_SUPPORTED_MODES_FIXED_2;
     case CONFIG_AIR_MODES_FIXED_3:

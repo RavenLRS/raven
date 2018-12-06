@@ -89,11 +89,7 @@ typedef struct air_pairing_s
     uint32_t key;
 } PACKED air_pairing_t;
 
-inline void air_pairing_cpy(air_pairing_t *dst, const air_pairing_t *src)
-{
-    memmove(dst, src, sizeof(*dst));
-}
-
+void air_pairing_cpy(air_pairing_t *dst, const air_pairing_t *src);
 void air_pairing_format(const air_pairing_t *pairing, char *buf, size_t bufsize);
 
 #define AIR_CHANNEL_BITS 9
@@ -133,39 +129,11 @@ typedef struct air_rx_packet_s
 _Static_assert(sizeof(air_rx_packet_t) == 5, "invalid air_rx_packet_t size");
 
 void air_addr_format(const air_addr_t *addr, char *buf, size_t bufsize);
-
-inline bool air_addr_equals(const air_addr_t *addr1, const air_addr_t *addr2)
-{
-    return memcmp(addr1->addr, addr2->addr, AIR_ADDR_LENGTH) == 0;
-}
-
-inline bool air_addr_is_byte(const air_addr_t *addr, uint8_t b)
-{
-    for (int ii = 0; ii < AIR_ADDR_LENGTH; ii++)
-    {
-        if (addr->addr[ii] != b)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
+bool air_addr_equals(const air_addr_t *addr1, const air_addr_t *addr2);
 // Returns true iff addr is not all zeros
-inline bool air_addr_is_valid(const air_addr_t *addr)
-{
-    return !air_addr_is_byte(addr, 0);
-}
-
-inline bool air_addr_is_broadcast(const air_addr_t *addr)
-{
-    return air_addr_is_byte(addr, 0xFF);
-}
-
-inline void air_addr_cpy(air_addr_t *dst, const air_addr_t *src)
-{
-    memmove(dst, src, sizeof(*dst));
-}
+bool air_addr_is_valid(const air_addr_t *addr);
+bool air_addr_is_broadcast(const air_addr_t *addr);
+void air_addr_cpy(air_addr_t *dst, const air_addr_t *src);
 
 air_key_t air_key_generate(void);
 

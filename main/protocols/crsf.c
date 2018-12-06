@@ -55,6 +55,18 @@ uint8_t crsf_ext_frame_payload_size(crsf_ext_frame_t *frame)
     return crsf_frame_payload_size((crsf_frame_t *)frame) - (sizeof(crsf_ext_header_t) - sizeof(crsf_header_t));
 }
 
+crsf_device_info_tail_t *crsf_device_info_get_tail(crsf_device_info_t *info)
+{
+    for (unsigned ii = 0; ii < sizeof(info->name); ii++)
+    {
+        if (info->name[ii] == '\0')
+        {
+            return (crsf_device_info_tail_t *)&info->name[ii + 1];
+        }
+    }
+    return NULL;
+}
+
 void crsf_port_init(crsf_port_t *port, io_t *io, crsf_frame_f frame_callback, void *callback_data)
 {
     port->io = *io;
@@ -81,6 +93,16 @@ bool crsf_port_read(crsf_port_t *port)
     }
     port->buf_pos += n;
     return crsf_port_decode(port);
+}
+
+bool crsf_port_push(crsf_port_t *port, uint8_t c)
+{
+    if (port->buf_pos < sizeof(port->buf))
+    {
+        port->buf[port->buf_pos++] = c;
+        return true;
+    }
+    return false;
 }
 
 bool crsf_port_decode(crsf_port_t *port)
@@ -129,4 +151,14 @@ bool crsf_port_decode(crsf_port_t *port)
         port->buf_pos -= start;
     }
     return found;
+}
+
+bool crsf_port_has_buffered_data(crsf_port_t *port)
+{
+    return port->buf_pos > 0 && port->buf_pos < sizeof(port->buf);
+}
+
+void crsf_port_reset(crsf_port_t *port)
+{
+    port->buf_pos = 0;
 }

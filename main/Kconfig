@@ -8,9 +8,8 @@ config RAVEN_RX_SUPPORT
     bool "Enable RX support"
     default "y"
 
-config RAVEN_FAKE_TX_INPUT
-    depends on RAVEN_TX_SUPPORT
-    bool "Enable fake TX input support"
+config RAVEN_FAKE_INPUT
+    bool "Enable fake input support"
     default "n"
 
 config RAVEN_USE_PWM_OUTPUTS

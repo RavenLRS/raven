@@ -1,5 +1,6 @@
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
+#include <stdlib.h>
+
+#include <os/os.h>
 
 #include "platform/dispatch.h"
 

@@ -17,7 +17,7 @@ static bool output_sbus_open(void *output, void *config)
 
     serial_port_config_t sbus_port_config = {
         .baud_rate = SBUS_BAUDRATE,
-        .tx_pin = cfg->sbus_pin_num,
+        .tx_pin = cfg->sbus,
         .rx_pin = -1,
         .tx_buffer_size = 0,
         .rx_buffer_size = 0,
@@ -30,8 +30,8 @@ static bool output_sbus_open(void *output, void *config)
 
     serial_port_config_t sport_port_config = {
         .baud_rate = SMARTPORT_BAUDRATE,
-        .tx_pin = cfg->sport_pin_num,
-        .rx_pin = cfg->sport_pin_num,
+        .tx_pin = cfg->sport,
+        .rx_pin = cfg->sport,
         .tx_buffer_size = 0,
         .rx_buffer_size = sizeof(smartport_payload_t) * 2,
         .parity = SERIAL_PARITY_DISABLE,
@@ -70,16 +70,17 @@ static bool output_sbus_update_sport(void *output, rc_data_t *data)
     return true;
 }
 
-static bool output_sbus_update(void *output, rc_data_t *data, time_micros_t now)
+static bool output_sbus_update(void *output, rc_data_t *data, bool update_rc, time_micros_t now)
 {
-    if (rc_data_is_ready(data))
+    if (update_rc)
     {
         if (!output_sbus_update_sbus(output, data))
         {
             return false;
         }
     }
-    return output_sbus_update_sport(output, data);
+    output_sbus_update_sport(output, data);
+    return true;
 }
 
 static void output_sbus_close(void *output, void *config)
@@ -91,11 +92,6 @@ static void output_sbus_close(void *output, void *config)
 
 void output_sbus_init(output_sbus_t *output)
 {
-    // Each frame lasts 3ms and there should be be 6ms between updates
-    output->output.min_update_interval = MILLIS_TO_MICROS(9);
-    // Don't wait more than 15ms to send a frame, otherwise the FC
-    // might think the cable broke and go into FS.
-    output->output.max_update_interval = MILLIS_TO_MICROS(15);
     output->output.flags = OUTPUT_FLAG_LOCAL;
     output->output.vtable = (output_vtable_t){
         .open = output_sbus_open,

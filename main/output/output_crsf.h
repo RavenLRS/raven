@@ -1,6 +1,6 @@
 #pragma once
 
-#include <driver/gpio.h>
+#include <hal/gpio.h>
 
 #include "msp/msp_telemetry.h"
 
@@ -10,8 +10,8 @@
 
 typedef struct output_crsf_config_s
 {
-    gpio_num_t tx_pin_num;
-    gpio_num_t rx_pin_num;
+    hal_gpio_t tx;
+    hal_gpio_t rx;
     bool inverted;
 } output_crsf_config_t;
 

@@ -23,6 +23,13 @@ typedef enum
     SERIAL_STOP_BITS_2,
 } serial_stop_bits_e;
 
+typedef enum
+{
+    SERIAL_HALF_DUPLEX_MODE_NONE,
+    SERIAL_HALF_DUPLEX_MODE_RX,
+    SERIAL_HALF_DUPLEX_MODE_TX,
+} serial_half_duplex_mode_e;
+
 typedef void (*serial_byte_callback_f)(const serial_port_t *port, uint8_t b, void *user_data);
 
 typedef struct serial_port_config_s
@@ -47,7 +54,9 @@ bool serial_port_end_write(serial_port_t *port);
 int serial_port_write(serial_port_t *port, const void *buf, size_t size);
 bool serial_port_set_baudrate(serial_port_t *port, uint32_t baudrate);
 void serial_port_close(serial_port_t *port);
-bool serial_port_is_half_duplex(serial_port_t *port);
+bool serial_port_is_half_duplex(const serial_port_t *port);
+serial_half_duplex_mode_e serial_port_half_duplex_mode(const serial_port_t *port);
+void serial_port_set_half_duplex_mode(serial_port_t *port, serial_half_duplex_mode_e mode);
 void serial_port_destroy(serial_port_t **port);
 
 io_flags_t serial_port_io_flags(serial_port_t *port);

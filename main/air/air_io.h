@@ -45,5 +45,6 @@ bool air_io_is_bound(air_io_t *io);
 bool air_io_get_bound_addr(air_io_t *io, air_addr_t *addr);
 void air_io_on_frame(air_io_t *io, time_micros_t now);
 void air_io_update_rssi(air_io_t *io, int rssi, int snr, int lq, time_micros_t now);
-void air_io_update_reset_rssi(air_io_t *io);
+void air_io_reset_rssi(air_io_t *io, int rssi, int snr, int lq, time_micros_t now);
+void air_io_invalidate_rssi(air_io_t *io, time_micros_t now);
 unsigned air_io_get_update_frequency(const air_io_t *io);

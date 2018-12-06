@@ -1,6 +1,5 @@
-#include <mbedtls/md5.h>
-
 #include <hal/log.h>
+#include <hal/md5.h>
 
 #include "config/config.h"
 
@@ -101,22 +100,21 @@ static bool rmp_get_peer_key(rmp_t *rmp, air_key_t *key, const air_addr_t *addr)
 
 static void rmp_get_message_signature(rmp_t *rmp, uint8_t *signature, rmp_msg_t *msg, air_key_t *key)
 {
-    mbedtls_md5_context ctx;
-    unsigned char md5_output[16];
+    hal_md5_ctx_t ctx;
+    uint8_t md5_output[HAL_MD5_OUTPUT_SIZE];
 
-    mbedtls_md5_init(&ctx);
-    mbedtls_md5_starts(&ctx);
-    mbedtls_md5_update(&ctx, (unsigned char *)key, sizeof(*key));
-    mbedtls_md5_update(&ctx, (unsigned char *)&msg->src, sizeof(msg->src));
-    mbedtls_md5_update(&ctx, (unsigned char *)&msg->src_port, sizeof(msg->src_port));
-    mbedtls_md5_update(&ctx, (unsigned char *)&msg->dst, sizeof(msg->dst));
-    mbedtls_md5_update(&ctx, (unsigned char *)&msg->dst_port, sizeof(msg->dst_port));
+    hal_md5_init(&ctx);
+    hal_md5_update(&ctx, (unsigned char *)key, sizeof(*key));
+    hal_md5_update(&ctx, (unsigned char *)&msg->src, sizeof(msg->src));
+    hal_md5_update(&ctx, (unsigned char *)&msg->src_port, sizeof(msg->src_port));
+    hal_md5_update(&ctx, (unsigned char *)&msg->dst, sizeof(msg->dst));
+    hal_md5_update(&ctx, (unsigned char *)&msg->dst_port, sizeof(msg->dst_port));
     if (msg->payload && msg->payload_size > 0)
     {
-        mbedtls_md5_update(&ctx, (unsigned char *)msg->payload, msg->payload_size);
+        hal_md5_update(&ctx, (unsigned char *)msg->payload, msg->payload_size);
     }
-    mbedtls_md5_finish(&ctx, md5_output);
-    mbedtls_md5_free(&ctx);
+    hal_md5_digest(&ctx, md5_output);
+    hal_md5_destroy(&ctx);
 
     memcpy(signature, &md5_output[sizeof(md5_output) - RMP_SIGNATURE_SIZE], RMP_SIGNATURE_SIZE);
 }

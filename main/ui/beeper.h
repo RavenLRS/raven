@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <hal/gpio.h>
+
 #include "util/time.h"
 
 typedef enum
@@ -17,7 +19,7 @@ typedef enum
 
 typedef struct beeper_s
 {
-    uint8_t pin;
+    hal_gpio_t gpio;
     beeper_mode_e mode;
     struct
     {
@@ -29,7 +31,7 @@ typedef struct beeper_s
     } internal;
 } beeper_t;
 
-void beeper_init(beeper_t *beeper, uint8_t pin);
+void beeper_init(beeper_t *beeper, hal_gpio_t gpio);
 void beeper_update(beeper_t *beeper);
 void beeper_beep(beeper_t *beeper);
 void beeper_set_mode(beeper_t *beeper, beeper_mode_e mode);

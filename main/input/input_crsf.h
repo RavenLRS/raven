@@ -2,10 +2,9 @@
 
 #include <stdint.h>
 
-#include <driver/uart.h>
-
 #include "config/settings.h"
 
+#include "io/gpio.h"
 #include "io/serial.h"
 
 #include "input/input.h"
@@ -28,7 +27,7 @@ typedef enum
 typedef struct input_crsf_config_s
 {
     // CRSF input from radio is always half duplex inverted
-    int pin_num;
+    hal_gpio_t gpio;
 } input_crsf_config_t;
 
 // Used to map air_addr_t to just one byte for CRSF and storing
@@ -48,15 +47,14 @@ typedef struct input_crsf_s
     input_t input;
     serial_port_t *serial_port;
     crsf_input_bps_e bps;
-    time_micros_t last_isr;
+    time_micros_t last_byte_at;
     time_micros_t last_frame_recv;
     time_micros_t next_resp_frame;
     time_micros_t enable_rx_deadline;
     time_micros_t bps_detect_switched;
     unsigned baud_rate;
     crsf_port_t crsf;
-    uart_isr_handle_t isr_handle;
-    int pin_num;
+    hal_gpio_t gpio;
     unsigned telemetry_pos;
     const rmp_port_t *rmp_port;
     input_crsf_addr_t rmp_addresses[CRSF_INPUT_ADDR_LIST_SIZE];
