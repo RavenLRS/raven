@@ -14,7 +14,7 @@
 #endif
 
 #include "air/air_radio.h"
-#include "air/air_radio_sx127x.h"
+#include "air/air_radio_driver.h"
 
 #if defined(USE_BLUETOOTH)
 #include "bluetooth/bluetooth.h"
@@ -48,6 +48,7 @@
 #include "util/time.h"
 
 static air_radio_t radio = {
+#if defined(USE_RADIO_SX127X)
     .sx127x.spi_bus = SX127X_SPI_BUS,
     .sx127x.mosi = SX127X_GPIO_MOSI,
     .sx127x.miso = SX127X_GPIO_MISO,
@@ -56,6 +57,7 @@ static air_radio_t radio = {
     .sx127x.rst = SX127X_GPIO_RST,
     .sx127x.dio0 = SX127X_GPIO_DIO0,
     .sx127x.output_type = SX127X_OUTPUT_TYPE,
+#endif
 };
 
 static rc_t rc;

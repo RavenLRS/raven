@@ -228,6 +228,10 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
             break;
         }
         const msp_attitude_t *data = payload;
+        OUTPUT_TELEMETRY_UPDATE_I16(arg, TELEMETRY_ID_ATTITUDE_X, data->pitch * 10);
+        OUTPUT_TELEMETRY_UPDATE_I16(arg, TELEMETRY_ID_ATTITUDE_Y, data->roll * 10);
+        // Convert from (0, 360] to (-180, 180)
+        OUTPUT_TELEMETRY_UPDATE_I16(arg, TELEMETRY_ID_ATTITUDE_Z, (data->yaw > 180 ? -360 + data->yaw : data->yaw) * 100);
         OUTPUT_TELEMETRY_UPDATE_U16(arg, TELEMETRY_ID_HEADING, data->yaw * 100);
         break;
     }

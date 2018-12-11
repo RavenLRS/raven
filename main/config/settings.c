@@ -159,9 +159,9 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
     }
     if (SETTING_IS(setting, SETTING_KEY_TX_TX_GPIO))
     {
-        // Don't allow changing the TX pin from the CRSF configuration scripts
+        // Don't allow changing the TX pin from the CRSF/IBUS configuration scripts
         // since it will break communication.
-        return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_CRSF && view_id != SETTINGS_VIEW_CRSF_INPUT);
+        return SETTING_SHOW_IF(config_get_input_type() != TX_INPUT_FAKE && view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
     if (SETTING_IS(setting, SETTING_KEY_TX_RX_GPIO))
     {
@@ -316,7 +316,7 @@ static const char *air_band_table[] = {
 };
 _Static_assert(ARRAY_COUNT(air_band_table) == CONFIG_AIR_BAND_COUNT, "Invalid air band names table");
 #if defined(USE_TX_SUPPORT)
-static const char *tx_input_table[] = {"CRSF", "Test"};
+static const char *tx_input_table[] = {"CRSF", "IBUS", "Test"};
 #endif
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");

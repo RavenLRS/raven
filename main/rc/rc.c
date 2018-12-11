@@ -286,6 +286,7 @@ static void rc_reconfigure_input(rc_t *rc)
     LOG_I(TAG, "Reconfigure input");
     union {
         input_crsf_config_t crsf;
+        input_crsf_config_t ibus;
     } input_config;
     if (rc->input != NULL)
     {
@@ -305,6 +306,12 @@ static void rc_reconfigure_input(rc_t *rc)
             rc->input = (input_t *)&rc->inputs.crsf;
             input_config.crsf.gpio = settings_get_key_gpio(SETTING_KEY_TX_TX_GPIO);
             rc->input_config = &input_config.crsf;
+            break;
+        case TX_INPUT_IBUS:
+            input_ibus_init(&rc->inputs.ibus);
+            rc->input = (input_t *)&rc->inputs.ibus;
+            input_config.ibus.gpio = settings_get_key_gpio(SETTING_KEY_TX_TX_GPIO);
+            rc->input_config = &input_config.ibus;
             break;
         case TX_INPUT_FAKE:
             input_fake_init(&rc->inputs.fake);
