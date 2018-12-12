@@ -56,6 +56,16 @@ static air_radio_t radio = {
     .sx127x.cs = SX127X_GPIO_CS,
     .sx127x.rst = SX127X_GPIO_RST,
     .sx127x.dio0 = SX127X_GPIO_DIO0,
+#if defined(SX127X_GPIO_TXEN)
+    .sx127x.txen = SX127X_GPIO_TXEN,
+#else
+    .sx127x.txen = HAL_GPIO_NONE,
+#endif
+#if defined(SX127X_GPIO_RXEN)
+    .sx127x.rxen = SX127X_GPIO_RXEN,
+#else
+    .sx127x.rxen = HAL_GPIO_NONE,
+#endif
     .sx127x.output_type = SX127X_OUTPUT_TYPE,
 #endif
 };

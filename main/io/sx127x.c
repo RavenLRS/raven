@@ -179,6 +179,16 @@ static void sx127x_set_mode(sx127x_t *sx127x, uint8_t mode)
     {
         sx127x_write_reg(sx127x, REG_OP_MODE, mode);
         sx127x->state.mode = mode;
+
+        if (sx127x->txen != HAL_GPIO_NONE)
+        {
+            HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->txen, (mode & MODE_TX) ? HAL_GPIO_HIGH : HAL_GPIO_LOW));
+        }
+
+        if (sx127x->rxen != HAL_GPIO_NONE)
+        {
+            HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rxen, (mode & MODE_RX_CONTINUOUS) ? HAL_GPIO_HIGH : HAL_GPIO_LOW));
+        }
     }
 }
 
@@ -289,6 +299,18 @@ void sx127x_init(sx127x_t *sx127x)
 {
     HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->rst, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
     sx127x_reset(sx127x);
+
+    if (sx127x->txen != HAL_GPIO_NONE)
+    {
+        HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->txen, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
+        HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->txen, HAL_GPIO_LOW));
+    }
+
+    if (sx127x->rxen != HAL_GPIO_NONE)
+    {
+        HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->rxen, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
+        HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rxen, HAL_GPIO_LOW));
+    }
 
     // Initialize the SPI bus
     HAL_ERR_ASSERT_OK(hal_spi_bus_init(sx127x->spi_bus, sx127x->miso, sx127x->mosi, sx127x->sck));
