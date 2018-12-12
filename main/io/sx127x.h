@@ -71,6 +71,8 @@ typedef struct sx127x_s
     const hal_gpio_t cs;
     const hal_gpio_t rst;
     const hal_gpio_t dio0;
+    const hal_gpio_t txen;
+    const hal_gpio_t rxen;
     const sx127x_output_type_e output_type;
     struct
     {
