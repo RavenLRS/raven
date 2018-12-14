@@ -25,12 +25,15 @@ typedef enum
 
 typedef struct rc_s rc_t;
 
+#if defined(USE_BUTTON_5WAY)
+#define UI_BUTTON_COUNT 5
+#else
+#define UI_BUTTON_COUNT 1
+#endif
+
 typedef struct ui_config_s
 {
-    hal_gpio_t button;
-#if defined(USE_TOUCH_BUTTON)
-    bool button_is_touch;
-#endif
+    button_config_t buttons[UI_BUTTON_COUNT];
     hal_gpio_t beeper;
 #ifdef USE_SCREEN
     screen_i2c_config_t screen;
@@ -44,7 +47,7 @@ typedef struct ui_s
         rc_t *rc;
         ui_config_t cfg;
         beeper_t beeper;
-        button_t button;
+        button_t buttons[UI_BUTTON_COUNT];
 #ifdef USE_SCREEN
         time_ticks_t screen_autooff_interval;
         time_ticks_t screen_off_at;

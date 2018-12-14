@@ -1,6 +1,5 @@
 #include "target/bands/433.h"
-
-#define BUTTON_1_GPIO 0
+#include "target/platforms/esp32/single_button.h"
 
 #define BEEPER_GPIO 12
 

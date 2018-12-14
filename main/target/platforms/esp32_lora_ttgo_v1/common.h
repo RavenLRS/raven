@@ -1,5 +1,4 @@
-// User button
-#define BUTTON_1_GPIO 0
+#include "target/platforms/esp32/single_button.h"
 
 // Buzzer
 #define BEEPER_GPIO 12 // This seems appropriate for TTGO v1 boards, since 12 can't be pulled low during boot and it's not connected to anything

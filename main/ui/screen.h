@@ -5,6 +5,7 @@
 
 #include "target.h"
 
+#include "ui/button.h"
 #include "ui/screen_i2c.h"
 
 typedef struct rc_s rc_t;
@@ -59,12 +60,12 @@ typedef struct screen_s
         screen_i2c_config_t cfg;
         rc_t *rc;
         bool available;
-        screen_main_mode_e main_mode;
-        screen_secondary_mode_e secondary_mode;
+        int8_t main_mode;      // from screen_main_mode_e
+        int8_t secondary_mode; // from screen_secondary_mode_e
         struct
         {
-            int page;
-            int count;
+            int8_t page;
+            int8_t count;
         } telemetry;
         unsigned w;
         unsigned h;
@@ -80,7 +81,8 @@ void screen_shutdown(screen_t *screen);
 void screen_power_on(screen_t *screen);
 void screen_enter_secondary_mode(screen_t *screen, screen_secondary_mode_e mode);
 
-bool screen_handle_press(screen_t *screen, bool before_menu);
+bool screen_handle_button_event(screen_t *screen, bool before_menu, const button_event_t *ev);
+
 void screen_update(screen_t *screen);
 void screen_splash(screen_t *screen);
 void screen_set_orientation(screen_t *screen, screen_orientation_e orientation);

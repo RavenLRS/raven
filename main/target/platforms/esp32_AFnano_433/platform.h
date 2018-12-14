@@ -1,7 +1,7 @@
 #include <hal/gpio.h>
-#include "target/bands/433.h"
 
-#define BUTTON_1_GPIO 0
+#include "target/bands/433.h"
+#include "target/platforms/esp32/single_button.h"
 
 // Buzzer
 #define BEEPER_GPIO 12
