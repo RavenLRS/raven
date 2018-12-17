@@ -1,9 +1,11 @@
 
+#include "input_ppm.h"
+#include "rc/rc_data.h"
 #include "util/time.h"
 #include <hal/gpio.h>
 #include <hal/rand.h>
-#include "rc/rc_data.h"
-#include "input_ppm.h"
+
+#define PPM_VALUE_MAPPING(ch) RC_CHANNEL_MIN_VALUE + (ch - PPM_IN_MIN_CHANNEL_PULSE_US) * (RC_CHANNEL_MAX_VALUE - RC_CHANNEL_MIN_VALUE) / (PPM_IN_MAX_CHANNEL_PULSE_US - PPM_IN_MIN_CHANNEL_PULSE_US)
 
 static bool input_ppm_open(void *input, void *config)
 {
@@ -21,34 +23,6 @@ static bool input_ppm_open(void *input, void *config)
     INPUT_SET_MSP_TRANSPORT(input_ppm, NULL);
     return true;
 }
-
-// static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
-// {
-//     input_ppm_t *input_ppm = input;
-
-//     int gpio_level = hal_gpio_get_level(input_ppm->gpio);
-
-//     if (gpio_level == input_ppm->last_gpio_level)
-//         return false;
-
-//     if (gpio_level == HAL_GPIO_HIGH)
-//     {
-//         time_micros_t pulse_length = now - input->last_pulse;
-//         if (pulse_length > PPM_IN_MIN_SYNC_PULSE_US)
-//         {
-//             input->pulseIndex = 0;
-//         }
-//         else if (pulse_length > PPM_IN_MIN_CHANNEL_PULSE_US && pulse_length < PPM_IN_MAX_CHANNEL_PULSE_US && input->pulseIndex != -1)
-//         {
-//             rc_data_update_channel(input_ppm->input.rc_data, input->pulseIndex,
-//                                    pulse_length, now);
-//         }
-//     }
-//     if (failsafe_is_active(&input_ppm->input.failsafe))
-//     {
-//         return false;
-//     }
-// }
 
 static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
 {
@@ -71,8 +45,8 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
         /* Sync pulse detection */
         if (pulse_length > PPM_IN_MIN_SYNC_PULSE_US)
         {
-            if (input_ppm->pulseIndex == input_ppm->numChannelsPrevFrame 
-                && input_ppm->pulseIndex >= PPM_IN_MIN_NUM_CHANNELS 
+            if (input_ppm->pulseIndex == input_ppm->numChannelsPrevFrame
+                && input_ppm->pulseIndex >= PPM_IN_MIN_NUM_CHANNELS
                 && input_ppm->pulseIndex <= PPM_IN_MAX_NUM_CHANNELS)
             {
                 /* If we see n simultaneous frames of the same
@@ -98,12 +72,12 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
                 for (i = 0; i < input_ppm->numChannels; i++)
                 {
                     rc_data_update_channel(input_ppm->input.rc_data, i,
-                                   input_ppm->captures[i], now);
+                                           PPM_VALUE_MAPPING(input_ppm->captures[i]), now);
                 }
                 for (i = input_ppm->numChannels; i < PPM_IN_MAX_NUM_CHANNELS; i++)
                 {
                     rc_data_update_channel(input_ppm->input.rc_data, i,
-                                   PPM_RCVR_TIMEOUT, now);
+                                           PPM_RCVR_TIMEOUT, now);
                 }
                 failsafe_reset_interval(&input_ppm->input.failsafe, now);
 
@@ -114,14 +88,13 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
             input_ppm->numChannelsPrevFrame = input_ppm->pulseIndex;
             input_ppm->pulseIndex = 0;
 
-
             /* We rely on the supervisor to set captureValue to invalid
            if no valid frame is found otherwise we ride over it */
         }
         else if (input_ppm->tracking)
         {
             /* Valid pulse duration 0.75 to 2.5 ms*/
-            if (pulse_length > PPM_IN_MIN_CHANNEL_PULSE_US 
+            if (pulse_length > PPM_IN_MIN_CHANNEL_PULSE_US
                 && pulse_length < PPM_IN_MAX_CHANNEL_PULSE_US
                 && input_ppm->pulseIndex < PPM_IN_MAX_NUM_CHANNELS)
             {
@@ -154,9 +127,9 @@ void input_ppm_init(input_ppm_t *input)
         .update = input_ppm_update,
         .close = input_ppm_close,
     };
-    input->pulseIndex   = 0;
-    input->numChannels  = -1;
+    input->pulseIndex = 0;
+    input->numChannels = -1;
     input->numChannelsPrevFrame = -1;
     input->stableFramesSeenCount = 0;
-    input->tracking     = false;
+    input->tracking = false;
 }
