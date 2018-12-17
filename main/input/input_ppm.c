@@ -1,16 +1,23 @@
+#include <hal/log.h>
+#include <hal/gpio.h>
+#include <hal/rand.h>
 
 #include "input_ppm.h"
 #include "rc/rc_data.h"
 #include "util/time.h"
-#include <hal/gpio.h>
-#include <hal/rand.h>
 
-#define PPM_VALUE_MAPPING(ch) RC_CHANNEL_MIN_VALUE + (ch - PPM_IN_MIN_CHANNEL_PULSE_US) * (RC_CHANNEL_MAX_VALUE - RC_CHANNEL_MIN_VALUE) / (PPM_IN_MAX_CHANNEL_PULSE_US - PPM_IN_MIN_CHANNEL_PULSE_US)
+
+static const char *TAG = "PPM";
+
+#define PPM_VALUE_MAPPING(ch) RC_CHANNEL_MIN_VALUE + (ch - PPM_IN_MIN_CHANNEL_VALUE) * (RC_CHANNEL_MAX_VALUE - RC_CHANNEL_MIN_VALUE) / (PPM_IN_MAX_CHANNEL_VALUE - PPM_IN_MIN_CHANNEL_VALUE)
 
 static bool input_ppm_open(void *input, void *config)
 {
+    char name[8];
     input_ppm_t *input_ppm = input;
-    HAL_ERR_ASSERT_OK(hal_gpio_setup(input_ppm->gpio, HAL_GPIO_DIR_INPUT, HAL_GPIO_PULL_DOWN));
+    input_ppm_config_t *config_ppm = config;
+    input_ppm->gpio = config_ppm->gpio;
+    HAL_ERR_ASSERT_OK(hal_gpio_setup(input_ppm->gpio, HAL_GPIO_DIR_INPUT, HAL_GPIO_PULL_UP));
 
     //HAL_ERR_ASSERT_OK(hal_gpio_set_isr(input->gpio, GPIO_INTR_POSEDGE , lora_handle_isr, sx127x));
     time_micros_t now = time_micros_now();
@@ -19,6 +26,9 @@ static bool input_ppm_open(void *input, void *config)
 
     input_ppm->last_gpio_level = hal_gpio_get_level(input_ppm->gpio);
     input_ppm->last_pulse = 0;
+
+    hal_gpio_toa(input_ppm->gpio, name, sizeof(name));
+    LOG_I(TAG, "PPM open on port %s, initial gpio level: %d", name, input_ppm->last_gpio_level);
 
     return true;
 }
@@ -86,6 +96,9 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
             input_ppm->tracking = true;
             input_ppm->numChannelsPrevFrame = input_ppm->pulseIndex;
             input_ppm->pulseIndex = 0;
+
+            LOG_I(TAG, "PPM start tracking");
+
 
             /* We rely on the supervisor to set captureValue to invalid
            if no valid frame is found otherwise we ride over it */

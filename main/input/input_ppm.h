@@ -12,8 +12,13 @@
 #define PPM_IN_MIN_NUM_CHANNELS     4
 #define PPM_IN_MAX_NUM_CHANNELS     PPM_CAPTURE_COUNT
 #define PPM_RCVR_TIMEOUT            0
+#define PPM_IN_MIN_CHANNEL_VALUE  1000
+#define PPM_IN_MAX_CHANNEL_VALUE  2000
 
-
+typedef struct input_ppm_config_s
+{
+    hal_gpio_t gpio;
+} input_ppm_config_t;
 
 typedef struct input_ppm_s
 {
@@ -21,7 +26,7 @@ typedef struct input_ppm_s
     hal_gpio_t gpio;
     uint32_t captures[RC_CHANNELS_NUM];
     time_micros_t last_pulse;
-    bool     last_gpio_level;
+    int     last_gpio_level;
     bool     tracking;
     uint8_t  pulseIndex;
     int8_t   numChannels;

@@ -287,7 +287,7 @@ static void rc_reconfigure_input(rc_t *rc)
     union {
         input_crsf_config_t crsf;
         input_crsf_config_t ibus;
-        input_crsf_config_t ppm;
+        input_ppm_config_t ppm;
     } input_config;
     if (rc->input != NULL)
     {
