@@ -2,121 +2,145 @@
 #include "util/time.h"
 #include <hal/gpio.h>
 #include <hal/rand.h>
-
+#include "rc/rc_data.h"
 #include "input_ppm.h"
 
 static bool input_ppm_open(void *input, void *config)
 {
     input_ppm_t *input_ppm = input;
-    HAL_ERR_ASSERT_OK(hal_gpio_setup(input->gpio, HAL_GPIO_DIR_INPUT, HAL_GPIO_PULL_DOWN));
+    HAL_ERR_ASSERT_OK(hal_gpio_setup(input_ppm->gpio, HAL_GPIO_DIR_INPUT, HAL_GPIO_PULL_DOWN));
 
     //HAL_ERR_ASSERT_OK(hal_gpio_set_isr(input->gpio, GPIO_INTR_POSEDGE , lora_handle_isr, sx127x));
-
+    time_micros_t now = time_micros_now();
     failsafe_set_max_interval(&input_ppm->input.failsafe, 1000);
+    failsafe_reset_interval(&input_ppm->input.failsafe, now);
 
-    input->last_gpio_level = hal_gpio_get_level(input->input);
-    
-    /*
-    time_micros_t now = time_micros_now();    
-    for (int ii = 0; ii < PPM_INPUT_MOVED_CHANNELS; ii++)
-    {
-        input_ppm->channels[ii] = hal_rand_u32() % 2 == 0;
-        rc_data_update_channel(input_ppm->input.rc_data, ii, RC_CHANNEL_CENTER_VALUE, now);
-    }
-    // Put all flipped channels to low, so they have a value
-    for (int ii = PPM_INPUT_MOVED_CHANNELS; ii < RC_CHANNELS_NUM; ii++)
-    {
-        rc_data_update_channel(input_ppm->input.rc_data, ii, RC_CHANNEL_MIN_VALUE, now);
-    }
-    */
+    input_ppm->last_gpio_level = hal_gpio_get_level(input_ppm->gpio);
+
     input_ppm->last_pulse = 0;
     INPUT_SET_MSP_TRANSPORT(input_ppm, NULL);
     return true;
 }
 
-static void input_ppm_update_channel(input_ppm_t *input, rc_data_t *data, int idx, time_micros_t now)
-{
-    control_channel_t *ch = &data->channels[idx];
-    unsigned value = ch->value;
-#if !defined(INPUT_PPM_CONSTANT)
-    bool *up = &input->channels[idx];
-    if (*up && ch->value == RC_CHANNEL_MAX_VALUE)
-    {
-        *up = false;
-    }
-    else if (!(*up) && ch->value == RC_CHANNEL_MIN_VALUE)
-    {
-        *up = true;
-    }
-    value += *up ? 1 : -1;
-#endif
-    rc_data_update_channel(data, idx, value, now);
-}
+// static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
+// {
+//     input_ppm_t *input_ppm = input;
+
+//     int gpio_level = hal_gpio_get_level(input_ppm->gpio);
+
+//     if (gpio_level == input_ppm->last_gpio_level)
+//         return false;
+
+//     if (gpio_level == HAL_GPIO_HIGH)
+//     {
+//         time_micros_t pulse_length = now - input->last_pulse;
+//         if (pulse_length > PPM_IN_MIN_SYNC_PULSE_US)
+//         {
+//             input->pulseIndex = 0;
+//         }
+//         else if (pulse_length > PPM_IN_MIN_CHANNEL_PULSE_US && pulse_length < PPM_IN_MAX_CHANNEL_PULSE_US && input->pulseIndex != -1)
+//         {
+//             rc_data_update_channel(input_ppm->input.rc_data, input->pulseIndex,
+//                                    pulse_length, now);
+//         }
+//     }
+//     if (failsafe_is_active(&input_ppm->input.failsafe))
+//     {
+//         return false;
+//     }
+// }
 
 static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
 {
     input_ppm_t *input_ppm = input;
+    int32_t i;
+    bool updated = false;
 
     int gpio_level = hal_gpio_get_level(input_ppm->gpio);
 
     if (gpio_level == input_ppm->last_gpio_level)
         return false;
 
+    input_ppm->last_gpio_level = gpio_level;
+
     if (gpio_level == HAL_GPIO_HIGH)
     {
-        time_micros_t pulse_length = now - input->last_pulse;
-        if( pulse_length > PPM_IN_MIN_SYNC_PULSE_US)
-        {
-            input->next_channel_index = 0;
-        }
-        else if ( pulse_length > PPM_IN_MIN_CHANNEL_PULSE_US 
-            && pulse_length < PPM_IN_MAX_CHANNEL_PULSE_US 
-            && input->next_channel_index != -1)
-        {
-            rc_data_update_channel(input_ppm->input.rc_data, input->next_channel_index,
-              pulse_length, now);
-        }
-    }
-    if (failsafe_is_active(&input_ppm->input.failsafe))
-    {
-        return false;
-    }
-    if (now > input_ppm->next_update)
-    {
-        for (int ii = 0; ii < PPM_INPUT_MOVED_CHANNELS; ii++)
-        {
-            input_ppm_update_channel(input_ppm, data, ii, now);
-        }
-        input_ppm->next_update = now + input_ppm->update_interval;
+        time_micros_t pulse_length = now - input_ppm->last_pulse;
+        input_ppm->last_pulse = now;
 
-        // Once in a while, flip a random channel in the remaining channels
-        if (now > input_ppm->next_flip)
+        /* Sync pulse detection */
+        if (pulse_length > PPM_IN_MIN_SYNC_PULSE_US)
         {
-            int ch = PPM_INPUT_MOVED_CHANNELS + (hal_rand_u32() % (RC_CHANNELS_NUM - PPM_INPUT_MOVED_CHANNELS));
-            unsigned value = data->channels[ch].value;
-#if !defined(INPUT_PPM_CONSTANT)
-            if (value > RC_CHANNEL_MAX_VALUE * 0.9)
+            if (input_ppm->pulseIndex == input_ppm->numChannelsPrevFrame 
+                && input_ppm->pulseIndex >= PPM_IN_MIN_NUM_CHANNELS 
+                && input_ppm->pulseIndex <= PPM_IN_MAX_NUM_CHANNELS)
             {
-                // Channel high
-                value = hal_rand_u32() % 2 == 0 ? RC_CHANNEL_MIN_VALUE : RC_CHANNEL_CENTER_VALUE;
-            }
-            else if (value < RC_CHANNEL_MAX_VALUE * 0.1)
-            {
-                // Channel low
-                value = hal_rand_u32() % 2 == 0 ? RC_CHANNEL_CENTER_VALUE : RC_CHANNEL_MAX_VALUE;
+                /* If we see n simultaneous frames of the same
+               number of channels we save it as our frame size */
+                if (input_ppm->stableFramesSeenCount < PPM_STABLE_FRAMES_REQUIRED_COUNT)
+                {
+                    input_ppm->stableFramesSeenCount++;
+                }
+                else
+                {
+                    input_ppm->numChannels = input_ppm->pulseIndex;
+                }
             }
             else
             {
-                // Channel mid
-                value = hal_rand_u32() % 2 == 0 ? RC_CHANNEL_MIN_VALUE : RC_CHANNEL_MAX_VALUE;
+                input_ppm->stableFramesSeenCount = 0;
             }
-#endif
-            rc_data_update_channel(data, ch, value, now);
-            input_ppm->next_flip = now + MILLIS_TO_MICROS(500);
+
+            /* Check if the last frame was well formed */
+            if (input_ppm->pulseIndex == input_ppm->numChannels && input_ppm->tracking)
+            {
+                /* The last frame was well formed */
+                for (i = 0; i < input_ppm->numChannels; i++)
+                {
+                    rc_data_update_channel(input_ppm->input.rc_data, i,
+                                   input_ppm->captures[i], now);
+                }
+                for (i = input_ppm->numChannels; i < PPM_IN_MAX_NUM_CHANNELS; i++)
+                {
+                    rc_data_update_channel(input_ppm->input.rc_data, i,
+                                   PPM_RCVR_TIMEOUT, now);
+                }
+                failsafe_reset_interval(&input_ppm->input.failsafe, now);
+
+                updated = true;
+            }
+
+            input_ppm->tracking = true;
+            input_ppm->numChannelsPrevFrame = input_ppm->pulseIndex;
+            input_ppm->pulseIndex = 0;
+
+
+            /* We rely on the supervisor to set captureValue to invalid
+           if no valid frame is found otherwise we ride over it */
         }
-        return true;
+        else if (input_ppm->tracking)
+        {
+            /* Valid pulse duration 0.75 to 2.5 ms*/
+            if (pulse_length > PPM_IN_MIN_CHANNEL_PULSE_US 
+                && pulse_length < PPM_IN_MAX_CHANNEL_PULSE_US
+                && input_ppm->pulseIndex < PPM_IN_MAX_NUM_CHANNELS)
+            {
+                input_ppm->captures[input_ppm->pulseIndex] = pulse_length;
+                input_ppm->pulseIndex++;
+            }
+            else
+            {
+                /* Not a valid pulse duration */
+                input_ppm->tracking = false;
+                for (i = 0; i < PPM_CAPTURE_COUNT; i++)
+                {
+                    input_ppm->captures[i] = PPM_RCVR_TIMEOUT;
+                }
+            }
+        }
     }
-    return false;
+
+    return updated;
 }
 
 static void input_ppm_close(void *input, void *config)
@@ -130,5 +154,9 @@ void input_ppm_init(input_ppm_t *input)
         .update = input_ppm_update,
         .close = input_ppm_close,
     };
-    input->next_channel_index = -1;
+    input->pulseIndex   = 0;
+    input->numChannels  = -1;
+    input->numChannelsPrevFrame = -1;
+    input->stableFramesSeenCount = 0;
+    input->tracking     = false;
 }
