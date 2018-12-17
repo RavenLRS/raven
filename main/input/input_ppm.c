@@ -18,9 +18,8 @@ static bool input_ppm_open(void *input, void *config)
     failsafe_reset_interval(&input_ppm->input.failsafe, now);
 
     input_ppm->last_gpio_level = hal_gpio_get_level(input_ppm->gpio);
-
     input_ppm->last_pulse = 0;
-    INPUT_SET_MSP_TRANSPORT(input_ppm, NULL);
+
     return true;
 }
 
