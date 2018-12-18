@@ -21,7 +21,7 @@ static bool input_ppm_open(void *input, void *config)
 
     //HAL_ERR_ASSERT_OK(hal_gpio_set_isr(input->gpio, GPIO_INTR_POSEDGE , lora_handle_isr, sx127x));
     time_micros_t now = time_micros_now();
-    failsafe_set_max_interval(&input_ppm->input.failsafe, 1000);
+    failsafe_set_max_interval(&input_ppm->input.failsafe, MILLIS_TO_MICROS(200));
     failsafe_reset_interval(&input_ppm->input.failsafe, now);
 
     input_ppm->last_gpio_level = hal_gpio_get_level(input_ppm->gpio);
