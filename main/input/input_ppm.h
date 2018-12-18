@@ -14,6 +14,7 @@
 #define PPM_RCVR_TIMEOUT            0
 #define PPM_IN_MIN_CHANNEL_VALUE  1000
 #define PPM_IN_MAX_CHANNEL_VALUE  2000
+#define PPM_PULSE_QUEUE_SIZE      8
 
 typedef struct input_ppm_config_s
 {
@@ -26,7 +27,8 @@ typedef struct input_ppm_s
     hal_gpio_t gpio;
     uint32_t captures[RC_CHANNELS_NUM];
     time_micros_t last_pulse;
-    int     last_gpio_level;
+    time_micros_t pulse_queue[PPM_PULSE_QUEUE_SIZE];
+    int      pulseCountInQueue;
     bool     tracking;
     uint8_t  pulseIndex;
     int8_t   numChannels;

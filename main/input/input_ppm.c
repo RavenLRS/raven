@@ -1,15 +1,26 @@
+// #include <freertos/FreeRTOS.h>
+// #include <freertos/task.h>
 #include <hal/log.h>
 #include <hal/gpio.h>
-#include <hal/rand.h>
 
 #include "input_ppm.h"
 #include "rc/rc_data.h"
 #include "util/time.h"
 
-
-static const char *TAG = "PPM";
+static const char *TAG = "PPM.Input";
 
 #define PPM_VALUE_MAPPING(ch) RC_CHANNEL_MIN_VALUE + (ch - PPM_IN_MIN_CHANNEL_VALUE) * (RC_CHANNEL_MAX_VALUE - RC_CHANNEL_MIN_VALUE) / (PPM_IN_MAX_CHANNEL_VALUE - PPM_IN_MIN_CHANNEL_VALUE)
+
+static void IRAM_ATTR ppm_handle_isr(void *arg)
+{
+    input_ppm_t *input_ppm = arg;
+    time_micros_t now = time_micros_now();
+    if(input_ppm->pulseCountInQueue < PPM_PULSE_QUEUE_SIZE)
+    {
+        input_ppm->pulse_queue[input_ppm->pulseCountInQueue] = now;
+        input_ppm->pulseCountInQueue++;
+    }
+}
 
 static bool input_ppm_open(void *input, void *config)
 {
@@ -19,16 +30,17 @@ static bool input_ppm_open(void *input, void *config)
     input_ppm->gpio = config_ppm->gpio;
     HAL_ERR_ASSERT_OK(hal_gpio_setup(input_ppm->gpio, HAL_GPIO_DIR_INPUT, HAL_GPIO_PULL_UP));
 
-    //HAL_ERR_ASSERT_OK(hal_gpio_set_isr(input->gpio, GPIO_INTR_POSEDGE , lora_handle_isr, sx127x));
     time_micros_t now = time_micros_now();
     failsafe_set_max_interval(&input_ppm->input.failsafe, MILLIS_TO_MICROS(200));
     failsafe_reset_interval(&input_ppm->input.failsafe, now);
 
-    input_ppm->last_gpio_level = hal_gpio_get_level(input_ppm->gpio);
     input_ppm->last_pulse = 0;
+    input_ppm->pulseCountInQueue = 0;
+
+    HAL_ERR_ASSERT_OK(hal_gpio_set_isr(input_ppm->gpio, GPIO_INTR_POSEDGE, ppm_handle_isr, input));
 
     hal_gpio_toa(input_ppm->gpio, name, sizeof(name));
-    LOG_I(TAG, "PPM open on port %s, initial gpio level: %d", name, input_ppm->last_gpio_level);
+    LOG_I(TAG, "PPM open on port %s", name);
 
     return true;
 }
@@ -38,19 +50,33 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
     input_ppm_t *input_ppm = input;
     int32_t i;
     bool updated = false;
+    time_micros_t pulse_length = 0;
+    time_micros_t current_pulse = 0;
 
-    int gpio_level = hal_gpio_get_level(input_ppm->gpio);
-
-    if (gpio_level == input_ppm->last_gpio_level)
+    if(input_ppm->pulseCountInQueue == 0)
         return false;
 
-    input_ppm->last_gpio_level = gpio_level;
-
-    if (gpio_level == HAL_GPIO_HIGH)
+    //Note: theoretically a MUTEX should be placed on dequeue operation.
+    // Since the min inverval of two valid PPM pulses is at least 0.75 ms,
+    // collision is unlikely to happen while processing a non-empty queue.
+    // And, even collision happens, the worse result is that two PPM frames 
+    // been ignored.
+    if (input_ppm->pulseCountInQueue > 0)
     {
-        time_micros_t pulse_length = now - input_ppm->last_pulse;
-        input_ppm->last_pulse = now;
+        current_pulse = input_ppm->pulse_queue[0];
+        
+        for( i = 1; i < input_ppm->pulseCountInQueue; i++)
+        {
+            input_ppm->pulse_queue[i-1] = input_ppm->pulse_queue[i];
+        }
+        input_ppm->pulseCountInQueue--;
+    }
 
+
+    pulse_length = current_pulse - input_ppm->last_pulse;
+    input_ppm->last_pulse = current_pulse;
+    if (pulse_length > 0)
+    {
         /* Sync pulse detection */
         if (pulse_length > PPM_IN_MIN_SYNC_PULSE_US)
         {
@@ -97,9 +123,6 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
             input_ppm->numChannelsPrevFrame = input_ppm->pulseIndex;
             input_ppm->pulseIndex = 0;
 
-            LOG_I(TAG, "PPM start tracking");
-
-
             /* We rely on the supervisor to set captureValue to invalid
            if no valid frame is found otherwise we ride over it */
         }
@@ -130,6 +153,8 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
 
 static void input_ppm_close(void *input, void *config)
 {
+    input_ppm_t *input_ppm = input;
+    hal_gpio_set_isr(input_ppm->gpio, GPIO_INTR_POSEDGE, NULL, NULL);
 }
 
 void input_ppm_init(input_ppm_t *input)
