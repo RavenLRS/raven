@@ -1,5 +1,3 @@
-// #include <freertos/FreeRTOS.h>
-// #include <freertos/task.h>
 #include <hal/log.h>
 #include <hal/gpio.h>
 
@@ -73,7 +71,7 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
         input_ppm->pulseCountInQueue--;
     }
 
-
+    //The following PPM process logic copied from betaflight
     pulse_length = current_pulse - input_ppm->last_pulse;
     input_ppm->last_pulse = current_pulse;
     if (pulse_length > 0)
