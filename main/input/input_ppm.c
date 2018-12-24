@@ -36,7 +36,7 @@ static bool input_ppm_open(void *input, void *config)
     input_ppm->last_pulse = 0;
     input_ppm->pulseCountInQueue = 0;
 
-    HAL_ERR_ASSERT_OK(hal_gpio_set_isr(input_ppm->gpio, GPIO_INTR_POSEDGE, ppm_handle_isr, input));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_isr(input_ppm->gpio, HAL_GPIO_INTR_POSEDGE, ppm_handle_isr, input));
 
     hal_gpio_toa(input_ppm->gpio, name, sizeof(name));
     LOG_I(TAG, "PPM open on port %s", name);
