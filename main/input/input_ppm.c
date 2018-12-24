@@ -7,8 +7,8 @@
 
 static const char *TAG = "PPM.Input";
 
-#define CHANNEL_THRESHOLD(ch) (ch < PPM_IN_MIN_CHANNEL_VALUE ? PPM_IN_MIN_CHANNEL_VALUE : (ch > PPM_IN_MAX_CHANNEL_VALUE ? PPM_IN_MAX_CHANNEL_VALUE : ch))
-#define PPM_VALUE_MAPPING(ch) RC_CHANNEL_MIN_VALUE + (CHANNEL_THRESHOLD(ch) - PPM_IN_MIN_CHANNEL_VALUE) * (RC_CHANNEL_MAX_VALUE - RC_CHANNEL_MIN_VALUE) / (PPM_IN_MAX_CHANNEL_VALUE - PPM_IN_MIN_CHANNEL_VALUE)
+#define PPM_VALUE_MAPPING(ch) RC_CHANNEL_MIN_VALUE + (ch - PPM_IN_MIN_CHANNEL_VALUE) * (RC_CHANNEL_MAX_VALUE - RC_CHANNEL_MIN_VALUE) / (PPM_IN_MAX_CHANNEL_VALUE - PPM_IN_MIN_CHANNEL_VALUE)
+#define PPM_VALUE_MAP_AND_THRESHOLDING(ch) (ch < PPM_IN_MIN_CHANNEL_VALUE ? RC_CHANNEL_MIN_VALUE : (ch > PPM_IN_MAX_CHANNEL_VALUE ? RC_CHANNEL_MAX_VALUE : PPM_VALUE_MAPPING(ch)))
 
 static void IRAM_ATTR ppm_handle_isr(void *arg)
 {
@@ -106,7 +106,7 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
                 for (i = 0; i < input_ppm->numChannels; i++)
                 {
                     rc_data_update_channel(input_ppm->input.rc_data, i,
-                                           PPM_VALUE_MAPPING(input_ppm->captures[i]), now);
+                                           PPM_VALUE_MAP_AND_THRESHOLDING(input_ppm->captures[i]), now);
                 }
                 for (i = input_ppm->numChannels; i < PPM_IN_MAX_NUM_CHANNELS; i++)
                 {
