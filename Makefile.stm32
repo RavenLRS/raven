@@ -1,4 +1,3 @@
-BINARY				= $(PROJECT_NAME)
 OPENCM3_DIR			= lib/libopencm3
 export OPENCM3_DIR
 
@@ -8,6 +7,8 @@ export PLATFORM_SOURCES
 
 BUILDDIR			= build-$(TARGET)
 export BUILDDIR
+
+BINARY				= $(BUILDDIR)/$(PROJECT_NAME)
 
 include $(VARIANTS_DIR)/$(VARIANT)/sdkconfig
 include $(ROOT)/main/component.mk

@@ -154,8 +154,6 @@ LDLIBS		+= -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
 
 all: elf
 
-BINARY := $(BUILDDIR)/$(BINARY)
-
 elf: $(BINARY).elf
 bin: $(BINARY).bin
 hex: $(BINARY).hex
