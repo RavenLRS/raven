@@ -16,9 +16,19 @@ GIT_REVISION := $(shell git rev-parse --short HEAD)
 
 CPPFLAGS += -DGIT_REVISION=\"$(GIT_REVISION)\" -DVERSION=\"$(VERSION)\"
 
+ifeq ($(RELEASE),1)
+CPPFLAGS += -DRAVEN_RELEASE
+endif
+
 WERROR ?=
 ifeq ($(WERROR),1)
 CPPFLAGS += -Werror
+endif
+
+ifeq ($(V),1)
+STDOUT_REDIR :=
+else
+STDOUT_REDIR := 1> /dev/null
 endif
 
 PLATFORM_VARIANT_SEPARATOR 	:= _
@@ -40,12 +50,18 @@ VALID_VARIANTS	 		= $(dir $(wildcard $(VARIANTS_DIR)/*/sdkconfig))
 VALID_VARIANTS			:= $(subst /,,$(subst $(VARIANTS_DIR)/,,$(VALID_VARIANTS)))
 VALID_VARIANTS			:= $(sort $(VALID_VARIANTS))
 
+# Disable txrx targets for releases
+RELEASE_VARIANTS		:= $(filter-out txrx,$(VALID_VARIANTS))
+
 # By default, all platforms support all variants. Platforms that support only some variants
 # can include a variants file with one supported variant per line.
 variants_file			= $(PLATFORMS_DIR)/$(platform)/variants
 make_target				= $(if $(shell grep ^$(variant)$$ $(variants_file) 2> /dev/null || (test ! -f $(variants_file) && echo $(variant))),$(platform)$(PLATFORM_VARIANT_SEPARATOR)$(variant),$(INVALID_TARGET))
 VALID_TARGETS			:= $(foreach platform,$(VALID_PLATFORMS),$(foreach variant,$(VALID_VARIANTS),$(make_target)))
 VALID_TARGETS			:= $(filter-out $(INVALID_TARGET),$(VALID_TARGETS))
+
+RELEASE_TARGETS			:= $(foreach platform,$(VALID_PLATFORMS),$(foreach variant,$(RELEASE_VARIANTS),$(make_target)))
+RELEASE_TARGETS			:= $(filter-out $(INVALID_TARGET),$(RELEASE_TARGETS))
 
 TARGETS_FILTER ?=
 
@@ -84,6 +100,11 @@ export VARIANT
 export CPPFLAGS
 export PORT
 
+RELEASE_BASENAME		:= $(PROJECT_NAME)_$(VERSION)_$(PLATFORM)_$(VARIANT)
+RELEASES_DIR			:= $(ROOT)/releases
+export RELEASE_BASENAME
+export RELEASES_DIR
+
 PLATFORM_MAKEFILE              := Makefile.$(BASE_PLATFORM)
 
 help:
@@ -120,6 +141,20 @@ menuconfig:
 
 size:
 	@ $(MAKE) -f $(PLATFORM_MAKEFILE) size
+
+release:
+ifeq ($(TARGET),)
+	@ for target in $(RELEASE_TARGETS); do \
+		echo "Building $$target"; \
+		RELEASE=1 TARGET=$$target $(MAKE) release $(STDOUT_REDIR) || exit 1; \
+	done
+else
+	@ mkdir -p $(RELEASES_DIR)
+	@ $(MAKE) -f $(PLATFORM_MAKEFILE) release
+endif
+
+release-clean:
+	$(RM) -r $(RELEASES_DIR)
 
 all:
 	@ for target in $(VALID_TARGETS); do \

@@ -1,4 +1,4 @@
-BINARY				= $(PROJECT_NAME)_$(PLATFORM)_$(VARIANT)
+BINARY				= $(PROJECT_NAME)
 OPENCM3_DIR			= lib/libopencm3
 export OPENCM3_DIR
 
@@ -43,3 +43,6 @@ SRC_DIRS			+= $(MAIN_DIRS)
 SOURCES				:= $(foreach dir,$(SRC_DIRS),$(dir_sources))
 SOURCES				+= $(FREERTOS_HEAP_IMPL)
 export SOURCES
+
+release: $(BINARY).hex
+	cp -f $< $(RELEASES_DIR)/$(RELEASE_BASENAME).hex
