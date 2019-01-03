@@ -166,7 +166,7 @@ all:
 ci-build:
 	@ for target in $(VALID_TARGETS); do \
 		echo "Building $$target"; \
-		TARGET=$$target $(MAKE) 1> /dev/null ; \
+		TARGET=$$target $(MAKE) 1> /dev/null || exit 1; \
 		TARGET=$$target $(MAKE) clean 1> /dev/null; \
 	done
 
