@@ -15,7 +15,11 @@
 
 #include "ui/ui.h"
 
+#ifdef USE_SCREEN
+// We don't log anything without a screen, so this would
+// produce a warning if we didn't guard it
 static const char *TAG = "UI";
+#endif
 
 #ifdef USE_SCREEN
 
