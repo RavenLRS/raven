@@ -45,5 +45,7 @@ SOURCES				:= $(foreach dir,$(SRC_DIRS),$(dir_sources))
 SOURCES				+= $(FREERTOS_HEAP_IMPL)
 export SOURCES
 
+.DEFAULT_GOAL := all
+
 release: $(BINARY).hex
 	cp -f $< $(RELEASES_DIR)/$(RELEASE_BASENAME).hex
