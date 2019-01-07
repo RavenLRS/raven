@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.com/RavenLRS/raven.svg?branch=master)](https://travis-ci.com/RavenLRS/raven)
 
 Raven is completely open source a long range system (LRS) based on LoRa
-which also supports peer to peer communications (so for example, 
+which also supports peer to peer communications (so for example,
 flight controllers in aircrafts can talk directly to each other).
 
 # Main features
@@ -12,11 +12,11 @@ flight controllers in aircrafts can talk directly to each other).
 - Full telemetry, integrated with the radio (voice alerts with OpenTX, etc...).
 - Supports 7 different bands: 147Mhz, 169Mhz, 315Mhz, 433Mhz, 470Mhz, 868Mhz and 915Mhz.
 - Up to 20 channels.
-- Support for P2P for aircraft to aircraft communication (either direct 
+- Support for P2P for aircraft to aircraft communication (either direct
 or via pilots on the ground). Allows, for example, displaying a radar in the
 OSD, automatically choosing a free VTX channel or automatically following
 another aircraft.
-- OLED screens, both on the TX and RX with channel monitor, telemetry 
+- OLED screens, both on the TX and RX with channel monitor, telemetry
 viewer and full configuration (requires at least one button on the board).
 - Bluetooth MSP bridge using the same serial port as the RC link (works with
 all the existing Betaflight/iNAV configurators with support for Bluetooth).
@@ -61,5 +61,8 @@ If you want to see the debug logs, you can use the builtin esp-idf monitor by ru
 
 ## Hardware setup
 
-A typical setup of 100mw TX and RX for 433Mhz or 868/916Mhz costs $20-30. All popular ESP32 boards with LoRa are supported and can
-be used as both TX and RX.
+A typical setup of 100mw TX and RX for 433Mhz or 868/916Mhz costs $20-30. All popular ESP32 boards with LoRa are supported and can be used as both TX and RX.
+
+## Getting started
+
+Check [the documentation](docs/getting_started.md) to get up and running in no time!
