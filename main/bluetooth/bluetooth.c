@@ -8,6 +8,8 @@
 #include "bluetooth/bluetooth_ota.h"
 #include "bluetooth/bluetooth_uuid.h"
 
+#include "config/config.h"
+
 #include "io/io.h"
 
 #include "rc/rc.h"
@@ -225,49 +227,56 @@ static esp_gatt_status_t telemetry_read(gatt_server_t *server, gatt_server_char_
     return ESP_GATT_OK;
 }
 
+static void bluetooth_default_device_name(rc_mode_e device_type, char* buf) {
+    char default_name[11];
+    air_addr_t addr = config_get_addr();
+    sprintf(default_name, "%02X:%02X:%02X-%s",
+        addr.addr[3], addr.addr[4], addr.addr[5],
+        (device_type == RC_MODE_TX) ? "TX" : "RX");
+    strcpy(buf, default_name);
+}
+
+static void bluetooth_format_device_name(rc_t *rc, rc_mode_e device_type, char* buf) {
+    const char *local_name = (device_type == RC_MODE_TX) ? rc_get_pilot_name(rc) : rc_get_craft_name(rc);
+
+    // Try to use currently set device name
+    if (local_name) {
+        char addr_str[18];
+        air_addr_t addr = config_get_addr();
+        sprintf(addr_str, "%02X:%02X:%02X:%02X:%02X:%02X",
+            addr.addr[0], addr.addr[1], addr.addr[2],
+            addr.addr[3], addr.addr[4], addr.addr[5]);
+            addr_str[17] = '\0';
+
+        // If device name equals MAC address (default), use its last 3 bytes
+        if (strcmp(local_name, addr_str) == 0) {
+            return bluetooth_default_device_name(device_type, buf);
+        }
+
+        // If not, shorten the custom one as needed
+        char local_name_short[12];
+        if (strlen(local_name) > 9) { // max 12 chars (including "-RX")
+            strncpy(local_name_short, local_name, 9);
+            local_name_short[9] = '\0';
+        } else {
+            strcpy(local_name_short, local_name);
+        }
+
+        strcat(local_name_short, (device_type == RC_MODE_TX) ? "-TX" : "-RX");
+        strcpy(buf, local_name_short);
+        return;
+    }
+
+    // Fallback to last three bytes of MAC address
+    bluetooth_default_device_name(device_type, buf);
+}
+
 static void bluetooth_update_device_name(rc_t *rc)
 {
-    const char *name = "";
+    char buf[12];
+    bluetooth_format_device_name(rc, config_get_rc_mode(), buf);
+    const char *name = buf;
 
-    switch (config_get_rc_mode())
-    {
-    case RC_MODE_TX:
-        {
-            const char *pilot_name = rc_get_pilot_name(rc);
-            if (pilot_name) {
-                char pilot_name_short[12];
-                if (strlen(pilot_name) > 9) { // max 12 chars (including "-RX")
-                    strncpy(pilot_name_short, pilot_name, 9);
-                    pilot_name_short[9] = '\0';
-                } else {
-                    strcpy(pilot_name_short, pilot_name);
-                }
-                strcat(pilot_name_short, "-TX");
-                name = pilot_name_short;
-            } else {
-                name = "Raven-TX";
-            }
-            break;
-        }
-    case RC_MODE_RX:
-        {
-            const char *craft_name = rc_get_craft_name(rc);
-            if (craft_name) {
-                char craft_name_short[12];
-                if (strlen(craft_name) > 9) { // max 12 chars (including "-RX")
-                    strncpy(craft_name_short, craft_name, 9);
-                    craft_name_short[9] = '\0';
-                } else {
-                    strcpy(craft_name_short, craft_name);
-                }
-                strcat(craft_name_short, "-RX");
-                name = craft_name_short;
-            } else {
-                name = "Raven-RX";
-            }
-            break;
-        }
-    }
     gatt_server_set_name(&gatt_server, name);
 }
 
