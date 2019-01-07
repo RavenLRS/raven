@@ -232,11 +232,41 @@ static void bluetooth_update_device_name(rc_t *rc)
     switch (config_get_rc_mode())
     {
     case RC_MODE_TX:
-        name = "Raven TX";
-        break;
+        {
+            const char *pilot_name = rc_get_pilot_name(rc);
+            if (pilot_name) {
+                char pilot_name_short[12];
+                if (strlen(pilot_name) > 9) { // max 12 chars (including "-RX")
+                    strncpy(pilot_name_short, pilot_name, 9);
+                    pilot_name_short[9] = '\0';
+                } else {
+                    strcpy(pilot_name_short, pilot_name);
+                }
+                strcat(pilot_name_short, "-TX");
+                name = pilot_name_short;
+            } else {
+                name = "Raven-TX";
+            }
+            break;
+        }
     case RC_MODE_RX:
-        name = "Raven RX";
-        break;
+        {
+            const char *craft_name = rc_get_craft_name(rc);
+            if (craft_name) {
+                char craft_name_short[12];
+                if (strlen(craft_name) > 9) { // max 12 chars (including "-RX")
+                    strncpy(craft_name_short, craft_name, 9);
+                    craft_name_short[9] = '\0';
+                } else {
+                    strcpy(craft_name_short, craft_name);
+                }
+                strcat(craft_name_short, "-RX");
+                name = craft_name_short;
+            } else {
+                name = "Raven-RX";
+            }
+            break;
+        }
     }
     gatt_server_set_name(&gatt_server, name);
 }
