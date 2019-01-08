@@ -178,3 +178,6 @@ show-targets:
 
 show-platforms:
 	@echo "Valid platforms are $(VALID_PLATFORMS)"
+
+format:
+	./format.sh format
