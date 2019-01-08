@@ -110,6 +110,9 @@ static void rc_data_initialize(rc_t *rc)
         }
         rmp_set_role(rc->rmp, AIR_ROLE_TX);
         rmp_set_name(rc->rmp, telemetry_get_str(rc_data_get_uplink_telemetry(&rc->data, TELEMETRY_ID_PILOT_NAME), TELEMETRY_ID_PILOT_NAME));
+
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RF_POWER, rc_get_tx_rf_power(rc), time_micros_now());
+
         break;
     case RC_MODE_RX:
         rc_update_rx_craft_name(rc, now);
@@ -128,6 +131,10 @@ static void rc_data_initialize(rc_t *rc)
         }
         rmp_set_role(rc->rmp, AIR_ROLE_RX);
         rmp_set_name(rc->rmp, telemetry_get_str(rc_data_get_downlink_telemetry(&rc->data, TELEMETRY_ID_CRAFT_NAME), TELEMETRY_ID_CRAFT_NAME));
+
+        (void)TELEMETRY_SET_U8(&rc->data, TELEMETRY_ID_RX_ACTIVE_ANT, 1, time_micros_now());
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RF_POWER, 20, time_micros_now());
+
         break;
     }
     if (channels_num > 0)
@@ -135,13 +142,6 @@ static void rc_data_initialize(rc_t *rc)
         rc->data.channels_num = MIN(channels_num, RC_CHANNELS_NUM);
     }
     rc->data.ready = false;
-
-    // TX
-    (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RF_POWER, rc_get_tx_rf_power(rc), time_micros_now());
-
-    // RX
-    (void)TELEMETRY_SET_U8(&rc->data, TELEMETRY_ID_RX_ACTIVE_ANT, 1, time_micros_now());
-    (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RF_POWER, 20, time_micros_now());
 }
 
 static void rc_invalidate_air(rc_t *rc)
