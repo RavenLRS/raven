@@ -452,6 +452,19 @@ const char *config_get_name(void)
     return NULL;
 }
 
+const char *config_get_mode_name(void)
+{
+    switch (config_get_rc_mode())
+    {
+    case RC_MODE_TX:
+        return "TX";
+    case RC_MODE_RX:
+        return "RX";
+    }
+    UNREACHABLE();
+    return NULL;
+}
+
 air_band_e config_get_air_band(config_air_band_e band)
 {
     switch (band)
