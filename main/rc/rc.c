@@ -73,7 +73,7 @@ static int rc_get_tx_rf_power(rc_t *rc)
     return air_rf_power_to_dbm(settings_get_key_u8(SETTING_KEY_TX_RF_POWER));
 }
 
-static void rc_update_tx_rf_power(rc_t *rc, time_micros_t now)
+static void rc_update_tx_rf_power(rc_t *rc)
 {
     int power = rc_get_tx_rf_power(rc);
     // This notification could arrive on any thread, so
@@ -835,7 +835,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
         case RC_MODE_TX:
             if (STR_EQUAL(setting->key, SETTING_KEY_TX_RF_POWER))
             {
-                rc_update_tx_rf_power(rc, time_micros_now());
+                rc_update_tx_rf_power(rc);
                 break;
             }
             if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RECEIVERS_RX_SELECT_PREFIX))
