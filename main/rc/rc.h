@@ -8,8 +8,8 @@
 #include "input/input_air.h"
 #include "input/input_air_bind.h"
 #include "input/input_crsf.h"
-#include "input/input_ibus.h"
 #include "input/input_fake.h"
+#include "input/input_ibus.h"
 
 #include "output/output_air.h"
 #include "output/output_air_bind.h"
