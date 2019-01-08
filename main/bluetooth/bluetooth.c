@@ -227,57 +227,59 @@ static esp_gatt_status_t telemetry_read(gatt_server_t *server, gatt_server_char_
     return ESP_GATT_OK;
 }
 
-static void bluetooth_default_device_name(rc_mode_e device_type, char* buf) {
-    char default_name[11];
+static void bluetooth_default_device_name(rc_mode_e device_type, char *buf, size_t size)
+{
     air_addr_t addr = config_get_addr();
-    sprintf(default_name, "%02X:%02X:%02X-%s",
-        addr.addr[3], addr.addr[4], addr.addr[5],
-        (device_type == RC_MODE_TX) ? "TX" : "RX");
-    strcpy(buf, default_name);
+    snprintf(buf, size, "%02X:%02X:%02X-%s", addr.addr[3], addr.addr[4], addr.addr[5], config_get_mode_name());
 }
 
-static void bluetooth_format_device_name(rc_t *rc, rc_mode_e device_type, char* buf) {
-    const char *local_name = (device_type == RC_MODE_TX) ? rc_get_pilot_name(rc) : rc_get_craft_name(rc);
+static void bluetooth_format_device_name(rc_t *rc, rc_mode_e device_type, char *buf, size_t size)
+{
+    const char *local_name = config_get_name();
 
-    // Try to use currently set device name
-    if (local_name) {
-        char addr_str[18];
+    // Try to use currently set device name if valid
+    if (local_name && strlen(local_name) > 0)
+    {
+        char addr_buf[AIR_ADDR_STRING_BUFFER_SIZE];
         air_addr_t addr = config_get_addr();
-        sprintf(addr_str, "%02X:%02X:%02X:%02X:%02X:%02X",
-            addr.addr[0], addr.addr[1], addr.addr[2],
-            addr.addr[3], addr.addr[4], addr.addr[5]);
-            addr_str[17] = '\0';
+        air_addr_format(&addr, addr_buf, sizeof(addr_buf));
 
         // If device name equals MAC address (default), use its last 3 bytes
-        if (strcmp(local_name, addr_str) == 0) {
-            return bluetooth_default_device_name(device_type, buf);
+        if (STR_EQUAL(local_name, addr_buf))
+        {
+            return bluetooth_default_device_name(device_type, buf, size);
         }
 
         // If not, shorten the custom one as needed
-        char local_name_short[12];
-        if (strlen(local_name) > 9) { // max 12 chars (including "-RX")
-            strncpy(local_name_short, local_name, 9);
-            local_name_short[9] = '\0';
-        } else {
+        char local_name_short[13]; // max 12 chars + null terminator
+        const char *mode_name = config_get_mode_name();
+        const int max_local_name_size = 13 - strlen(mode_name) - 1;
+        if (strlen(local_name) > max_local_name_size)
+        {
+            strncpy(local_name_short, local_name, max_local_name_size);
+            local_name_short[max_local_name_size] = '\0';
+        }
+        else
+        {
             strcpy(local_name_short, local_name);
         }
 
-        strcat(local_name_short, (device_type == RC_MODE_TX) ? "-TX" : "-RX");
-        strcpy(buf, local_name_short);
+        strcat(local_name_short, "-");
+        strcat(local_name_short, mode_name);
+        strncpy(buf, local_name_short, size);
         return;
     }
 
     // Fallback to last three bytes of MAC address
-    bluetooth_default_device_name(device_type, buf);
+    bluetooth_default_device_name(device_type, buf, size);
 }
 
 static void bluetooth_update_device_name(rc_t *rc)
 {
     char buf[12];
-    bluetooth_format_device_name(rc, config_get_rc_mode(), buf);
-    const char *name = buf;
+    bluetooth_format_device_name(rc, config_get_rc_mode(), buf, sizeof(buf));
 
-    gatt_server_set_name(&gatt_server, name);
+    gatt_server_set_name(&gatt_server, buf);
 }
 
 static esp_err_t bluetooth_init(rc_t *rc)
