@@ -163,6 +163,9 @@ tx_input_type_e config_get_input_type(void);
 rx_output_type_e config_get_output_type(void);
 
 air_addr_t config_get_addr(void);
+// Returns the configured name for the device
+// (pilot name in TX mode, craft name in RX mode)
+const char *config_get_name(void);
 
 air_band_e config_get_air_band(config_air_band_e band);
 air_band_mask_t config_get_air_band_mask(void);
