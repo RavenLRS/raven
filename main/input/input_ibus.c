@@ -61,8 +61,8 @@ static void input_ibus_frame_callback(void *data, ibus_frame_t *frame)
     {
         for (int i = 0; i < IBUS_NUM_CHANNELS; i++)
         {
-            rc_data_update_channel(input_ibus->input.rc_data, i, 
-                input_ibus_channel_value_mapping(frame->payload.ch[i]), now);
+            rc_data_update_channel(input_ibus->input.rc_data, i,
+                                   input_ibus_channel_value_mapping(frame->payload.ch[i]), now);
         }
         break;
     }
