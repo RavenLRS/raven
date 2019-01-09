@@ -2,7 +2,7 @@
 
 set -e
 
-# Make sure the code is properly formatted
+export CLANG_FORMAT=clang-format-8
 make format
 
 XTENSA_ESP32_GCC_URL=https://dl.espressif.com/dl/xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz
