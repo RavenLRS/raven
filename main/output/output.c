@@ -217,7 +217,7 @@ static void output_configure_rssi(output_t *output)
 {
     // TODO: This code and RSSI handling can be left out when no RX support is compiled in
     rx_rssi_channel_e rssi_channel = RX_RSSI_CHANNEL_NONE;
-    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_REMOTE) && OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI))
+    if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_REMOTE) && !OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI))
     {
         const setting_t *rx_rssi_channel_setting = settings_get_key(SETTING_KEY_RX_RSSI_CHANNEL);
         if (rx_rssi_channel_setting)
