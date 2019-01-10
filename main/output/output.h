@@ -17,7 +17,7 @@ typedef enum
 {
     OUTPUT_FLAG_LOCAL = 0,           // Connected by cable to the FC/servos
     OUTPUT_FLAG_REMOTE = 1 << 0,     // Sends data over the air
-    OUTPUT_FLAG_SENDS_RSSI = 1 << 1, // Output sends RSSI to the FC
+    OUTPUT_FLAG_SENDS_RSSI = 1 << 1, // Output sends RSSI to the FC on its own (e.g. FPort)
 } output_flags_e;
 
 typedef struct output_vtable_s

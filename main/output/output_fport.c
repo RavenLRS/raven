@@ -237,7 +237,7 @@ static void output_fport_close(void *output, void *config)
 
 void output_fport_init(output_fport_t *output)
 {
-    output->output.flags = OUTPUT_FLAG_LOCAL;
+    output->output.flags = OUTPUT_FLAG_LOCAL | OUTPUT_FLAG_SENDS_RSSI;
     output->output.vtable = (output_vtable_t){
         .open = output_fport_open,
         .update = output_fport_update,
