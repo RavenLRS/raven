@@ -38,6 +38,14 @@ Menu navigation via a single button (5-way joystick is undergoing development) w
     + If it doesn't, manually put **both** modules into binding mode, starting with the RX: enter the menu and toggle the first entry (`"Bind: Off"`) to enable it (`"Bind: On"`).
 5. _(Optional)_ If you don't want to use the modules' screens or your boards don't have them, you can use OpenTX's LUA scripts _(they should already be present in your MicroSD card if you are on a recent version)_ to configure both the TX and the RX. You can follow [generic guides][lua_script_guide] on how to do so.
 
+> **Important note for QX7 users:** you must lower the external module's baudrate in the radio settings:
+> 1. Long press the `Menu` button to enter the radio's settings.
+> 2. Press the `Page` button until you reach the `Hardware` page.
+> 3. Scroll down to `Max bauds` press the scroll wheel once to toggle it to `115200` instead of the default `400000`.
+> 4. Press the `Exit` button as needed to get out of the menu.
+>
+> As an alternative to this workaround you can replace the inverting transistor in your radio, but beware: this is by no means a beginner-friendly mod! It is completely unsupported & the risk of damaging your radio is high. You can read more about this solution [here][qx7_inverter_mod] and proceed at your own risk.
+
 ### Connecting RX to aircraft
 
 #### Serial protocols
@@ -68,3 +76,4 @@ Menu navigation via a single button (5-way joystick is undergoing development) w
 [lua_script_guide]: https://oscarliang.com/crossfire-betaflight/#configure-rx
 [oscar_protocols]: https://oscarliang.com/pwm-ppm-sbus-dsm2-dsmx-sumd-difference/
 [speedybee]: https://www.speedybee.com/download/
+[qx7_inverter_mod]: https://blog.seidel-philipp.de/fixed-inverter-mod-for-tbs-crossfire-and-frsky-qx7/
