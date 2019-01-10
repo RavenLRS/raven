@@ -58,7 +58,7 @@ Menu navigation via a single button (5-way joystick is undergoing development) w
 
 [Oscar Liang has a good article on this][oscar_protocols]. Summing up:
 
-+ **MSP**: MultiwiiSerialProtocol, lets you use the ESP32's inbuilt BT to connect from [mobile apps][speedybee] to the FC. May have a slightly higher latency.
++ **MSP**: MultiwiiSerialProtocol, lets you use the ESP32's inbuilt BT to connect to the FC with [mobile apps][speedybee]. May have a slightly higher latency, but **is the preferred choice since the RX will have access to much more infos from the FC**.
 + **CRSF**: Combined signal & telemetry protocol developed by TBS. It’s similar to SBUS but has faster update rates and two-way communication capabilities.
 + **FPort**: Combined signal & telemetry protocol developed by FrSky. Can use a single wire in half duplex mode if needed (set both pins to the same value in the RX menu).
 + **SBUS/SPort**: Developed by FrSky, SBUS carries signal and SPort carries telemetry.
