@@ -68,6 +68,21 @@ static void rc_update_rx_craft_name(rc_t *rc, time_micros_t now)
     (void)TELEMETRY_SET_STR(&rc->data, TELEMETRY_ID_CRAFT_NAME, name, now);
 }
 
+static int rc_get_tx_rf_power(rc_t *rc)
+{
+    return air_rf_power_to_dbm(settings_get_key_u8(SETTING_KEY_TX_RF_POWER));
+}
+
+static void rc_update_tx_rf_power(rc_t *rc)
+{
+    int power = rc_get_tx_rf_power(rc);
+    // This notification could arrive on any thread, so
+    // we can't just change the power from here, schedule
+    // it and change it in the main RC loop.
+    rc->state.tx_rf_power = power;
+    (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RF_POWER, power, time_micros_now());
+}
+
 // Initialize local telemetry values
 static void rc_data_initialize(rc_t *rc)
 {
@@ -95,6 +110,9 @@ static void rc_data_initialize(rc_t *rc)
         }
         rmp_set_role(rc->rmp, AIR_ROLE_TX);
         rmp_set_name(rc->rmp, telemetry_get_str(rc_data_get_uplink_telemetry(&rc->data, TELEMETRY_ID_PILOT_NAME), TELEMETRY_ID_PILOT_NAME));
+
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RF_POWER, rc_get_tx_rf_power(rc), time_micros_now());
+
         break;
     case RC_MODE_RX:
         rc_update_rx_craft_name(rc, now);
@@ -113,6 +131,10 @@ static void rc_data_initialize(rc_t *rc)
         }
         rmp_set_role(rc->rmp, AIR_ROLE_RX);
         rmp_set_name(rc->rmp, telemetry_get_str(rc_data_get_downlink_telemetry(&rc->data, TELEMETRY_ID_CRAFT_NAME), TELEMETRY_ID_CRAFT_NAME));
+
+        (void)TELEMETRY_SET_U8(&rc->data, TELEMETRY_ID_RX_ACTIVE_ANT, 1, time_micros_now());
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RF_POWER, 20, time_micros_now());
+
         break;
     }
     if (channels_num > 0)
@@ -120,13 +142,6 @@ static void rc_data_initialize(rc_t *rc)
         rc->data.channels_num = MIN(channels_num, RC_CHANNELS_NUM);
     }
     rc->data.ready = false;
-
-    // TX
-    (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RF_POWER, 20, time_micros_now());
-
-    // RX
-    (void)TELEMETRY_SET_U8(&rc->data, TELEMETRY_ID_RX_ACTIVE_ANT, 1, time_micros_now());
-    (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RF_POWER, 20, time_micros_now());
 }
 
 static void rc_invalidate_air(rc_t *rc)
@@ -142,11 +157,6 @@ static void rc_invalidate_air(rc_t *rc)
     default:
         UNREACHABLE();
     }
-}
-
-static int rc_get_tx_rf_power(rc_t *rc)
-{
-    return air_rf_power_to_dbm(settings_get_key_u8(SETTING_KEY_TX_RF_POWER));
 }
 
 static bool rc_should_enable_power_test(rc_t *rc)
@@ -825,10 +835,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
         case RC_MODE_TX:
             if (STR_EQUAL(setting->key, SETTING_KEY_TX_RF_POWER))
             {
-                // This notification could arrive on any thread, so
-                // we can't just change the power from here, schedule
-                // it and change it in the main RC loop.
-                rc->state.tx_rf_power = rc_get_tx_rf_power(rc);
+                rc_update_tx_rf_power(rc);
                 break;
             }
             if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RECEIVERS_RX_SELECT_PREFIX))
