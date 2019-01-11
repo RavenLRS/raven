@@ -439,6 +439,32 @@ air_addr_t config_get_addr(void)
     return config.addr;
 }
 
+const char *config_get_name(void)
+{
+    switch (config_get_rc_mode())
+    {
+    case RC_MODE_TX:
+        return settings_get_key_string(SETTING_KEY_TX_PILOT_NAME);
+    case RC_MODE_RX:
+        return settings_get_key_string(SETTING_KEY_RX_CRAFT_NAME);
+    }
+    UNREACHABLE();
+    return NULL;
+}
+
+const char *config_get_mode_name(void)
+{
+    switch (config_get_rc_mode())
+    {
+    case RC_MODE_TX:
+        return "TX";
+    case RC_MODE_RX:
+        return "RX";
+    }
+    UNREACHABLE();
+    return NULL;
+}
+
 air_band_e config_get_air_band(config_air_band_e band)
 {
     switch (band)

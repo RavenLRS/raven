@@ -5,6 +5,8 @@
 
 #include "target.h"
 
+#define BUTTON_SYSTEM_GPIO BUTTON_ENTER_GPIO
+
 float system_temperature(void)
 {
     extern uint8_t temprature_sens_read();
@@ -24,7 +26,7 @@ void system_reboot(void)
 void system_shutdown(void)
 {
     // Wait until the button is released if it's now low
-    while (gpio_get_level(BUTTON_1_GPIO) == 0)
+    while (gpio_get_level(BUTTON_SYSTEM_GPIO) == 0)
     {
     };
 
@@ -32,9 +34,9 @@ void system_shutdown(void)
     // TODO: This might increase sleep current consumption
     // by a lot, measure it.
     ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON));
-    ESP_ERROR_CHECK(gpio_pulldown_dis(BUTTON_1_GPIO));
-    ESP_ERROR_CHECK(gpio_pullup_en(BUTTON_1_GPIO));
-    ESP_ERROR_CHECK(esp_sleep_enable_ext1_wakeup(1 << BUTTON_1_GPIO, ESP_EXT1_WAKEUP_ALL_LOW));
+    ESP_ERROR_CHECK(gpio_pulldown_dis(BUTTON_SYSTEM_GPIO));
+    ESP_ERROR_CHECK(gpio_pullup_en(BUTTON_SYSTEM_GPIO));
+    ESP_ERROR_CHECK(esp_sleep_enable_ext1_wakeup(1 << BUTTON_SYSTEM_GPIO, ESP_EXT1_WAKEUP_ALL_LOW));
 
     // TODO: Wake up if the 5V power is connected.
     // If battery power doesn't enable the 5V line

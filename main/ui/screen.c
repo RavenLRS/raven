@@ -218,7 +218,7 @@ bool screen_is_animating(const screen_t *screen)
     return false;
 }
 
-bool screen_handle_press(screen_t *screen, bool before_menu)
+bool screen_handle_button_event(screen_t *screen, bool before_menu, const button_event_t *ev)
 {
     if (screen->internal.secondary_mode != SCREEN_SECONDARY_MODE_NONE)
     {
@@ -231,25 +231,57 @@ bool screen_handle_press(screen_t *screen, bool before_menu)
         return false;
     }
 
-    switch (screen->internal.main_mode)
+    if (ev->type != BUTTON_EVENT_TYPE_SHORT_PRESS)
     {
-    case SCREEN_MODE_MAIN:
-        screen->internal.main_mode = SCREEN_MODE_CHANNELS;
-        break;
-    case SCREEN_MODE_CHANNELS:
-        screen->internal.telemetry.page = 0;
-        screen->internal.main_mode = SCREEN_MODE_TELEMETRY;
-        break;
-    case SCREEN_MODE_TELEMETRY:
-        if (screen->internal.telemetry.page < screen->internal.telemetry.count - 1)
+        return false;
+    }
+
+#if defined(USE_BUTTON_5WAY)
+    button_id_e bid = button_event_id(ev);
+    int direction = bid == BUTTON_ID_LEFT ? -1 : bid == BUTTON_ID_RIGHT ? 1 : 0;
+    if (direction == 0)
+    {
+        return false;
+    }
+#else
+    int direction = 1;
+#endif
+
+    if (screen->internal.main_mode == SCREEN_MODE_TELEMETRY)
+    {
+        screen->internal.telemetry.page += direction;
+        if (screen->internal.telemetry.page < 0)
         {
-            screen->internal.telemetry.page++;
+            screen->internal.telemetry.page = 0;
+            screen->internal.main_mode = SCREEN_MODE_CHANNELS;
         }
-        else
+        else if (screen->internal.telemetry.page >= screen->internal.telemetry.count)
         {
+            screen->internal.telemetry.page = screen->internal.telemetry.count - 1;
             screen->internal.main_mode = SCREEN_MODE_MAIN;
         }
-        break;
+    }
+    else
+    {
+        screen->internal.main_mode += direction;
+        if (screen->internal.main_mode < 0)
+        {
+            screen->internal.main_mode = SCREEN_MODE_TELEMETRY;
+            screen->internal.telemetry.page = screen->internal.telemetry.count - 1;
+        }
+        else if (screen->internal.main_mode == SCREEN_MODE_TELEMETRY)
+        {
+            if (direction > 0)
+            {
+                screen->internal.telemetry.page = 0;
+            }
+            else
+            {
+                screen->internal.telemetry.page = screen->internal.telemetry.count - 1;
+            }
+        }
+        // It's not possible to go over SCREEN_MODE_TELEMETRY when moving
+        // to the right, because it's handled separately in the previous if block
     }
     return true;
 }
@@ -825,23 +857,11 @@ static unsigned screen_draw_telemetry_val(screen_t *s, const telemetry_t *val, i
     return total_height;
 }
 
-static void screen_draw_telemetry(screen_t *s)
-{
-#define TELEMETRY_TITLE "Telemetry"
 #define TELEMETRY_ITEMS_PER_PAGE 4
 
-    int telemetry_title_height = 0;
-
-    switch (SCREEN_DIRECTION(s))
-    {
-    case SCREEN_DIRECTION_HORIZONTAL:
-        telemetry_title_height = 12;
-        break;
-    case SCREEN_DIRECTION_VERTICAL:
-        telemetry_title_height = 24;
-        break;
-    }
-
+// Returns the number of telemetry items
+static int telemetry_update_count(screen_t *s)
+{
     int telemetry_count = telemetry_get_id_count();
     int displayed = 0;
     for (int ii = 0; ii < telemetry_count; ii++)
@@ -858,8 +878,31 @@ static void screen_draw_telemetry(screen_t *s)
     {
         s->internal.telemetry.count = 1;
     }
+    return telemetry_count;
+}
+
+static void screen_draw_telemetry(screen_t *s)
+{
+#define TELEMETRY_TITLE "Telemetry"
+    int telemetry_title_height = 0;
+
+    switch (SCREEN_DIRECTION(s))
+    {
+    case SCREEN_DIRECTION_HORIZONTAL:
+        telemetry_title_height = 12;
+        break;
+    case SCREEN_DIRECTION_VERTICAL:
+        telemetry_title_height = 24;
+        break;
+    }
+
+    int telemetry_count = telemetry_update_count(s);
+
     // In case some telemetry items go away while looking at the telemetry
-    if (s->internal.telemetry.page >= s->internal.telemetry.count - 1)
+    // Also, if s->interal.telemetry.page is < 0, it means some place that tried
+    // to initialize it to the last page didn't update the count first. Instead of
+    // updating the count from several places that might not need to, do it here.
+    if (s->internal.telemetry.page >= s->internal.telemetry.count - 1 || s->internal.telemetry.page < 0)
     {
         s->internal.telemetry.page = s->internal.telemetry.count - 1;
     }
@@ -1254,10 +1297,10 @@ static void screen_draw(screen_t *screen)
     }
     else
     {
-        switch (screen->internal.secondary_mode)
+        switch ((screen_secondary_mode_e)screen->internal.secondary_mode)
         {
         case SCREEN_SECONDARY_MODE_NONE:
-            switch (screen->internal.main_mode)
+            switch ((screen_main_mode_e)screen->internal.main_mode)
             {
             case SCREEN_MODE_MAIN:
                 screen_draw_main(screen);

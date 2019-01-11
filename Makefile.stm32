@@ -1,4 +1,3 @@
-BINARY				= $(PROJECT_NAME)_$(PLATFORM)_$(VARIANT)
 OPENCM3_DIR			= lib/libopencm3
 export OPENCM3_DIR
 
@@ -8,6 +7,8 @@ export PLATFORM_SOURCES
 
 BUILDDIR			= build-$(TARGET)
 export BUILDDIR
+
+BINARY				= $(BUILDDIR)/$(PROJECT_NAME)
 
 include $(VARIANTS_DIR)/$(VARIANT)/sdkconfig
 include $(ROOT)/main/component.mk
@@ -43,3 +44,8 @@ SRC_DIRS			+= $(MAIN_DIRS)
 SOURCES				:= $(foreach dir,$(SRC_DIRS),$(dir_sources))
 SOURCES				+= $(FREERTOS_HEAP_IMPL)
 export SOURCES
+
+.DEFAULT_GOAL := all
+
+release: $(BINARY).hex
+	cp -f $< $(RELEASES_DIR)/$(RELEASE_BASENAME).hex

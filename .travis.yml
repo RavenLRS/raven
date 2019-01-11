@@ -6,6 +6,11 @@ git:
 
 addons:
   apt:
+    sources:
+      # PPA for clang-format 8
+      - llvm-toolchain-trusty
+      # Required by clang-format 8
+      - ubuntu-toolchain-r-test
     packages:
       - gcc
       - git
@@ -17,6 +22,7 @@ addons:
       - gperf
       - python
       - python-serial
+      - clang-format-8
 
 language: cpp
 dist: trusty

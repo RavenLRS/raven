@@ -31,10 +31,22 @@ static const char *TAG = "menu";
 
 #define MENU_TITLE_CMD_SUFFIX "\xAC"
 
+#if defined(USE_BUTTON_5WAY)
+#define BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev) (!ev || button_event_id(ev) == BUTTON_ID_ENTER || button_event_id(ev) == BUTTON_ID_RIGHT)
+#define BUTTON_EVENT_INCREMENTS(ev) (ev && button_event_id(ev) == BUTTON_ID_RIGHT && ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+#define BUTTON_EVENT_DECREMENTS(ev) (ev && button_event_id(ev) == BUTTON_ID_LEFT && ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+#else
+#define BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev) true
+#define BUTTON_EVENT_INCREMENTS(ev) (ev && button_event_id(ev) == BUTTON_ID_ENTER && ev->type == BUTTON_EVENT_TYPE_LONG_PRESS)
+#define BUTTON_EVENT_DECREMENTS(ev) false
+#endif
+
+typedef bool (*menu_action_f)(void *data, const button_event_t *ev);
+
 typedef struct menu_entry_s
 {
     const char *(*title)(void *data, char *buf, uint16_t bufsize);
-    void (*action)(void *data);
+    menu_action_f action;
     void *data;
 } menu_entry_t;
 
@@ -93,13 +105,13 @@ static settings_remote_t remotes;
 _Static_assert(ARRAY_COUNT(remotes.devices) <= MAX_DYN_MENU_ENTRIES - 2, "increase MAX_DYN_MENU_ENTRIES");
 
 static const char *menu_back_title(void *data, char *buf, uint16_t bufsize);
-static void menu_back_action(void *data);
+static bool menu_back_action(void *data, const button_event_t *ev);
 static const char *menu_local_setting_title(void *data, char *buf, uint16_t bufsize);
-static void menu_local_setting_action(void *data);
+static bool menu_local_setting_action(void *data, const button_event_t *ev);
 static const char *menu_device_title(void *data, char *buf, uint16_t bufsize);
-static void menu_device_action(void *data);
+static bool menu_device_action(void *data, const button_event_t *ev);
 static const char *menu_remote_setting_title(void *data, char *buf, uint16_t bufsize);
-static void menu_remote_setting_action(void *data);
+static bool menu_remote_setting_action(void *data, const button_event_t *ev);
 static int menu_setting_build_entries(menu_t *menu, folder_id_e folder);
 
 #define MENU_BACK_ENTRY ((menu_entry_t){.title = menu_back_title, .action = menu_back_action})
@@ -115,8 +127,14 @@ static const char *menu_back_title(void *data, char *buf, uint16_t bufsize)
     return "Exit";
 }
 
-static void menu_back_action(void *data)
+static bool menu_back_action(void *data, const button_event_t *ev)
 {
+#if defined(USE_BUTTON_5WAY)
+    if (ev && button_event_id(ev) == BUTTON_ID_RIGHT)
+    {
+        return false;
+    }
+#endif
     if (menu_stack_depth > 0)
     {
         menu_t *old_menu = menu_get_active();
@@ -142,7 +160,7 @@ static void menu_back_action(void *data)
                     // we delete a paired RX.
                     if (!settings_is_folder_visible(SETTINGS_VIEW_MENU, menu->data1))
                     {
-                        menu_back_action(NULL);
+                        menu_back_action(NULL, ev);
                         break;
                     }
                     menu_setting_build_entries(menu, menu->data1);
@@ -156,6 +174,7 @@ static void menu_back_action(void *data)
             }
         }
     }
+    return true;
 }
 
 static const char *menu_string_title(void *data, char *buf, uint16_t bufsize)
@@ -223,11 +242,16 @@ static const char *menu_confirm_ok_title(void *data, char *buf, uint16_t bufsize
     return "Confirm " MENU_TITLE_CMD_SUFFIX;
 }
 
-static void menu_confirm_ok_action(void *data)
+static bool menu_confirm_ok_action(void *data, const button_event_t *ev)
 {
+    if (!BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev))
+    {
+        return false;
+    }
     const setting_t *setting = data;
     setting_cmd_exec(setting);
-    menu_back_action(data);
+    menu_back_action(data, ev);
+    return true;
 }
 
 static menu_entry_t menu_confirm_entries[] = {
@@ -249,14 +273,19 @@ static void menu_rmp_setting_write(settings_rmp_setting_t *setting)
     rmp_send(rc->rmp, rmp_port, &dev->addr, RMP_PORT_SETTINGS, &msg, settings_rmp_msg_size(&msg));
 }
 
-static void menu_confirm_remote_ok_action(void *data)
+static bool menu_confirm_remote_ok_action(void *data, const button_event_t *ev)
 {
+    if (!BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev))
+    {
+        return false;
+    }
     settings_rmp_setting_t *setting = data;
     if (settings_rmp_setting_cmd_set_exec(setting))
     {
         menu_rmp_setting_write(setting);
-        menu_back_action(data);
+        menu_back_action(data, ev);
     }
+    return true;
 }
 
 static menu_entry_t menu_confirm_remote_entries[] = {
@@ -373,7 +402,7 @@ static void menu_rmp_port_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
             // settings.
             if (!msg->ehlo.is_visible)
             {
-                menu_back_action(NULL);
+                menu_back_action(NULL, NULL);
                 break;
             }
             // Prepare the entries
@@ -422,37 +451,59 @@ static const char *menu_local_setting_title(void *data, char *buf, uint16_t bufs
     return buf;
 }
 
-static void menu_local_setting_action(void *data)
+static bool menu_local_do_setting_action(void *data, const button_event_t *ev)
 {
     const setting_t *setting = data;
     if (setting->type == SETTING_TYPE_FOLDER)
     {
-        menu_settings_enter_folder(setting_get_folder_id(setting));
-    }
-    else
-    {
-        // TODO: Allow editing strings
-        if (setting->flags & SETTING_FLAG_CMD)
+        if (BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev))
         {
-            setting_cmd_flag_e cmd_flags = setting_cmd_get_flags(setting);
-            if (cmd_flags & SETTING_CMD_FLAG_CONFIRM)
-            {
-                menu_confirm.prompt = setting->name;
-                menu_confirm.entries[0].data = (void *)setting;
-                menu_enter(&menu_confirm);
-            }
-            else
-            {
-                // Command without confirmation
-                setting_cmd_exec(setting);
-            }
+            menu_settings_enter_folder(setting_get_folder_id(setting));
+            return true;
+        }
+        return false;
+    }
+
+    // TODO: Allow editing strings
+    if (setting->flags & SETTING_FLAG_CMD)
+    {
+        if (!BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev))
+        {
+            return false;
+        }
+
+        setting_cmd_flag_e cmd_flags = setting_cmd_get_flags(setting);
+        if (cmd_flags & SETTING_CMD_FLAG_CONFIRM)
+        {
+            menu_confirm.prompt = setting->name;
+            menu_confirm.entries[0].data = (void *)setting;
+            menu_enter(&menu_confirm);
         }
         else
         {
-            setting_increment(setting);
+            // Command without confirmation
+            setting_cmd_exec(setting);
         }
-        menu_setting_rebuild_current_entries();
+        return true;
     }
+    if (BUTTON_EVENT_INCREMENTS(ev))
+    {
+        setting_increment(setting);
+        return true;
+    }
+    if (BUTTON_EVENT_DECREMENTS(ev))
+    {
+        setting_decrement(setting);
+        return true;
+    }
+    return false;
+}
+
+static bool menu_local_setting_action(void *data, const button_event_t *ev)
+{
+    bool ret = menu_local_do_setting_action(data, ev);
+    menu_setting_rebuild_current_entries();
+    return ret;
 }
 
 static const char *menu_device_title(void *data, char *buf, uint16_t bufsize)
@@ -461,8 +512,13 @@ static const char *menu_device_title(void *data, char *buf, uint16_t bufsize)
     return dev->name;
 }
 
-static void menu_device_action(void *data)
+static bool menu_device_action(void *data, const button_event_t *ev)
 {
+    if (!BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev))
+    {
+        return false;
+    }
+
     settings_device_t *dev = data;
     int device_index = -1;
     for (int ii = 0; ii < ARRAY_COUNT(remotes.devices); ii++)
@@ -476,7 +532,9 @@ static void menu_device_action(void *data)
     if (device_index >= 0)
     {
         menu_device_enter_folder(device_index, FOLDER_ID_ROOT);
+        return true;
     }
+    return false;
 }
 
 static const char *menu_remote_setting_title(void *data, char *buf, uint16_t bufsize)
@@ -526,12 +584,12 @@ static const char *menu_remote_setting_title(void *data, char *buf, uint16_t buf
     return buf;
 }
 
-static void menu_remote_setting_action(void *data)
+static bool menu_remote_setting_action(void *data, const button_event_t *ev)
 {
     settings_rmp_setting_t *setting = data;
     if (!setting && setting->flags & SETTING_FLAG_READONLY)
     {
-        return;
+        return false;
     }
     bool send_write = false;
     switch (setting->type)
@@ -539,6 +597,10 @@ static void menu_remote_setting_action(void *data)
     case SETTING_TYPE_U8:
         if (setting->flags & SETTING_FLAG_CMD)
         {
+            if (!BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev))
+            {
+                return false;
+            }
             setting_cmd_flag_e cmd_flags = settings_rmp_setting_cmd_get_flags(setting);
             if (cmd_flags & SETTING_CMD_FLAG_CONFIRM)
             {
@@ -552,19 +614,34 @@ static void menu_remote_setting_action(void *data)
             send_write = settings_rmp_setting_cmd_set_exec(setting);
             break;
         }
-        send_write = settings_rmp_setting_increment(setting);
+        if (BUTTON_EVENT_INCREMENTS(ev))
+        {
+            send_write = settings_rmp_setting_increment(setting);
+            break;
+        }
+        if (BUTTON_EVENT_DECREMENTS(ev))
+        {
+            send_write = settings_rmp_setting_decrement(setting);
+            break;
+        }
         break;
     case SETTING_TYPE_STRING:
         // TODO: Allow editing strings
         break;
     case SETTING_TYPE_FOLDER:
-        menu_device_enter_folder(menu_get_active()->data2, settings_rmp_setting_get_value(setting));
+        if (BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev))
+        {
+            menu_device_enter_folder(menu_get_active()->data2, settings_rmp_setting_get_value(setting));
+            return true;
+        }
         break;
     }
     if (send_write)
     {
         menu_rmp_setting_write(setting);
+        return true;
     }
+    return false;
 }
 
 static menu_entry_t menu_empty_entries[] = {
@@ -576,9 +653,14 @@ menu_t menu_empty = {
     .entries = menu_empty_entries,
 };
 
-static void menu_bind_req_accept_action(void *data)
+static bool menu_bind_req_accept_action(void *data, const button_event_t *ev)
 {
-    rc_accept_bind(rc);
+    if (BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev))
+    {
+        rc_accept_bind(rc);
+        return true;
+    }
+    return false;
 }
 
 static menu_entry_t menu_bind_req_entries[] = {
@@ -620,18 +702,24 @@ menu_t menu_alt_pairings = {
     .entries = menu_alt_pairings_entries,
 };
 
-static void menu_pairing_action(void *data)
+static bool menu_pairing_action(void *data, const button_event_t *ev)
 {
-    air_pairing_t *pairing = data;
-    rc_switch_pairing(rc, pairing);
-    menu_alt_pairings.index = 0;
+    if (BUTTON_EVENT_IS_ENTER_OR_RIGHT(ev))
+    {
+        air_pairing_t *pairing = data;
+        rc_switch_pairing(rc, pairing);
+        menu_alt_pairings.index = 0;
+        return true;
+    }
+    return false;
 }
 
-static void menu_pairing_exit_action(void *data)
+static bool menu_pairing_exit_action(void *data, const button_event_t *ev)
 {
     menu_alt_pairings.index = 0;
     rc_dismiss_alternative_pairings(rc);
-    menu_back_action(data);
+    menu_back_action(data, ev);
+    return true;
 }
 
 static void menu_request_remote_setting(settings_rmp_msg_t *req, int device_index, int folder_id, int setting_index)
@@ -752,23 +840,51 @@ void menu_update(void)
     }
 }
 
-bool menu_press(void)
+static bool menu_run_action(menu_t *menu, const button_event_t *ev)
+{
+    menu_action_f action = menu->entries[menu->index].action;
+    void *data = menu->entries[menu->index].data;
+    if (!action)
+    {
+        action = menu_back_action;
+    }
+    return action(data, ev);
+}
+
+static bool menu_handle_short_press(menu_t *active, const button_event_t *ev)
 {
     menu_t *menu = menu_get_active();
     if (!menu)
     {
         return false;
     }
-    menu->index++;
-    if (!menu->entries[menu->index].title)
+#if defined(USE_BUTTON_5WAY)
+    button_id_e bid = button_event_id(ev);
+    int direction = bid == BUTTON_ID_DOWN ? 1 : bid == BUTTON_ID_UP ? -1 : 0;
+    if (direction == 0)
     {
-        // Already on last entry
-        menu->index = 0;
+        return menu_run_action(menu, ev);
+    }
+#else
+    int direction = 1;
+#endif
+    if (direction < 0 && menu->index == 0)
+    {
+        menu->index = menu_get_num_entries(menu) - 1;
+    }
+    else
+    {
+        menu->index += direction;
+        if (!menu->entries[menu->index].title)
+        {
+            // Already on last entry
+            menu->index = 0;
+        }
     }
     return true;
 }
 
-bool menu_long_press(void)
+static bool menu_handle_long_press(menu_t *active, const button_event_t *ev)
 {
     menu_t *menu = menu_get_active();
     if (menu == NULL)
@@ -776,18 +892,21 @@ bool menu_long_press(void)
         menu_settings_enter_folder(FOLDER_ID_ROOT);
         return true;
     }
-    void (*action)(void *) = menu->entries[menu->index].action;
-    void *data = menu->entries[menu->index].data;
-    if (!action)
-    {
-        action = menu_back_action;
-    }
-    action(data);
-    return true;
+#if defined(USE_BUTTON_5WAY)
+    return false;
+#else
+    return menu_run_action(menu, ev);
+#endif
 }
 
-bool menu_really_long_press(void)
+static bool menu_handle_really_long_press(menu_t *active, const button_event_t *ev)
 {
+#if defined(USE_BUTTON_5WAY)
+    if (button_event_id(ev) == BUTTON_ID_LEFT)
+    {
+        return menu_back_action(NULL, ev);
+    }
+#endif
 #if 0
     if (setting_is_visible(SETTINGS_VIEW_MENU, SETTING_KEY_POWER_OFF))
     {
@@ -803,7 +922,22 @@ bool menu_really_long_press(void)
         }
     }
 #endif
-    return true;
+    return false;
+}
+
+bool menu_handle_button_event(const button_event_t *ev)
+{
+    menu_t *active = menu_get_active();
+    switch (ev->type)
+    {
+    case BUTTON_EVENT_TYPE_SHORT_PRESS:
+        return menu_handle_short_press(active, ev);
+    case BUTTON_EVENT_TYPE_LONG_PRESS:
+        return menu_handle_long_press(active, ev);
+    case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
+        return menu_handle_really_long_press(active, ev);
+    }
+    return false;
 }
 
 void menu_push_active(menu_t *menu)

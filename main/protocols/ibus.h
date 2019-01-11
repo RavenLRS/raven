@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+
 #include "io/io.h"
 
 #define IBUS_BAUDRATE 115200
@@ -21,7 +22,7 @@ typedef enum
 typedef struct ibus_payload_s
 {
     uint8_t pack_len : 8;
-    input_frame_type_e pack_type: 8;
+    input_frame_type_e pack_type : 8;
     uint16_t ch[IBUS_NUM_CHANNELS];
     uint16_t checksum;
 } __attribute__((packed)) ibus_payload_t;

@@ -119,14 +119,15 @@ static void setting_changed(const setting_t *setting, void *user_data)
 void raven_ui_init(void)
 {
     ui_config_t cfg = {
-        .button = BUTTON_1_GPIO,
-#if defined(USE_TOUCH_BUTTON)
-#if defined(BUTTON_1_GPIO_IS_TOUCH)
-        .button_is_touch = true,
-#else
-        .button_is_touch = false,
+        .buttons = {
+            [BUTTON_ID_ENTER] = BUTTON_CONFIG_FROM_GPIO(BUTTON_ENTER_GPIO),
+#if defined(USE_BUTTON_5WAY)
+            [BUTTON_ID_LEFT] = BUTTON_CONFIG_FROM_GPIO(BUTTON_LEFT_GPIO),
+            [BUTTON_ID_RIGHT] = BUTTON_CONFIG_FROM_GPIO(BUTTON_RIGHT_GPIO),
+            [BUTTON_ID_UP] = BUTTON_CONFIG_FROM_GPIO(BUTTON_UP_GPIO),
+            [BUTTON_ID_DOWN] = BUTTON_CONFIG_FROM_GPIO(BUTTON_DOWN_GPIO),
 #endif
-#endif
+        },
         .beeper = BEEPER_GPIO,
 #ifdef USE_SCREEN
         .screen.i2c_bus = SCREEN_I2C_BUS,

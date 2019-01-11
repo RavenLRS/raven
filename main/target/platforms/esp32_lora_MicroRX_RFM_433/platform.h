@@ -8,8 +8,7 @@
  */
 
 #include "target/bands/433.h"
-
-#define BUTTON_1_GPIO 0
+#include "target/platforms/esp32/single_button.h"
 
 #define BEEPER_GPIO 23 // This is Led D2 (red) on the microRX
 #define LED_1_GPIO 4   // This is Led D1 (Green)

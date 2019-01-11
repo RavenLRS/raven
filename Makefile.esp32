@@ -37,5 +37,13 @@ MAKECMDGOALS = $(REAL_MAKECMDGOALS)
 
 erase: erase_flash
 
+release: all_binaries
+	$(PLATFORMS_DIR)/esp32/make_release.py \
+		--esptool-write-flash-options "$(ESPTOOL_WRITE_FLASH_OPTIONS)" \
+		--esptool-all-flash-args "$(ESPTOOL_ALL_FLASH_ARGS)" \
+		--partitions-csv "$(PARTITIONS_TABLE_CSV)" \
+		--basename "$(RELEASE_BASENAME)" \
+		--output-dir "$(RELEASES_DIR)"
+
 $(TARGET): $(SDKCONFIG) all
 

@@ -10,7 +10,7 @@ typedef enum
     AIR_BAND_433,
     AIR_BAND_470,
     AIR_BAND_868,
-    AIR_BAND_915,    
+    AIR_BAND_915,
 } air_band_e;
 
 #define AIR_BAND_INVALID 0

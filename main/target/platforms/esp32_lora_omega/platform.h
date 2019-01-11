@@ -1,12 +1,12 @@
 #include "target/bands/433.h"
-
-#define BUTTON_1_GPIO 0
+#include "target/platforms/esp32/single_button.h"
 
 #define BEEPER_GPIO 12
 
 #define LED_1_GPIO 22
 
 #define USE_RADIO_SX127X
+#define SX127X_SPI_BUS VSPI_HOST
 #define SX127X_GPIO_SCK 5
 #define SX127X_GPIO_MISO 19
 #define SX127X_GPIO_MOSI 27

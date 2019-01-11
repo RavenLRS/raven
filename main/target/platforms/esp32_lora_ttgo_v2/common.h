@@ -1,18 +1,11 @@
 #include <hal/gpio.h>
 
+#include "target/platforms/esp32/single_button.h"
+
 // All v2 boards are wired in the same way, only the LoRa circuitry changes
 
 // V2 boards have no programmable LED. There's a green one
 // but it's connected to OLED's SCL (22).
-
-// User button. Since boards ship without a button, we also support using them as touchpad.
-#if defined(BUTTON_1_TOUCH_GPIO)
-#define USE_TOUCH_BUTTON
-#define BUTTON_1_GPIO BUTTON_1_TOUCH_GPIO
-#define BUTTON_1_GPIO_IS_TOUCH
-#else
-#define BUTTON_1_GPIO 0
-#endif
 
 // Buzzer
 #define BEEPER_GPIO 12 // This seems appropriate for v1 boards, since it can't be pulled low during boot
@@ -33,11 +26,7 @@
 // Note that these boards use ESP32-PICO-D4, which has GPIO 16 and 17 connected to the
 // internal SPI flash, so we can't use them.
 #define HAL_GPIO_USER_BASE_MASK (HAL_GPIO_M(1) | HAL_GPIO_M(3) | HAL_GPIO_M(4) | HAL_GPIO_M(11) | HAL_GPIO_M(13) | HAL_GPIO_M(23) | HAL_GPIO_M(25) | HAL_GPIO_M(32) | HAL_GPIO_M(33))
-#if defined(BUTTON_1_TOUCH_GPIO)
-#define HAL_GPIO_USER_MASK (HAL_GPIO_USER_BASE_MASK & ~HAL_GPIO_M(BUTTON_1_TOUCH_GPIO))
-#else
 #define HAL_GPIO_USER_MASK HAL_GPIO_USER_BASE_MASK
-#endif
 
 #define TX_DEFAULT_GPIO 13
 #define RX_DEFAULT_GPIO 23
