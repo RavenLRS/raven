@@ -58,6 +58,10 @@ for development and troubleshooting. Most of the time you should flash the TX or
 
 If you want to see the debug logs, you can use the builtin esp-idf monitor by running `PORT=<port> TARGET=<target> make monitor`.
 
+### Compiling by using Docker (Recommended)
+`./build.sh <target>`
+
+More information please references: [doskoi/RavenLRS](https://github.com/doskoi/RavenLRS)
 
 ## Hardware setup
 
