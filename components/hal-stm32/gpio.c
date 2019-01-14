@@ -79,6 +79,7 @@ hal_err_t hal_gpio_setup(hal_gpio_t gpio, hal_gpio_dir_t dir, hal_gpio_pull_t pu
     case HAL_GPIO_DIR_OUTPUT:
         mode = GPIO_MODE_OUTPUT_2_MHZ;
         cnf = GPIO_CNF_OUTPUT_PUSHPULL;
+        break;
     case HAL_GPIO_DIR_OUTPUT_OD:
         mode = GPIO_MODE_OUTPUT_2_MHZ;
         cnf = GPIO_CNF_OUTPUT_OPENDRAIN;
