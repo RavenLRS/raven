@@ -153,7 +153,7 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
 static void input_ppm_close(void *input, void *config)
 {
     input_ppm_t *input_ppm = input;
-    hal_gpio_set_isr(input_ppm->gpio, GPIO_INTR_POSEDGE, NULL, NULL);
+    hal_gpio_set_isr(input_ppm->gpio, HAL_GPIO_INTR_POSEDGE, NULL, NULL);
 }
 
 void input_ppm_init(input_ppm_t *input)
