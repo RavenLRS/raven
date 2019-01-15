@@ -1,8 +1,10 @@
-#include <hal/log.h>
 #include <hal/gpio.h>
+#include <hal/log.h>
 
 #include "input_ppm.h"
+
 #include "rc/rc_data.h"
+
 #include "util/time.h"
 
 static const char *TAG = "PPM.Input";
@@ -14,7 +16,7 @@ static void IRAM_ATTR ppm_handle_isr(void *arg)
 {
     input_ppm_t *input_ppm = arg;
     time_micros_t now = time_micros_now();
-    if(input_ppm->pulseCountInQueue < PPM_PULSE_QUEUE_SIZE)
+    if (input_ppm->pulseCountInQueue < PPM_PULSE_QUEUE_SIZE)
     {
         input_ppm->pulse_queue[input_ppm->pulseCountInQueue] = now;
         input_ppm->pulseCountInQueue++;
@@ -52,21 +54,23 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
     time_micros_t pulse_length = 0;
     time_micros_t current_pulse = 0;
 
-    if(input_ppm->pulseCountInQueue == 0)
+    if (input_ppm->pulseCountInQueue == 0)
+    {
         return false;
+    }
 
     //Note: theoretically a MUTEX should be placed on dequeue operation.
     // Since the min inverval of two valid PPM pulses is at least 0.75 ms,
     // collision is unlikely to happen while processing a non-empty queue.
-    // And, even collision happens, the worse result is that two PPM frames 
+    // And, even collision happens, the worse result is that two PPM frames
     // been ignored.
     if (input_ppm->pulseCountInQueue > 0)
     {
         current_pulse = input_ppm->pulse_queue[0];
-        
-        for( i = 1; i < input_ppm->pulseCountInQueue; i++)
+
+        for (i = 1; i < input_ppm->pulseCountInQueue; i++)
         {
-            input_ppm->pulse_queue[i-1] = input_ppm->pulse_queue[i];
+            input_ppm->pulse_queue[i - 1] = input_ppm->pulse_queue[i];
         }
         input_ppm->pulseCountInQueue--;
     }
