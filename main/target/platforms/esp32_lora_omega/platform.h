@@ -1,6 +1,7 @@
 #include "target/bands/433.h"
 #include "target/platforms/esp32/single_button.h"
 
+#define USE_BEEPER
 #define BEEPER_GPIO 12
 
 #define LED_1_GPIO 22

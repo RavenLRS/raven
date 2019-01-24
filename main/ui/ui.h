@@ -34,7 +34,9 @@ typedef struct rc_s rc_t;
 typedef struct ui_config_s
 {
     button_config_t buttons[UI_BUTTON_COUNT];
+#if defined(USE_BEEPER)
     hal_gpio_t beeper;
+#endif
 #ifdef USE_SCREEN
     screen_i2c_config_t screen;
 #endif
@@ -46,7 +48,9 @@ typedef struct ui_s
     {
         rc_t *rc;
         ui_config_t cfg;
+#if defined(USE_BEEPER)
         beeper_t beeper;
+#endif
         button_t buttons[UI_BUTTON_COUNT];
 #ifdef USE_SCREEN
         time_ticks_t screen_autooff_interval;

@@ -1,3 +1,7 @@
+#include "target.h"
+
+#if defined(USE_BEEPER)
+
 #if defined(BEEPER_USE_PWM)
 #include <hal/pwm.h>
 #endif
@@ -185,3 +189,5 @@ void beeper_set_mode(beeper_t *beeper, beeper_mode_e mode)
 {
     beeper_set_mode_force(beeper, mode, false);
 }
+
+#endif

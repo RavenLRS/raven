@@ -128,7 +128,9 @@ void raven_ui_init(void)
             [BUTTON_ID_DOWN] = BUTTON_CONFIG_FROM_GPIO(BUTTON_DOWN_GPIO),
 #endif
         },
+#if defined(USE_BEEPER)
         .beeper = BEEPER_GPIO,
+#endif
 #ifdef USE_SCREEN
         .screen.i2c_bus = SCREEN_I2C_BUS,
         .screen.sda = SCREEN_GPIO_SDA,

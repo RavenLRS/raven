@@ -8,6 +8,7 @@
 // but it's connected to OLED's SCL (22).
 
 // Buzzer
+#define USE_BEEPER
 #define BEEPER_GPIO 12 // This seems appropriate for v1 boards, since it can't be pulled low during boot
 
 // SX127X

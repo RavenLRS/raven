@@ -13,6 +13,8 @@
 #include "ui/menu.h"
 #include "ui/screen.h"
 
+#include "util/macros.h"
+
 #include "ui/ui.h"
 
 #ifdef USE_SCREEN
@@ -20,6 +22,15 @@
 // produce a warning if we didn't guard it
 static const char *TAG = "UI";
 #endif
+
+static void ui_beep(ui_t *ui)
+{
+#if defined(USE_BEEPER)
+    beeper_beep(&ui->internal.beeper);
+#else
+    UNUSED(ui);
+#endif
+}
 
 #ifdef USE_SCREEN
 
@@ -63,7 +74,7 @@ static void ui_handle_screen_button_event(const button_event_t *ev, void *user_d
     }
     if (handled)
     {
-        beeper_beep(&ui->internal.beeper);
+        ui_beep(ui);
     }
 }
 #endif
@@ -80,7 +91,7 @@ static void ui_handle_noscreen_button_event(const button_event_t *ev, void *user
         if (rc_has_pending_bind_request(ui->internal.rc, NULL))
         {
             rc_accept_bind(ui->internal.rc);
-            beeper_beep(&ui->internal.beeper);
+            ui_beep(ui);
         }
         break;
     case BUTTON_EVENT_TYPE_LONG_PRESS:
@@ -92,12 +103,12 @@ static void ui_handle_noscreen_button_event(const button_event_t *ev, void *user
         if (time_micros_now() < SECS_TO_MICROS(15) && !is_binding)
         {
             setting_set_bool(bind_setting, true);
-            beeper_beep(&ui->internal.beeper);
+            ui_beep(ui);
         }
         else if (is_binding)
         {
             setting_set_bool(bind_setting, false);
-            beeper_beep(&ui->internal.beeper);
+            ui_beep(ui);
         }
         break;
     }
@@ -138,6 +149,7 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
 #endif
 }
 
+#if defined(USE_BEEPER)
 static void ui_update_beeper(ui_t *ui)
 {
     if (rc_is_failsafe_active(ui->internal.rc, NULL))
@@ -154,6 +166,7 @@ static void ui_update_beeper(ui_t *ui)
     }
     beeper_update(&ui->internal.beeper);
 }
+#endif
 
 void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
 {
@@ -180,11 +193,12 @@ void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
         ui->internal.buttons[ii].cfg = cfg->buttons[ii];
         button_init(&ui->internal.buttons[ii]);
     }
-    if (cfg->beeper != HAL_GPIO_NONE)
-    {
-        beeper_init(&ui->internal.beeper, cfg->beeper);
-        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
-    }
+
+#if defined(USE_BEEPER)
+    beeper_init(&ui->internal.beeper, cfg->beeper);
+    beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
+#endif
+
     system_add_flag(SYSTEM_FLAG_BUTTON);
 #ifdef USE_SCREEN
     if (screen_is_available(&ui->internal.screen))
@@ -231,10 +245,9 @@ bool ui_is_animating(const ui_t *ui)
 
 void ui_update(ui_t *ui)
 {
-    if (ui->internal.cfg.beeper != HAL_GPIO_NONE)
-    {
-        ui_update_beeper(ui);
-    }
+#if defined(USE_BEEPER)
+    ui_update_beeper(ui);
+#endif
     for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
     {
         button_update(&ui->internal.buttons[ii]);
