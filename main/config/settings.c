@@ -138,10 +138,12 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
     {
         return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_RX);
     }
+#if defined(USE_SCREEN)
     if (SETTING_IS(setting, SETTING_KEY_SCREEN))
     {
         return SETTING_SHOW_IF_SCREEN(view_id);
     }
+#endif
     if (SETTING_IS(setting, SETTING_KEY_RECEIVERS))
     {
         return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_TX);
@@ -377,7 +379,9 @@ static const char *rssi_channel_table[] = {
 };
 #endif
 #if defined(USE_SCREEN)
+#if !defined(SCREEN_FIXED_ORIENTATION)
 static const char *screen_orientation_table[] = {"Horizontal", "Horizontal (buttons at the right)", "Vertical", "Vertical (buttons on top)"};
+#endif
 static const char *screen_brightness_table[] = {"Low", "Medium", "High"};
 static const char *screen_autopoweroff_table[] = {"Disabled", "30 sec", "1 min", "5 min", "10 min"};
 #endif
@@ -457,7 +461,9 @@ static const setting_t settings[] = {
 
 #if defined(USE_SCREEN)
     FOLDER(SETTING_KEY_SCREEN, "Screen", FOLDER_ID_SCREEN, FOLDER_ID_ROOT, NULL),
+#if !defined(SCREEN_FIXED_ORIENTATION)
     U8_MAP_SETTING(SETTING_KEY_SCREEN_ORIENTATION, "Orientation", 0, FOLDER_ID_SCREEN, screen_orientation_table, SCREEN_ORIENTATION_DEFAULT),
+#endif
     U8_MAP_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, "Brightness", 0, FOLDER_ID_SCREEN, screen_brightness_table, SCREEN_BRIGHTNESS_DEFAULT),
     U8_MAP_SETTING(SETTING_KEY_SCREEN_AUTO_OFF, "Auto Off", 0, FOLDER_ID_SCREEN, screen_autopoweroff_table, UI_SCREEN_AUTOOFF_DEFAULT),
 #endif

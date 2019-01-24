@@ -129,7 +129,9 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
     } while (0)
 
     ui_t *ui = user_data;
+#if !defined(SCREEN_FIXED_ORIENTATION)
     UPDATE_SCREEN_SETTING(SETTING_KEY_SCREEN_ORIENTATION, screen_set_orientation);
+#endif
     UPDATE_SCREEN_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, screen_set_brightness);
 
     if (SETTING_IS(setting, SETTING_KEY_SCREEN_AUTO_OFF) && screen_is_available(&ui->internal.screen))
@@ -205,7 +207,12 @@ void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
     {
         LOG_I(TAG, "Screen detected");
         system_add_flag(SYSTEM_FLAG_SCREEN);
-        screen_set_orientation(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_ORIENTATION));
+#if defined(SCREEN_FIXED_ORIENTATION)
+        screen_orientation_e screen_orientation = SCREEN_ORIENTATION_DEFAULT;
+#else
+        screen_orientation_e screen_orientation = settings_get_key_u8(SETTING_KEY_SCREEN_ORIENTATION);
+#endif
+        screen_set_orientation(&ui->internal.screen, screen_orientation);
         screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
         ui_set_screen_set_autooff(ui, settings_get_key_u8(SETTING_KEY_SCREEN_AUTO_OFF));
     }
