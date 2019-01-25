@@ -10,6 +10,7 @@
 #include "input/input_crsf.h"
 #include "input/input_fake.h"
 #include "input/input_ibus.h"
+#include "input/input_ppm.h"
 
 #include "output/output_air.h"
 #include "output/output_air_bind.h"
@@ -56,6 +57,7 @@ typedef struct rc_s
         input_air_t air;
         input_air_bind_t air_bind;
         input_crsf_t crsf;
+        input_ppm_t ppm;
         input_ibus_t ibus;
         input_fake_t fake;
     } inputs;
