@@ -70,3 +70,12 @@
 #define UNUSED(...)                       \
     UNUSED_IMPL(VA_NUM_ARGS(__VA_ARGS__)) \
     (__VA_ARGS__)
+
+#if __GNUC__ > 6
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH \
+    do              \
+    {               \
+    } while (0)
+#endif
