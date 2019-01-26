@@ -227,7 +227,7 @@ static setting_visibility_e setting_visibility_rx_channel_outputs(folder_id_e fo
     int index = setting_rx_channel_output_get_pos(setting);
     if (index >= 0)
     {
-        int gpio = hal_gpio_user_at(index);
+        int gpio = gpio_get_configurable_at(index);
         if (gpio != HAL_GPIO_NONE && pwm_output_can_use_gpio(gpio))
         {
             return SETTING_VISIBILITY_SHOW;
@@ -242,7 +242,7 @@ static int setting_format_rx_channel_output(char *buf, size_t size, const settin
     char gpio_name[HAL_GPIO_NAME_LENGTH];
     if (index >= 0)
     {
-        int gpio = hal_gpio_user_at(index);
+        int gpio = gpio_get_configurable_at(index);
         switch (fmt)
         {
         case SETTING_DYNAMIC_FORMAT_NAME:
@@ -672,7 +672,7 @@ void settings_init(void)
     // Initialize GPIO names
     for (int ii = 0; ii < HAL_GPIO_USER_COUNT; ii++)
     {
-        hal_gpio_t x = hal_gpio_user_at(ii);
+        hal_gpio_t x = gpio_get_configurable_at(ii);
         hal_gpio_toa(x, gpio_name_storage[ii], sizeof(gpio_name_storage[ii]));
         gpio_names[ii] = gpio_name_storage[ii];
     }
@@ -990,7 +990,7 @@ void setting_set_u8(const setting_t *setting, uint8_t v)
 hal_gpio_t setting_get_gpio(const setting_t *setting)
 {
     assert(setting->val_names == gpio_names);
-    return hal_gpio_user_at(setting_get_val_ptr(setting)->u8);
+    return gpio_get_configurable_at(setting_get_val_ptr(setting)->u8);
 }
 
 bool setting_get_bool(const setting_t *setting)

@@ -757,7 +757,7 @@ static bool input_crsf_open(void *input, void *config)
     input_crsf_t *input_crsf = input;
     input_crsf->bps = CRSF_INPUT_BPS_DETECT;
 
-    LOG_I(TAG, "Open");
+    LOG_I(TAG, "Open on GPIO %s", gpio_toa(config_crsf->gpio));
 
     io_t crsf_io = {
         .read = NULL,

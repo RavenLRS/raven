@@ -9,6 +9,7 @@
 
 #include "config/config.h"
 
+#include "io/gpio.h"
 #include "io/pwm.h"
 
 #include "platform/dispatch.h"
@@ -315,19 +316,19 @@ static void rc_reconfigure_input(rc_t *rc)
         case TX_INPUT_CRSF:
             input_crsf_init(&rc->inputs.crsf);
             rc->input = (input_t *)&rc->inputs.crsf;
-            input_config.crsf.gpio = settings_get_key_gpio(SETTING_KEY_TX_TX_GPIO);
+            input_config.crsf.gpio = gpio_get_by_tag(GPIO_TAG_INPUT_BIDIR);
             rc->input_config = &input_config.crsf;
             break;
         case TX_INPUT_PPM:
             input_ppm_init(&rc->inputs.ppm);
             rc->input = (input_t *)&rc->inputs.ppm;
-            input_config.ppm.gpio = settings_get_key_gpio(SETTING_KEY_TX_TX_GPIO);
+            input_config.ppm.gpio = gpio_get_by_tag(GPIO_TAG_INPUT_RX);
             rc->input_config = &input_config.ppm;
             break;
         case TX_INPUT_IBUS:
             input_ibus_init(&rc->inputs.ibus);
             rc->input = (input_t *)&rc->inputs.ibus;
-            input_config.ibus.gpio = settings_get_key_gpio(SETTING_KEY_TX_TX_GPIO);
+            input_config.ibus.gpio = gpio_get_by_tag(GPIO_TAG_INPUT_RX);
             rc->input_config = &input_config.ibus;
             break;
         case TX_INPUT_FAKE:
@@ -461,33 +462,38 @@ static void rc_reconfigure_output(rc_t *rc)
         case RX_OUTPUT_MSP:
             output_msp_init(&rc->outputs.msp);
             rc->output = (output_t *)&rc->outputs.msp;
-            output_config.msp.tx = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
-            output_config.msp.rx = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            output_config.msp.tx = gpio_get_by_tag(GPIO_TAG_OUTPUT_TX);
+            output_config.msp.rx = gpio_get_by_tag(GPIO_TAG_OUTPUT_RX);
             output_config.msp.baud_rate = settings_get_key_u8(SETTING_KEY_RX_MSP_BAUDRATE);
             rc->output_config = &output_config.msp;
             break;
         case RX_OUTPUT_CRSF:
             output_crsf_init(&rc->outputs.crsf);
             rc->output = (output_t *)&rc->outputs.crsf;
-            output_config.crsf.tx = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
-            output_config.crsf.rx = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            output_config.crsf.tx = gpio_get_by_tag(GPIO_TAG_OUTPUT_TX);
+            output_config.crsf.rx = gpio_get_by_tag(GPIO_TAG_OUTPUT_RX);
             output_config.crsf.inverted = false;
             rc->output_config = &output_config.crsf;
             break;
         case RX_OUTPUT_FPORT:
             output_fport_init(&rc->outputs.fport);
             rc->output = (output_t *)&rc->outputs.fport;
-            output_config.fport.tx = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
-            output_config.fport.rx = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            // Nothing expects full duplex FPort right now, so
+            // we only support it as half duplex although the driver
+            // is capable of both.
+            output_config.fport.tx = gpio_get_by_tag(GPIO_TAG_OUTPUT_BIDIR);
+            output_config.fport.rx = output_config.fport.tx;
             output_config.fport.inverted = settings_get_key_bool(SETTING_KEY_RX_FPORT_INVERTED);
             rc->output_config = &output_config.fport;
             break;
         case RX_OUTPUT_SBUS_SPORT:
             output_sbus_init(&rc->outputs.sbus);
             rc->output = (output_t *)&rc->outputs.sbus;
-            output_config.sbus.sbus = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
+            output_config.sbus.sbus = gpio_get_by_tag(GPIO_TAG_OUTPUT_TX);
             output_config.sbus.sbus_inverted = settings_get_key_bool(SETTING_KEY_RX_SBUS_INVERTED);
-            output_config.sbus.sport = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            // TODO: This doesn't work on hardware that doesn't allow
+            // UART pin remapping
+            output_config.sbus.sport = gpio_get_by_tag(GPIO_TAG_OUTPUT_RX);
             output_config.sbus.sport_inverted = settings_get_key_bool(SETTING_KEY_RX_SPORT_INVERTED);
             rc->output_config = &output_config.sbus;
             break;
