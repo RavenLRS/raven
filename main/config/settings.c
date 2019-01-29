@@ -170,16 +170,18 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
     {
         return SETTING_SHOW_IF(view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
+#if defined(USE_GPIO_REMAP)
     if (SETTING_IS(setting, SETTING_KEY_TX_TX_GPIO))
     {
         // Don't allow changing the TX pin from the CRSF/IBUS configuration scripts
         // since it will break communication.
-        return SETTING_SHOW_IF(config_get_input_type() != TX_INPUT_FAKE && view_id != SETTINGS_VIEW_CRSF_INPUT);
+        return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_CRSF && view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
     if (SETTING_IS(setting, SETTING_KEY_TX_RX_GPIO))
     {
-        return SETTING_VISIBILITY_HIDE;
+        return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_IBUS || config_get_input_type() == TX_INPUT_PPM);
     }
+#endif
     return SETTING_VISIBILITY_SHOW;
 }
 #endif
@@ -420,8 +422,10 @@ static const setting_t settings[] = {
     U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),
     STRING_SETTING(SETTING_KEY_TX_PILOT_NAME, "Pilot Name", FOLDER_ID_TX),
     U8_MAP_SETTING(SETTING_KEY_TX_INPUT, "Input", 0, FOLDER_ID_TX, tx_input_table, TX_INPUT_FIRST),
+#if defined(USE_GPIO_REMAP)
     GPIO_USER_SETTING(SETTING_KEY_TX_TX_GPIO, "TX Pin", FOLDER_ID_TX, TX_DEFAULT_GPIO_IDX),
     GPIO_USER_SETTING(SETTING_KEY_TX_RX_GPIO, "RX Pin", FOLDER_ID_TX, RX_DEFAULT_GPIO_IDX),
+#endif
 #endif
 
 #if defined(USE_RX_SUPPORT)
@@ -430,8 +434,10 @@ static const setting_t settings[] = {
     BOOL_YN_SETTING(SETTING_KEY_RX_AUTO_CRAFT_NAME, "Auto Craft Name", 0, FOLDER_ID_RX, true),
     STRING_SETTING(SETTING_KEY_RX_CRAFT_NAME, "Craft Name", FOLDER_ID_RX),
     U8_MAP_SETTING(SETTING_KEY_RX_OUTPUT, "Output", 0, FOLDER_ID_RX, rx_output_table, RX_OUTPUT_MSP),
+#if defined(USE_GPIO_REMAP)
     GPIO_USER_SETTING(SETTING_KEY_RX_TX_GPIO, "TX Pin", FOLDER_ID_RX, TX_DEFAULT_GPIO_IDX),
     GPIO_USER_SETTING(SETTING_KEY_RX_RX_GPIO, "RX Pin", FOLDER_ID_RX, RX_DEFAULT_GPIO_IDX),
+#endif
     U8_MAP_SETTING(SETTING_KEY_RX_RSSI_CHANNEL, "RSSI Channel", 0, FOLDER_ID_RX, rssi_channel_table, RX_RSSI_CHANNEL_AUTO),
     BOOL_YN_SETTING(SETTING_KEY_RX_SBUS_INVERTED, "SBUS Inverted", 0, FOLDER_ID_RX, true),
     BOOL_YN_SETTING(SETTING_KEY_RX_SPORT_INVERTED, "S.Port Inverted", 0, FOLDER_ID_RX, true),

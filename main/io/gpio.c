@@ -23,6 +23,7 @@ hal_gpio_t gpio_get_configurable_at(unsigned idx)
 
 hal_gpio_t gpio_get_by_tag(gpio_tag_e tag)
 {
+#if defined(USE_GPIO_REMAP)
     const char *key = NULL;
     switch (tag)
     {
@@ -47,6 +48,23 @@ hal_gpio_t gpio_get_by_tag(gpio_tag_e tag)
     {
         return settings_get_key_gpio(key);
     }
+#else
+    switch (tag)
+    {
+    case GPIO_TAG_INPUT_BIDIR:
+        FALLTHROUGH;
+    case GPIO_TAG_OUTPUT_BIDIR:
+        FALLTHROUGH;
+    case GPIO_TAG_OUTPUT_TX:
+        FALLTHROUGH;
+    case GPIO_TAG_INPUT_TX:
+        return TX_DEFAULT_GPIO;
+    case GPIO_TAG_OUTPUT_RX:
+        FALLTHROUGH;
+    case GPIO_TAG_INPUT_RX:
+        return RX_DEFAULT_GPIO;
+    }
+#endif
     return HAL_GPIO_NONE;
 }
 
