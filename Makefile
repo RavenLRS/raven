@@ -185,3 +185,6 @@ show-platforms:
 
 format:
 	./format.sh format
+
+format-check:
+	./format.sh check
