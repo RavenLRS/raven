@@ -22,6 +22,7 @@ check)
         fi
         if ${CLANG_FORMAT} --style=file -output-replacements-xml ${file} | grep -c "</replacement>" > /dev/null; then
             echo "File ${file} is not correctly formatted" 1>&2
+            ${CLANG_FORMAT} --style=file ${file} | diff -u ${file} -
             exit 1;
         fi
     done
