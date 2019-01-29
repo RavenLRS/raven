@@ -5,6 +5,7 @@
 #include <hal/pwm.h>
 
 #include "config/config.h"
+#include "config/settings.h"
 
 #include "io/gpio.h"
 
