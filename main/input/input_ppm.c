@@ -1,11 +1,12 @@
-#include <hal/gpio.h>
 #include <hal/log.h>
 
-#include "input_ppm.h"
+#include "io/gpio.h"
 
 #include "rc/rc_data.h"
 
 #include "util/time.h"
+
+#include "input_ppm.h"
 
 static const char *TAG = "PPM.Input";
 
@@ -25,7 +26,6 @@ static void IRAM_ATTR ppm_handle_isr(void *arg)
 
 static bool input_ppm_open(void *input, void *config)
 {
-    char name[8];
     input_ppm_t *input_ppm = input;
     input_ppm_config_t *config_ppm = config;
     input_ppm->gpio = config_ppm->gpio;
@@ -40,8 +40,7 @@ static bool input_ppm_open(void *input, void *config)
 
     HAL_ERR_ASSERT_OK(hal_gpio_set_isr(input_ppm->gpio, HAL_GPIO_INTR_POSEDGE, ppm_handle_isr, input));
 
-    hal_gpio_toa(input_ppm->gpio, name, sizeof(name));
-    LOG_I(TAG, "PPM open on port %s", name);
+    LOG_I(TAG, "Open on GPIO %s", gpio_toa(input_ppm->gpio));
 
     return true;
 }
@@ -83,9 +82,7 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
         /* Sync pulse detection */
         if (pulse_length > PPM_IN_MIN_SYNC_PULSE_US)
         {
-            if (input_ppm->pulseIndex == input_ppm->numChannelsPrevFrame
-                && input_ppm->pulseIndex >= PPM_IN_MIN_NUM_CHANNELS
-                && input_ppm->pulseIndex <= PPM_IN_MAX_NUM_CHANNELS)
+            if (input_ppm->pulseIndex == input_ppm->numChannelsPrevFrame && input_ppm->pulseIndex >= PPM_IN_MIN_NUM_CHANNELS && input_ppm->pulseIndex <= PPM_IN_MAX_NUM_CHANNELS)
             {
                 /* If we see n simultaneous frames of the same
                number of channels we save it as our frame size */
@@ -132,9 +129,7 @@ static bool input_ppm_update(void *input, rc_data_t *data, time_micros_t now)
         else if (input_ppm->tracking)
         {
             /* Valid pulse duration 0.75 to 2.5 ms*/
-            if (pulse_length > PPM_IN_MIN_CHANNEL_PULSE_US
-                && pulse_length < PPM_IN_MAX_CHANNEL_PULSE_US
-                && input_ppm->pulseIndex < PPM_IN_MAX_NUM_CHANNELS)
+            if (pulse_length > PPM_IN_MIN_CHANNEL_PULSE_US && pulse_length < PPM_IN_MAX_CHANNEL_PULSE_US && input_ppm->pulseIndex < PPM_IN_MAX_NUM_CHANNELS)
             {
                 input_ppm->captures[input_ppm->pulseIndex] = pulse_length;
                 input_ppm->pulseIndex++;
