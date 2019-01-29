@@ -3,7 +3,7 @@
 set -e
 
 export CLANG_FORMAT=clang-format-9
-make format
+make format-check
 
 XTENSA_ESP32_GCC_URL=https://dl.espressif.com/dl/xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz
 ARM_EABI_NONE_GCC_URL=https://developer.arm.com/-/media/Files/downloads/gnu-rm/7-2018q2/gcc-arm-none-eabi-7-2018-q2-update-linux.tar.bz2
