@@ -711,8 +711,24 @@ static void input_crsf_rmp_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
                     do_write = settings_rmp_setting_set_value(&cpy, pending_write->payload.u8);
                     break;
                 case SETTING_TYPE_STRING:
+                    // Since the crossfire.lua script doesn't support deleting characters, the
+                    // only way to shorten a string is to set the characters at the end as blank
+                    // so we need to trim them manually.
+
+                    // Make sure there's at least a null at the end before we call strlen()
+                    pending_write->payload.s[sizeof(pending_write->payload.s) - 1] = '\0';
+                    for (int ii = (int)strlen(pending_write->payload.s) - 1; ii >= 0; ii--)
+                    {
+                        if (pending_write->payload.s[ii] != ' ')
+                        {
+                            // Non blank, stop
+                            break;
+                        }
+                        pending_write->payload.s[ii] = '\0';
+                    }
                     do_write = settings_rmp_setting_set_str_value(&cpy, pending_write->payload.s);
                     break;
+
                 default:
                     do_write = false;
                     LOG_W(TAG, "Can't handle CRSF write for setting of type %d", setting->type);
