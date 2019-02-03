@@ -70,7 +70,16 @@ hal_gpio_t gpio_get_by_tag(gpio_tag_e tag)
 
 char *gpio_toa(hal_gpio_t gpio)
 {
-    static char buf[4];
-    hal_gpio_toa(gpio, buf, sizeof(buf));
-    return buf;
+    // Keep 4 values in the buffer, so function calls with up to
+    // 4 gpio_toa() arguments work.
+#define GPIO_TOA_BUFFER_COUNT 4
+    static char buf[HAL_GPIO_NAME_LENGTH * GPIO_TOA_BUFFER_COUNT];
+    static int pos = 0;
+    char *ptr = buf + (pos++ * GPIO_TOA_BUFFER_COUNT);
+    hal_gpio_toa(gpio, ptr, HAL_GPIO_NAME_LENGTH);
+    if (pos == GPIO_TOA_BUFFER_COUNT)
+    {
+        pos = 0;
+    }
+    return ptr;
 }
