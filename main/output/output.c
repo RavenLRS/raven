@@ -15,10 +15,17 @@
 
 static const char *TAG = "Output";
 
-#define OUTPUT_FC_MSP_UPDATE_INTERVAL SECS_TO_MICROS(10)
-#define MSP_SEND_REQ(output, req) OUTPUT_MSP_SEND_REQ(output, req, output_msp_callback)
+#define OUTPUT_FC_MSP_UPDATE_INTERVAL SECS_TO_MICROS(5)
+#define OUTPUT_FC_MSP_SLOW_UPDATE_INTERVAL SECS_TO_MICROS(10)
+#define OUTPUT_FC_MSP_FAST_UPDATE_INTERVAL MILLIS_TO_MICROS(500)
+#define MSP_SEND_REQ(output, req) MSP_SEND_REQ_PAYLOAD(output, req, NULL, 0)
+#define MSP_SEND_REQ_PAYLOAD(output, req, payload, payload_size) OUTPUT_MSP_SEND_REQ_PAYLOAD(output, req, payload, payload_size, output_msp_callback)
+
 #define FW_VARIANT_CONST(s0, s1, s2, s3) (s0 << 24 | s1 << 16 | s2 << 8 | s3)
 #define FW_VARIANT_CONST_S(s) FW_VARIANT_CONST(s[0], s[1], s[2], s[3])
+
+#define FW_VARIANT_INAV FW_VARIANT_CONST('I', 'N', 'A', 'V')
+#define FW_VARIANT_BF FW_VARIANT_CONST('B', 'T', 'F', 'L')
 
 static void telemetry_updated_callback(void *data, telemetry_downlink_id_e id, telemetry_val_t *val)
 {
@@ -69,14 +76,51 @@ static void output_setting_changed(const setting_t *setting, void *user_data)
     output_t *output = user_data;
     if (SETTING_IS(setting, SETTING_KEY_RX_AUTO_CRAFT_NAME))
     {
-        // Re-schedule polls to take into account if the setting
-        // is enabled or disabled.
+        // Re-schedule polls to take into account the new setting values
         output->fc.next_fw_update = 0;
     }
 }
 
+static bool output_msp_fc_is_at_least(output_t *output, uint32_t variant, uint8_t major, uint8_t minor, uint8_t patch)
+{
+    if (FW_VARIANT_CONST_S(output->fc.fw_variant) == variant)
+    {
+        if (output->fc.fw_version[0] > major)
+        {
+            return true;
+        }
+        if (output->fc.fw_version[0] == major)
+        {
+            if (output->fc.fw_version[1] > minor)
+            {
+                return true;
+            }
+            if (output->fc.fw_version[1] == minor)
+            {
+                return output->fc.fw_version[2] >= patch;
+            }
+        }
+    }
+    return false;
+}
+
+static bool output_can_send_rssi_via_msp(output_t *output)
+{
+    return output_msp_fc_is_at_least(output, FW_VARIANT_INAV, 1, 9, 1) || output_msp_fc_is_at_least(output, FW_VARIANT_BF, 3, 2, 0);
+}
+
 static void output_msp_configure_poll(output_t *output, uint16_t cmd, time_micros_t interval)
 {
+    // Check if we already have this poll configured
+    for (int ii = 0; ii < OUTPUT_FC_MAX_NUM_POLLS; ii++)
+    {
+        if (output->fc.polls[ii].interval > 0 && output->fc.polls[ii].cmd == cmd)
+        {
+            output->fc.polls[ii].interval = interval;
+            output->fc.polls[ii].next_poll = 0;
+            return;
+        }
+    }
     for (int ii = 0; ii < OUTPUT_FC_MAX_NUM_POLLS; ii++)
     {
         if (output->fc.polls[ii].interval == 0)
@@ -97,7 +141,7 @@ static void output_msp_configure_polling_common(output_t *output)
     if (settings_get_key_bool(SETTING_KEY_RX_AUTO_CRAFT_NAME))
     {
         output->craft_name_setting = settings_get_key(SETTING_KEY_RX_CRAFT_NAME);
-        output_msp_configure_poll(output, MSP_NAME, SECS_TO_MICROS(10));
+        output_msp_configure_poll(output, MSP_NAME, OUTPUT_FC_MSP_SLOW_UPDATE_INTERVAL);
     }
     else
     {
@@ -105,7 +149,7 @@ static void output_msp_configure_polling_common(output_t *output)
     }
     if (!OUTPUT_HAS_FLAG(output, OUTPUT_FLAG_SENDS_RSSI) && output->fc.rssi.channel_auto)
     {
-        output_msp_configure_poll(output, MSP_RSSI_CONFIG, SECS_TO_MICROS(10));
+        output_msp_configure_poll(output, MSP_RSSI_CONFIG, OUTPUT_FC_MSP_SLOW_UPDATE_INTERVAL);
     }
 }
 
@@ -123,14 +167,14 @@ static void output_msp_configure_polling(output_t *output)
     output_msp_configure_polling_common(output);
     switch (FW_VARIANT_CONST_S(output->fc.fw_variant))
     {
-    case FW_VARIANT_CONST('I', 'N', 'A', 'V'):
+    case FW_VARIANT_INAV:
         output_msp_configure_polling_inav(output);
         break;
-    case FW_VARIANT_CONST('B', 'T', 'F', 'L'):
+    case FW_VARIANT_BF:
         output_msp_configure_polling_betaflight(output);
         break;
     default:
-        LOG_W(TAG, "Unknown fw_variant \"%.4s\"", output->fc.fw_variant);
+        LOG_W(TAG, "Unknown fw_variant \"%s\"", output->fc.fw_variant);
     }
 }
 
@@ -143,14 +187,23 @@ static void output_msp_callback(msp_conn_t *conn, uint16_t cmd, const void *payl
         if (size == 4)
         {
             memcpy(output->fc.fw_variant, payload, size);
+            output->fc.fw_variant[4] = '\0';
             output->fc.fw_version_is_pending = true;
+            LOG_I(TAG, "MSP firmware variant %s", output->fc.fw_variant);
         }
         break;
     case MSP_FC_VERSION:
         if (size == 3)
         {
             memcpy(output->fc.fw_version, payload, size);
+            LOG_I(TAG, "MSP firmware version %u.%u.%u",
+                  output->fc.fw_version[0],
+                  output->fc.fw_version[1],
+                  output->fc.fw_version[2]);
             output_msp_configure_polling(output);
+            // We've got the firmware info. Don't poll for it again
+            // unless settings are changed.
+            output->fc.next_fw_update = TIME_MICROS_MAX;
         }
         break;
     case MSP_NAME:
@@ -171,8 +224,30 @@ static void output_msp_callback(msp_conn_t *conn, uint16_t cmd, const void *payl
             // MSP based FCs return 0 to mean disabled, non-zero to indicate
             // that the channel number (from 1) is the RSSI channel.
             uint8_t fc_rssi_channel = *((const uint8_t *)payload);
-            output->fc.rssi.channel = fc_rssi_channel > 0 ? fc_rssi_channel - 1 : -1;
+            if (fc_rssi_channel > 0)
+            {
+                output->fc.rssi.channel = fc_rssi_channel - 1;
+                LOG_I(TAG, "Sending RSSI via channel %d", fc_rssi_channel);
+            }
+            else
+            {
+                output->fc.rssi.channel = -1;
+                if (output_can_send_rssi_via_msp(output))
+                {
+                    LOG_I(TAG, "Sending RSSI via MSP");
+                    output_msp_configure_poll(output, MSP_SET_TX_INFO, OUTPUT_FC_MSP_FAST_UPDATE_INTERVAL);
+                }
+                else
+                {
+                    LOG_I(TAG, "Can't send RSSI");
+                }
+            }
         }
+        break;
+    case MSP_SET_TX_INFO:
+        break;
+    default:
+        LOG_W(TAG, "Got a callback for unexpected MSP cmd %u", cmd);
         break;
     }
 }
@@ -181,6 +256,7 @@ static void output_msp_poll(output_t *output, time_micros_t now)
 {
     if (output->fc.next_fw_update < now)
     {
+        LOG_I(TAG, "Polling for MSP compatible FC");
         if (MSP_SEND_REQ(output, MSP_FC_VARIANT) > 0)
         {
             output->fc.next_fw_update = now + OUTPUT_FC_MSP_UPDATE_INTERVAL;
@@ -205,7 +281,21 @@ static void output_msp_poll(output_t *output, time_micros_t now)
         }
         if (output->fc.polls[ii].next_poll < now)
         {
-            if (MSP_SEND_REQ(output, output->fc.polls[ii].cmd) > 0)
+            size_t size = 0;
+            const void *payload = NULL;
+            // Possible payloads
+            uint8_t u8;
+            uint16_t cmd = output->fc.polls[ii].cmd;
+            switch (cmd)
+            {
+            case MSP_SET_TX_INFO:
+                // RSSI is a single byte in the [0, 255] range
+                u8 = TELEMETRY_GET_I8(output->rc_data, TELEMETRY_ID_RX_LINK_QUALITY) * (255.0f / 100);
+                payload = &u8;
+                size = sizeof(u8);
+                break;
+            }
+            if (MSP_SEND_REQ_PAYLOAD(output, cmd, payload, size) > 0)
             {
                 output->fc.polls[ii].next_poll = now + interval;
             }

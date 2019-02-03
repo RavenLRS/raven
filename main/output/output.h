@@ -92,7 +92,8 @@ typedef struct output_vtable_s
 
 #define OUTPUT_SET_MSP_TRANSPORT(output_impl, tr) msp_io_set_transport(&output_impl->output.msp, tr)
 #define OUTPUT_MSP_CONN_GET(output) (&((output_t *)output)->msp.conn)
-#define OUTPUT_MSP_SEND_REQ(output, req, callback) msp_conn_send(OUTPUT_MSP_CONN_GET(output), req, NULL, 0, callback, output)
+#define OUTPUT_MSP_SEND_REQ(output, req, callback) OUTPUT_MSP_SEND_REQ_PAYLOAD(output, req, NULL, 0, callback)
+#define OUTPUT_MSP_SEND_REQ_PAYLOAD(output, req, payload, payload_size, callback) msp_conn_send(OUTPUT_MSP_CONN_GET(output), req, payload, payload_size, callback, output)
 
 #define OUTPUT_HAS_FLAG(output, flag) ((output->flags & flag) == flag)
 
@@ -110,7 +111,7 @@ typedef struct output_msp_poll_s
 
 typedef struct output_fc_s
 {
-    char fw_variant[4]; // 4-char code
+    char fw_variant[5]; // 4-char code, use 5 bytes to null terminate it
     bool fw_version_is_pending;
     uint8_t fw_version[3];
     time_micros_t next_fw_update;

@@ -1,11 +1,17 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <hal/log.h>
+
+#include "io/gpio.h"
+
 #include "msp/msp.h"
 
 #include "util/macros.h"
 
 #include "output_msp.h"
+
+static const char *TAG = "MSP.Output";
 
 #define MSP_RC_MAX_SUPPORTED_CHANNELS 18
 // No data in the response
@@ -285,6 +291,7 @@ static bool output_msp_open(void *output, void *config)
     {
         output_msp->output.min_rc_update_interval = 0;
     }
+    LOG_I(TAG, "Open with TX: %s, RX: %s", gpio_toa(cfg->tx), gpio_toa(cfg->rx));
     io_t msp_serial_io = SERIAL_IO(output_msp->output.serial_port);
     msp_serial_init(&output_msp->msp_serial, &msp_serial_io);
     OUTPUT_SET_MSP_TRANSPORT(output_msp, MSP_TRANSPORT(&output_msp->msp_serial));
