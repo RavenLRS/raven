@@ -8,6 +8,8 @@
 
 #define SERIAL_IO(port) IO_MAKE(serial_port_read, serial_port_write, serial_port_io_flags, port)
 
+#define SERIAL_UNUSED_GPIO -1
+
 typedef struct serial_port_s serial_port_t;
 
 typedef enum
@@ -53,6 +55,7 @@ bool serial_port_begin_write(serial_port_t *port);
 bool serial_port_end_write(serial_port_t *port);
 int serial_port_write(serial_port_t *port, const void *buf, size_t size);
 bool serial_port_set_baudrate(serial_port_t *port, uint32_t baudrate);
+bool serial_port_set_inverted(serial_port_t *port, bool inverted);
 void serial_port_close(serial_port_t *port);
 bool serial_port_is_half_duplex(const serial_port_t *port);
 serial_half_duplex_mode_e serial_port_half_duplex_mode(const serial_port_t *port);

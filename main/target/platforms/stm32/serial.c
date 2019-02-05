@@ -34,6 +34,11 @@ bool serial_port_set_baudrate(serial_port_t *port, uint32_t baudrate)
     return true;
 }
 
+bool serial_port_set_inverted(serial_port_t *port, bool inverted)
+{
+    return true;
+}
+
 void serial_port_close(serial_port_t *port)
 {
 }

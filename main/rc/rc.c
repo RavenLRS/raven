@@ -299,6 +299,7 @@ static void rc_reconfigure_input(rc_t *rc)
         input_crsf_config_t crsf;
         input_crsf_config_t ibus;
         input_ppm_config_t ppm;
+        input_sbus_config_t sbus;
     } input_config;
     if (rc->input != NULL)
     {
@@ -330,6 +331,12 @@ static void rc_reconfigure_input(rc_t *rc)
             rc->input = (input_t *)&rc->inputs.ibus;
             input_config.ibus.gpio = gpio_get_by_tag(GPIO_TAG_INPUT_RX);
             rc->input_config = &input_config.ibus;
+            break;
+        case TX_INPUT_SBUS:
+            input_sbus_init(&rc->inputs.sbus);
+            rc->input = (input_t *)&rc->inputs.sbus;
+            input_config.sbus.rx = gpio_get_by_tag(GPIO_TAG_INPUT_RX);
+            rc->input_config = &input_config.sbus;
             break;
         case TX_INPUT_FAKE:
             input_fake_init(&rc->inputs.fake);

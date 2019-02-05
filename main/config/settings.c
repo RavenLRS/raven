@@ -331,7 +331,15 @@ static const char *air_band_table[] = {
 };
 _Static_assert(ARRAY_COUNT(air_band_table) == CONFIG_AIR_BAND_COUNT, "Invalid air band names table");
 #if defined(USE_TX_SUPPORT)
-static const char *tx_input_table[] = {"CRSF", "PPM", "IBUS", "Test"};
+static const char *tx_input_table[] = {
+    "CRSF",
+    "PPM",
+    "IBUS",
+    "SBUS",
+#if defined(CONFIG_RAVEN_FAKE_INPUT)
+    "Test",
+#endif
+};
 #endif
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");

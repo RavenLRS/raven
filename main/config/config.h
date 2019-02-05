@@ -26,12 +26,13 @@ typedef enum
     TX_INPUT_CRSF,
     TX_INPUT_PPM,
     TX_INPUT_IBUS,
+    TX_INPUT_SBUS,
     TX_INPUT_FAKE,
     TX_INPUT_FIRST = TX_INPUT_CRSF,
 #if defined(CONFIG_RAVEN_FAKE_INPUT)
     TX_INPUT_LAST = TX_INPUT_FAKE,
 #else
-    TX_INPUT_LAST = TX_INPUT_CRSF,
+    TX_INPUT_LAST = TX_INPUT_SBUS,
 #endif
 } tx_input_type_e;
 

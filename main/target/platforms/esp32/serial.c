@@ -290,6 +290,13 @@ bool serial_port_set_baudrate(serial_port_t *port, uint32_t baudrate)
     return true;
 }
 
+bool serial_port_set_inverted(serial_port_t *port, bool inverted)
+{
+    uint32_t inverse_mask = inverted ? UART_INVERSE_TXD | UART_INVERSE_RXD : 0;
+    ESP_ERROR_CHECK(uart_set_line_inverse(port->port_num, inverse_mask));
+    return true;
+}
+
 void serial_port_close(serial_port_t *port)
 {
     assert(port->open);
