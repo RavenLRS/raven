@@ -189,6 +189,7 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
 #if defined(USE_RX_SUPPORT)
 static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
+#if defined(USE_GPIO_REMAP)
     if (SETTING_IS(setting, SETTING_KEY_RX_TX_GPIO))
     {
         return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
@@ -198,6 +199,7 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
     {
         return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
     }
+#endif
 
     if (SETTING_IS(setting, SETTING_KEY_RX_RSSI_CHANNEL))
     {
