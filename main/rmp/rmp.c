@@ -59,6 +59,8 @@ static rmp_peer_t *rmp_get_peer(rmp_t *rmp, const air_addr_t *addr)
 
 static void rmp_update_peer_authentication(rmp_t *rmp, rmp_peer_t *peer)
 {
+    UNUSED(rmp);
+
     bool can_authenticate = config_get_pairing(NULL, &peer->addr);
     if (can_authenticate)
     {
@@ -89,6 +91,8 @@ static rmp_peer_t *rmp_add_peer(rmp_t *rmp, air_addr_t *addr)
 
 static bool rmp_get_peer_key(rmp_t *rmp, air_key_t *key, const air_addr_t *addr)
 {
+    UNUSED(rmp);
+
     air_pairing_t pairing;
     if (config_get_pairing(&pairing, addr))
     {
@@ -100,6 +104,8 @@ static bool rmp_get_peer_key(rmp_t *rmp, air_key_t *key, const air_addr_t *addr)
 
 static void rmp_get_message_signature(rmp_t *rmp, uint8_t *signature, rmp_msg_t *msg, air_key_t *key)
 {
+    UNUSED(rmp);
+
     hal_md5_ctx_t ctx;
     uint8_t md5_output[HAL_MD5_OUTPUT_SIZE];
 
@@ -211,6 +217,8 @@ static void rmp_broadcast_device_info(rmp_t *rmp, time_ticks_t now)
 
 static void rmp_device_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
 {
+    UNUSED(user_data);
+
     rmp_peer_t *peer = rmp_get_peer(rmp, &req->msg->src);
     if (!peer)
     {
@@ -226,7 +234,7 @@ static void rmp_device_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
         peer->role = frame->device_info.role;
         peer->pair_addr = frame->device_info.pair_addr;
         // Make sure name is null terminated
-        for (int ii = 0; ii < sizeof(frame->device_info.name); ii++)
+        for (size_t ii = 0; ii < sizeof(frame->device_info.name); ii++)
         {
             if (peer->name[ii] == '\0')
             {
@@ -267,6 +275,8 @@ static bool rmp_send_p2p(rmp_t *rmp, rmp_msg_t *msg, time_ticks_t now)
 
 static bool rmp_send_rc(rmp_t *rmp, rmp_msg_t *msg, time_ticks_t now)
 {
+    UNUSED(now);
+
     rmp_transport_t transport = rmp->internal.transports[RMP_TRANSPORT_RC];
     if (transport.send)
     {
@@ -275,17 +285,21 @@ static bool rmp_send_rc(rmp_t *rmp, rmp_msg_t *msg, time_ticks_t now)
     return false;
 }
 
+#if defined(USE_P2P)
 static void rmp_send_p2p_ping(rmp_t *rmp, time_ticks_t now)
 {
+    UNUSED(now);
+
     LOG_D(TAG, "Sending p2p ping");
     rmp_send(rmp, NULL, AIR_ADDR_BROADCAST, 0, NULL, 0);
 }
+#endif
 
 void rmp_init(rmp_t *rmp, air_addr_t *addr)
 {
     memset(rmp, 0, sizeof(*rmp));
     air_addr_cpy(&rmp->internal.addr, addr);
-    rmp->internal.device_port = rmp_open_port(rmp, RMP_PORT_DEVICE, rmp_device_handler, rmp);
+    rmp->internal.device_port = rmp_open_port(rmp, RMP_PORT_DEVICE, rmp_device_handler, NULL);
 }
 
 void rmp_update(rmp_t *rmp)
@@ -296,10 +310,12 @@ void rmp_update(rmp_t *rmp)
     {
         rmp_broadcast_device_info(rmp, now);
     }
+#if defined(USE_P2P)
     else if (rmp->internal.next_p2p_ping < now)
     {
         rmp_send_p2p_ping(rmp, now);
     }
+#endif
     rmp_update_peers(rmp, now);
 }
 
@@ -363,8 +379,14 @@ bool rmp_can_authenticate_peer(rmp_t *rmp, const air_addr_t *addr)
 
 bool rmp_has_p2p_peer(rmp_t *rmp, const air_addr_t *addr)
 {
+#if defined(USE_P2P)
     rmp_peer_t *peer = rmp_get_peer(rmp, addr);
     return peer && peer->last_seen > 0; // RC peers have last_seen == 0
+#else
+    UNUSED(rmp);
+    UNUSED(addr);
+    return false;
+#endif
 }
 
 void rmp_get_p2p_counts(rmp_t *rmp, int *tx_count, int *rx_count, bool *has_pairing_as_peer)
@@ -448,6 +470,16 @@ bool rmp_send(rmp_t *rmp, const rmp_port_t *port, const air_addr_t *dst, int dst
     return rmp_send_flags(rmp, port, dst, dst_port, payload, size, RMP_SEND_FLAG_NONE);
 }
 
+static bool rmp_should_broadcast_via_rc(rmp_send_flags_e flags)
+{
+#if defined(USE_P2P)
+    return flags & RMP_SEND_FLAG_BROADCAST_RC;
+#else
+    UNUSED(flags);
+    return true;
+#endif
+}
+
 bool rmp_send_flags(rmp_t *rmp, const rmp_port_t *port, const air_addr_t *dst, int dst_port, const void *payload, size_t size, rmp_send_flags_e flags)
 {
     if (!dst)
@@ -478,12 +510,13 @@ bool rmp_send_flags(rmp_t *rmp, const rmp_port_t *port, const air_addr_t *dst, i
             // Send via loopback too
             rmp_process_message(rmp, &msg, RMP_TRANSPORT_LOOPBACK);
         }
-        if (flags & RMP_SEND_FLAG_BROADCAST_RC)
+        if (rmp_should_broadcast_via_rc(flags))
         {
             rmp_send_rc(rmp, &msg, now);
         }
-
+#if defined(USE_P2P)
         rmp_send_p2p(rmp, &msg, now);
+#endif
         return true;
     }
     // Not a broadcast message. Check if we should sign it.
