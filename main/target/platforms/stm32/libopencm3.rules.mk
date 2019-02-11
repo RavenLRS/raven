@@ -250,6 +250,8 @@ styleclean: $(STYLECHECKFILES:=.styleclean)
 	@printf "  FLASH  $<\n"
 	$(STFLASH) --flash=0x20000 write $(*).bin 0x8000000
 
+stlink-flash: $(BINARY).stlink-flash
+
 ifeq ($(BMP_PORT),)
 ifeq ($(OOCD_FILE),)
 %.flash: %.elf
