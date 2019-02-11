@@ -155,7 +155,7 @@ bool config_get_paired_rx(air_pairing_t *pairing, const air_addr_t *addr)
 {
     uint8_t max_seq = 0;
     int idx = -1;
-    for (int ii = 0; ii < ARRAY_COUNT(config.paired_rxs); ii++)
+    for (size_t ii = 0; ii < ARRAY_COUNT(config.paired_rxs); ii++)
     {
         config_paired_rx_t *rx = &config.paired_rxs[ii];
         if (!config_paired_rx_is_valid(rx))

@@ -112,7 +112,7 @@ int hal_gpio_get_level(hal_gpio_t gpio)
     return gpio_get_level(gpio);
 }
 
-hal_err_t hal_gpio_set_isr(hal_gpio_t gpio, hal_gpio_intr_t intr, hal_gpio_isr_t isr, const void *data)
+hal_err_t hal_gpio_set_isr(hal_gpio_t gpio, hal_gpio_intr_t intr, hal_gpio_isr_t isr, void *data)
 {
     hal_err_t err;
 

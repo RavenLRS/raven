@@ -1,5 +1,3 @@
-#include <assert.h>
-
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/spi.h>
@@ -14,9 +12,9 @@ hal_err_t hal_spi_bus_init(hal_spi_bus_t bus, hal_gpio_t miso, hal_gpio_t mosi, 
 {
     int spi_rcc = 0;
     int gpio_rcc = 0;
-    hal_gpio_t gpio_miso = HAL_GPIO_NONE;
-    hal_gpio_t gpio_mosi = HAL_GPIO_NONE;
-    hal_gpio_t gpio_sck = HAL_GPIO_NONE;
+    hal_gpio_t gpio_miso;
+    hal_gpio_t gpio_mosi;
+    hal_gpio_t gpio_sck;
     switch (bus)
     {
     case SPI1:
@@ -46,9 +44,12 @@ hal_err_t hal_spi_bus_init(hal_spi_bus_t bus, hal_gpio_t miso, hal_gpio_t mosi, 
     default:
         LOG_F(TAG, "Unsupported SPI bus %u", (unsigned)bus);
     }
-    assert(gpio_miso == miso);
-    assert(gpio_mosi == mosi);
-    assert(gpio_sck == sck);
+
+    if (gpio_miso != miso || gpio_mosi != mosi || gpio_sck != sck)
+    {
+        return HAL_ERR_INVALID_ARG;
+    }
+
     rcc_periph_clock_enable(RCC_AFIO);
     rcc_periph_clock_enable(spi_rcc);
     rcc_periph_clock_enable(gpio_rcc);
@@ -69,13 +70,12 @@ hal_err_t hal_spi_bus_add_device(hal_spi_bus_t bus, const hal_spi_device_config_
     {
         LOG_F(TAG, "Unsupported command_bits + address_bits");
     }
-#if 0
+
     // Configure NSS. We allow any NSS pin because we manage it by software.
     uint32_t cs_port = hal_gpio_port(cfg->cs);
     uint32_t cs_bit = hal_gpio_bit(cfg->cs);
     gpio_set_mode(cs_port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, cs_bit);
     gpio_set(cs_port, cs_bit);
-#endif
 
     spi_reset(bus);
 
@@ -104,13 +104,9 @@ hal_err_t hal_spi_bus_add_device(hal_spi_bus_t bus, const hal_spi_device_config_
     // TODO: Clock speed
     spi_init_master(bus, SPI_CR1_BAUDRATE_FPCLK_DIV_16, cpol, cpha, SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
 
-    spi_disable_software_slave_management(bus);
-    spi_enable_ss_output(bus);
-
     // Manage NSS by software
-    //spi_enable_software_slave_management(bus);
-    // Enable SPI
-    spi_enable(bus);
+    spi_enable_software_slave_management(bus);
+    spi_set_nss_high(bus);
 
     dev->bus = bus;
     dev->command_bits = cfg->command_bits;
@@ -129,22 +125,13 @@ hal_err_t hal_spi_device_transmit(const hal_spi_device_handle_t *dev, uint16_t c
     }
     uint32_t cs_port = hal_gpio_port(dev->cs);
     uint32_t cs_bit = hal_gpio_bit(dev->cs);
-    //gpio_clear(cs_port, cs_bit);
+    gpio_clear(cs_port, cs_bit);
 
-    /* Set NSS management to software.
-    *
-    * Note:
-    * Setting nss high is very important, even if we are controlling the GPIO
-    * ourselves this bit needs to be at least set to 1, otherwise the spi
-    * peripheral will not send any data out.
-    */
-    //spi_set_nss_high(dev->bus);
+    spi_enable(dev->bus);
 
     // Write cmd+addr
     uint8_t cmd_addr = (cmd << dev->address_bits) | addr;
-    printf("WRITE CMD %x\n", cmd_addr);
-    uint8_t r1 = spi_xfer(dev->bus, cmd_addr);
-    printf("R1 %u\n", r1);
+    spi_xfer(dev->bus, cmd_addr);
 
     // Now start writing bytes
     const uint8_t *input = tx;
@@ -156,7 +143,6 @@ hal_err_t hal_spi_device_transmit(const hal_spi_device_handle_t *dev, uint16_t c
             uint8_t c = *input;
             input++;
             uint8_t r = spi_xfer(dev->bus, c);
-            printf("R %u\n", r);
             if (jj < rx_size)
             {
                 *output = r;
@@ -174,9 +160,8 @@ hal_err_t hal_spi_device_transmit(const hal_spi_device_handle_t *dev, uint16_t c
         }
     }
 
-    //gpio_set(cs_port, cs_bit);
+    gpio_set(cs_port, cs_bit);
 
-    //spi_set_nss_low(dev->bus);
     spi_disable(dev->bus);
 
     return HAL_ERR_NONE;

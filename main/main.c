@@ -81,6 +81,15 @@ static p2p_t p2p;
 #endif
 static ui_t ui;
 
+#define CREATE_TASK(handler, name, stack, params, prio, task, core)                            \
+    do                                                                                         \
+    {                                                                                          \
+        if (xTaskCreatePinnedToCore(handler, name, stack, params, prio, task, core) != pdTRUE) \
+        {                                                                                      \
+            LOG_E("main", "Could not create task %s", name);                                   \
+        }                                                                                      \
+    } while (0)
+
 static void shutdown(void)
 {
     air_radio_shutdown(&radio);
@@ -254,14 +263,13 @@ void app_main(void)
 
     raven_ui_init();
 
-    xTaskCreatePinnedToCore(task_rc_update, "RC", RC_TASK_STACK_SIZE, NULL, 1, NULL, 1);
+    CREATE_TASK(task_rc_update, "RC", RC_TASK_STACK_SIZE, NULL, 1, NULL, 1);
 
 #if defined(USE_BLUETOOTH)
-    xTaskCreatePinnedToCore(task_bluetooh, "BLUETOOTH", 4096, &rc, 2, NULL, 0);
+    CREATE_TASK(task_bluetooh, "BLUETOOTH", 4096, &rc, 2, NULL, 0);
 #endif
-#warning enable
-    // xTaskCreatePinnedToCore(task_rmp, "RMP", configMINIMAL_STACK_SIZE, NULL, 2, NULL, 0);
 
+    CREATE_TASK(task_rmp, "RMP", RMP_TASK_STACK_SIZE, NULL, 2, NULL, 0);
     // Start updating the UI after everything else is set up, since it queries other subsystems
-    //xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 0);
+    CREATE_TASK(task_ui, "UI", UI_TASK_STACK_SIZE, NULL, 1, NULL, 0);
 }

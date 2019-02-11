@@ -175,7 +175,6 @@ static uint8_t sx127x_read_reg(sx127x_t *sx127x, uint8_t addr)
     // Send 8 arbitrary bits to get one byte back in full duplex
     uint8_t out;
     HAL_ERR_ASSERT_OK(hal_spi_device_transmit_u8(&sx127x->state.spi, 0, addr, 0, &out));
-    printf("REG %x = %x\n", addr, out);
     return out;
 }
 

@@ -55,6 +55,6 @@ hal_err_t hal_gpio_set_level(hal_gpio_t gpio, uint32_t level);
 hal_err_t hal_gpio_get_level(hal_gpio_t gpio);
 
 typedef void (*hal_gpio_isr_t)(void *);
-int hal_gpio_set_isr(hal_gpio_t gpio, hal_gpio_intr_t intr, hal_gpio_isr_t isr, const void *data);
+int hal_gpio_set_isr(hal_gpio_t gpio, hal_gpio_intr_t intr, hal_gpio_isr_t isr, void *data);
 
 char *hal_gpio_toa(hal_gpio_t gpio, char *dst, size_t size);

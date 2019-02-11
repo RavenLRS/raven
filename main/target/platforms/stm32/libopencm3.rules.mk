@@ -129,7 +129,7 @@ TGT_CPPFLAGS	+= $(DEFS)
 
 TGT_LDFLAGS		+= --static -nostartfiles
 TGT_LDFLAGS		+= --specs=nano.specs -u _printf_float
-TGT_LDFLAGS		+= --specs=rdimon.specs -lc -lrdimon
+#TGT_LDFLAGS		+= --specs=rdimon.specs -lc -lrdimon
 TGT_LDFLAGS		+= -Wl,--print-memory-usage
 TGT_LDFLAGS		+= $(OPT)
 TGT_LDFLAGS		+= -T$(LDSCRIPT)

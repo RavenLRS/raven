@@ -101,6 +101,8 @@ typedef int (*setting_dynamic_format_f)(char *buf, size_t size, const setting_t 
 
 static int setting_format_own_addr(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
 {
+    UNUSED(setting);
+
     if (fmt == SETTING_DYNAMIC_FORMAT_VALUE)
     {
         air_addr_t addr = config_get_addr();
@@ -112,6 +114,8 @@ static int setting_format_own_addr(char *buf, size_t size, const setting_t *sett
 
 static setting_visibility_e setting_visibility_root(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
+    UNUSED(folder);
+
     if (SETTING_IS(setting, SETTING_KEY_RC_MODE))
     {
 #if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
@@ -162,6 +166,9 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
 #if defined(USE_TX_SUPPORT)
 static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
+    UNUSED(folder);
+    UNUSED(view_id);
+
     if (SETTING_IS(setting, SETTING_KEY_TX_INPUT))
     {
         return SETTING_SHOW_IF(view_id != SETTINGS_VIEW_CRSF_INPUT);
@@ -185,6 +192,9 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
 #if defined(USE_RX_SUPPORT)
 static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
+    UNUSED(folder);
+    UNUSED(view_id);
+
 #if defined(USE_GPIO_REMAP)
     if (SETTING_IS(setting, SETTING_KEY_RX_TX_GPIO))
     {

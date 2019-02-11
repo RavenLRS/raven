@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-#define ARRAY_COUNT(arr) (sizeof(arr) / sizeof(arr[0]))
+#define ARRAY_COUNT(arr) ((int)(sizeof(arr) / sizeof(arr[0])))
 #define ARRAY_ASSERT_COUNT(arr, count, msg) _Static_assert(ARRAY_COUNT(arr) == count, msg)
 #define PACKED __attribute__((packed))
 
@@ -78,4 +78,10 @@
     do              \
     {               \
     } while (0)
+#endif
+
+#if __STDC_VERSION__ >= 199901L
+#define INLINE static inline __attribute__((always_inline))
+#else
+#define INLINE inline
 #endif

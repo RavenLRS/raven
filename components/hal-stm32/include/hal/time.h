@@ -4,6 +4,8 @@
 
 inline uint64_t hal_time_micros_now(void)
 {
-#warning this might lead to some stalling
-    return 0;
+    // Implemented in main.c, since it needs to
+    // take into account the app configuration
+    extern uint64_t stm32_time_micros_now(void);
+    return stm32_time_micros_now();
 }

@@ -4,6 +4,7 @@
 
 #include "rc/rc_data.h"
 
+#include "util/macros.h"
 #include "util/uvarint.h"
 
 #include "air_stream.h"
@@ -209,7 +210,7 @@ void air_stream_feed_input(air_stream_t *s, unsigned seq, const void *data, size
     }
 
     const uint8_t *buf = data;
-    for (int ii = 0; ii < size; ii++)
+    for (size_t ii = 0; ii < size; ii++)
     {
         uint8_t c = buf[ii];
         if (!s->input_in_sync)
@@ -253,7 +254,7 @@ size_t air_stream_feed_output_channel(air_stream_t *s, unsigned chn, unsigned va
 {
     // Maximum channel number is now 20 since we can use
     // as much as 4 bits for 2-bit channel representation.
-    assert(chn < 20);
+    ASSERT(chn < 20);
 
     uint8_t ss = AIR_DATA_START_STOP;
     ring_buffer_push(&s->output_buf, &ss);
@@ -290,7 +291,7 @@ static size_t air_stream_feed_output_telemetry(air_stream_t *s, telemetry_t *t, 
     size_t data_size = telemetry_get_data_size(id);
     if (data_size == 0)
     {
-        assert(telemetry_get_type(id) == TELEMETRY_TYPE_STRING);
+        ASSERT(telemetry_get_type(id) == TELEMETRY_TYPE_STRING);
         data_size = strlen(t->val.s) + 1;
     }
     uint8_t ss = AIR_DATA_START_STOP;
@@ -301,7 +302,7 @@ static size_t air_stream_feed_output_telemetry(air_stream_t *s, telemetry_t *t, 
 
 size_t air_stream_feed_output_uplink_telemetry(air_stream_t *s, telemetry_t *t, telemetry_uplink_id_e id)
 {
-    assert(air_stream_sends_uplink(s));
+    ASSERT(air_stream_sends_uplink(s));
     // Uplink telemetry IDs have MSB (0x80) set, so the ID sent over the air
     // is exactly its ID from the enum.
     return air_stream_feed_output_telemetry(s, t, id, id);
@@ -309,7 +310,7 @@ size_t air_stream_feed_output_uplink_telemetry(air_stream_t *s, telemetry_t *t, 
 
 size_t air_stream_feed_output_downlink_telemetry(air_stream_t *s, telemetry_t *t, telemetry_downlink_id_e id)
 {
-    assert(air_stream_sends_downlink(s));
+    ASSERT(air_stream_sends_downlink(s));
     // Downlink telemetry has MSB (0x80) unset, so the ID sent over the air
     // has to be OR'ed with AIR_STREAM_TELEMETRY_MASK.
     return air_stream_feed_output_telemetry(s, t, id, id | AIR_STREAM_TELEMETRY_MASK);
@@ -318,7 +319,7 @@ size_t air_stream_feed_output_downlink_telemetry(air_stream_t *s, telemetry_t *t
 size_t air_stream_feed_output_cmd(air_stream_t *s, uint8_t cmd, const void *data, size_t size)
 {
     // We only have 6 bits for CMD encoding
-    assert(cmd < 64);
+    ASSERT(cmd < 64);
     uint8_t ss = AIR_DATA_START_STOP;
     ring_buffer_push(&s->output_buf, &ss);
     uint8_t cid = cmd | AIR_STREAM_CMD_MASK;
