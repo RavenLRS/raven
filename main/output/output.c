@@ -21,7 +21,7 @@ static const char *TAG = "Output";
 #define MSP_SEND_REQ(output, req) MSP_SEND_REQ_PAYLOAD(output, req, NULL, 0)
 #define MSP_SEND_REQ_PAYLOAD(output, req, payload, payload_size) OUTPUT_MSP_SEND_REQ_PAYLOAD(output, req, payload, payload_size, output_msp_callback)
 
-#define FW_VARIANT_CONST(s0, s1, s2, s3) (s0 << 24 | s1 << 16 | s2 << 8 | s3)
+#define FW_VARIANT_CONST(s0, s1, s2, s3) ((uint32_t)s0 << 24 | (uint32_t)s1 << 16 | (uint32_t)s2 << 8 | (uint32_t)s3)
 #define FW_VARIANT_CONST_S(s) FW_VARIANT_CONST(s[0], s[1], s[2], s[3])
 
 #define FW_VARIANT_INAV FW_VARIANT_CONST('I', 'N', 'A', 'V')
@@ -212,7 +212,7 @@ static void output_msp_callback(msp_conn_t *conn, uint16_t cmd, const void *payl
         {
             // The string is not null terminated, so we need to ammend it
             char sval[SETTING_STRING_BUFFER_SIZE];
-            size_t val_size = MIN(sizeof(sval) - 1, size);
+            size_t val_size = MIN(sizeof(sval) - 1, (unsigned)size);
             memcpy(sval, payload, val_size);
             sval[val_size] = '\0';
             setting_set_string(output->craft_name_setting, sval);

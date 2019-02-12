@@ -596,7 +596,7 @@ static void input_crsf_send_setting_frame(input_crsf_t *input_crsf, const settin
     // XXX: Due to a bug in device.lua, if we send CRSF_MAX_SETTINGS_ENTRY_PAYLOAD_SIZE,
     // some chunks will be incorrectly interpreted and the current value will be
     // incorrectly displayed (e.g. value = 0 shows value = 2 for the RSSI channel setting).
-    const int max_setting_payload_size = CRSF_MAX_SETTINGS_ENTRY_PAYLOAD_SIZE - 8;
+    const size_t max_setting_payload_size = CRSF_MAX_SETTINGS_ENTRY_PAYLOAD_SIZE - 8;
     int cur_chunk = ring_buffer_count(&rb.b) / max_setting_payload_size;
     while (cur_chunk >= 0)
     {
@@ -604,7 +604,7 @@ static void input_crsf_send_setting_frame(input_crsf_t *input_crsf, const settin
         entry.settings_entry.chunk = cur_chunk;
         entry.header.frame_size = CRSF_SETTINGS_ENTRY_FRAME_SIZE(chunk_payload_size);
         uint8_t *ptr = entry.settings_entry.payload;
-        for (int ii = 0; ii < chunk_payload_size; ii++)
+        for (size_t ii = 0; ii < chunk_payload_size; ii++)
         {
             ASSERT(ring_buffer_pop(&rb.b, ptr++));
         }

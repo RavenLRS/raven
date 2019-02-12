@@ -144,7 +144,7 @@ static void rc_data_initialize(rc_t *rc)
     }
     if (channels_num > 0)
     {
-        rc->data.channels_num = MIN(channels_num, RC_CHANNELS_NUM);
+        rc->data.channels_num = MIN(channels_num, (unsigned)RC_CHANNELS_NUM);
     }
     rc->data.ready = false;
 }
@@ -682,7 +682,7 @@ static void rc_rmp_msp_request_response_handler(msp_conn_t *conn, uint16_t cmd, 
         .cmd = cmd,
         .payload_size = size,
     };
-    size_t cpy_size = MIN(size, sizeof(resp.payload));
+    size_t cpy_size = MIN((unsigned)MAX(size, 0), sizeof(resp.payload));
     memcpy(resp.payload, payload, cpy_size);
     size_t rmp_payload_size = sizeof(resp) - sizeof(resp.payload) + cpy_size;
     rmp_send(ctx->rc->rmp, ctx->rc->state.msp_recv_port, &ctx->dst, ctx->dst_port, &resp, rmp_payload_size);
@@ -796,7 +796,7 @@ static void rc_msp_request_callback(msp_conn_t *conn, uint16_t cmd, const void *
                     .cmd = cmd,
                     .payload_size = size,
                 };
-                size_t cpy_size = MIN(size, sizeof(req.payload));
+                size_t cpy_size = MIN((unsigned)MAX(0, size), sizeof(req.payload));
                 memcpy(req.payload, payload, cpy_size);
                 size_t rmp_payload_size = sizeof(req) - sizeof(req.payload) + cpy_size;
                 if (rmp_send(rc->rmp, port, &pair_addr, RMP_PORT_MSP, &req, rmp_payload_size))
@@ -1236,7 +1236,7 @@ int rc_get_alternative_pairings(rc_t *rc, air_pairing_t *pairings, size_t size)
                 continue;
             }
             crc = rc_crc_addr(crc, &peer->addr);
-            if (count < size)
+            if (count < (int)size)
             {
                 air_pairing_cpy(&pairings[count], &pairing);
                 if (paired_idx < 0 && air_addr_equals(&paired_addr, &peer->addr))
@@ -1279,7 +1279,7 @@ int rc_get_alternative_pairings(rc_t *rc, air_pairing_t *pairings, size_t size)
             }
         }
     }
-    return MIN(count, size);
+    return MIN(count, (int)size);
 }
 
 void rc_switch_pairing(rc_t *rc, air_pairing_t *pairing)

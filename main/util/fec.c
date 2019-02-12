@@ -50,7 +50,7 @@ size_t fec_encode(const void *data, size_t size, void *output, size_t output_siz
     }
     const uint8_t *input = data;
     uint8_t *ptr = output;
-    for (int ii = 0; ii < size; ii++)
+    for (size_t ii = 0; ii < size; ii++)
     {
         ptr[2 * ii] = fec_encode_nibble(input[ii] >> 4);
         ptr[2 * ii + 1] = fec_encode_nibble(input[ii] & 0xf);
@@ -67,7 +67,7 @@ size_t fec_decode(const void *data, size_t size, void *output, size_t output_siz
     }
     const uint8_t *input = data;
     uint8_t *ptr = output;
-    for (int ii = 0; ii < size; ii += 2)
+    for (size_t ii = 0; ii < size; ii += 2)
     {
         ptr[ii / 2] = fec_decode_byte(input[ii]) << 4;
         ptr[ii / 2] |= fec_decode_byte(input[ii + 1]);

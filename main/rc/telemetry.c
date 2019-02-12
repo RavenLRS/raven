@@ -52,7 +52,7 @@ static const char *telemetry_format_current(const telemetry_t *val, char *buf, s
 
 static const char *telemetry_format_mah_i32(const telemetry_t *val, char *buf, size_t bufsize)
 {
-    snprintf(buf, bufsize, "%dmAh", val->val.i32);
+    snprintf(buf, bufsize, "%dmAh", (int)val->val.i32);
     return buf;
 }
 

@@ -103,7 +103,7 @@ static int fport_write_payload(output_fport_t *output, uint8_t type, const void 
     count += fport_write_byte(output, type, &sum);
 
     const uint8_t *ptr = data;
-    for (int ii = 0; ii < size; ii++, ptr++)
+    for (size_t ii = 0; ii < size; ii++, ptr++)
     {
         count += fport_write_byte(output, *ptr, &sum);
     }
@@ -151,7 +151,7 @@ static bool output_fport_open(void *output, void *config)
 static void output_fport_receive(output_fport_t *output_fport)
 {
     // Read potential telemetry response
-    int n = 0;
+    unsigned n = 0;
     if (output_fport->buf_pos == 0)
     {
         // We're in half duplex mode (or we're talking to a faulty end).

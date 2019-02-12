@@ -81,7 +81,7 @@ static void msp_telemetry_init(msp_telemetry_t *tr, size_t max_size)
 static bool msp_telemetry_push_data(ring_buffer_t *rb, const void *data, size_t size)
 {
     uint8_t *ptr = (uint8_t *)data;
-    for (int ii = 0; ii < size; ii++, ptr++)
+    for (size_t ii = 0; ii < size; ii++, ptr++)
     {
         if (!ring_buffer_push(rb, ptr))
         {
@@ -94,7 +94,7 @@ static bool msp_telemetry_push_data(ring_buffer_t *rb, const void *data, size_t 
 static bool msp_telemetry_pop_data(ring_buffer_t *rb, void *data, size_t size)
 {
     uint8_t *ptr = (uint8_t *)data;
-    for (int ii = 0; ii < size; ii++, ptr++)
+    for (size_t ii = 0; ii < size; ii++, ptr++)
     {
         if (!ring_buffer_pop(rb, ptr))
         {
@@ -337,7 +337,7 @@ bool msp_telemetry_push_request_chunk(msp_telemetry_t *tr, const void *payload, 
         ring_buffer_empty(&tr->req);
         return false;
     }
-    size_t data_size = MIN(size, tr->size - tr->recv);
+    size_t data_size = MIN(size, (unsigned)(tr->size - tr->recv));
     for (size_t ii = 0; ii < data_size; ii++, ptr++)
     {
         ring_buffer_push(&tr->req, ptr);
@@ -442,7 +442,7 @@ bool msp_telemetry_push_response_chunk(msp_telemetry_t *tr, const void *payload,
         tr->in_use_since = 0;
         return false;
     }
-    for (int ii = 0; ii < size && tr->recv < tr->size; ii++, tr->recv++, ptr++)
+    for (size_t ii = 0; ii < size && tr->recv < tr->size; ii++, tr->recv++, ptr++)
     {
         LOG_D(TAG, "Push byte %u", *ptr);
         ring_buffer_push(&tr->resp, ptr);

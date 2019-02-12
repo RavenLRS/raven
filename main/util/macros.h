@@ -21,10 +21,10 @@
 #endif
 
 #define CONSTRAIN(v, min, max) ({ \
-    __typeof(v) __v = v;          \
-    __typeof(min) __min = min;    \
-    __typeof(max) __max = max;    \
-    assert(min < max);            \
+    __typeof(v) __v = (v);        \
+    __typeof(min) __min = (min);  \
+    __typeof(max) __max = (max);  \
+    assert(__min < __max);        \
     if (__v < __min)              \
     {                             \
         __v = __min;              \

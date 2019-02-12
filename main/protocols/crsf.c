@@ -112,8 +112,8 @@ bool crsf_port_decode(crsf_port_t *port)
     bool found = false;
     while (end - start >= 2)
     {
-        size_t frame_length = port->buf[start + 1];
-        size_t total_frame_size = frame_length + CRSF_FRAME_NOT_COUNTED_BYTES;
+        int frame_length = port->buf[start + 1];
+        int total_frame_size = frame_length + CRSF_FRAME_NOT_COUNTED_BYTES;
         if (end - start < total_frame_size)
         {
             // No more complete frames to decode
@@ -138,12 +138,12 @@ bool crsf_port_decode(crsf_port_t *port)
     }
     if (start > 0)
     {
-        if (start > port->buf_pos)
+        if ((unsigned)start > port->buf_pos)
         {
             LOG_E(TAG, "Error %d > %d", start, (int)port->buf_pos);
         }
         assert(start <= port->buf_pos);
-        if (start != port->buf_pos)
+        if ((unsigned)start != port->buf_pos)
         {
             // Move remaining data to the front
             memmove(port->buf, &port->buf[start], end - start);

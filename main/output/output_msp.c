@@ -150,7 +150,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     {
     case MSP_RAW_GPS:
     {
-        if (size < sizeof(msp_raw_gps_t))
+        if (size < (int)sizeof(msp_raw_gps_t))
         {
             break;
         }
@@ -182,7 +182,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     }
     case MSP_ANALOG:
     {
-        if (size < sizeof(msp_analog_t))
+        if (size < (int)sizeof(msp_analog_t))
         {
             break;
         }
@@ -208,7 +208,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     }
     case MSP_CURRENT_METER_CONFIG:
     {
-        if (size < sizeof(msp_current_meter_config_t))
+        if (size < (int)sizeof(msp_current_meter_config_t))
         {
             break;
         }
@@ -218,7 +218,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     }
     case MSP_ALTITUDE:
     {
-        if (size < sizeof(msp_altitude_t))
+        if (size < (int)sizeof(msp_altitude_t))
         {
             break;
         }
@@ -229,7 +229,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     }
     case MSP_ATTITUDE:
     {
-        if (size < sizeof(msp_attitude_t))
+        if (size < (int)sizeof(msp_attitude_t))
         {
             break;
         }
@@ -243,7 +243,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     }
     case MSP_RAW_IMU:
     {
-        if (size < sizeof(msp_raw_imu_t))
+        if (size < (int)sizeof(msp_raw_imu_t))
         {
             break;
         }
@@ -255,7 +255,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
         break;
     }
     case MSP_MISC:
-        if (size < sizeof(msp_misc_t))
+        if (size < (int)sizeof(msp_misc_t))
         {
             break;
         }

@@ -6,7 +6,7 @@
 
 hal_gpio_t gpio_get_configurable_at(unsigned idx)
 {
-    int c = 0;
+    unsigned c = 0;
     for (int ii = 0; ii < HAL_GPIO_MAX; ii++)
     {
         if (HAL_GPIO_IS_USER(ii))

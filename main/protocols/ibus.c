@@ -8,7 +8,7 @@ static const char *TAG = "IBUS";
 static bool ibus_frame_crc_check(ibus_frame_t *frame)
 {
     uint16_t sum = 0;
-    for (int i = 0; i < sizeof(ibus_frame_t) - 2; i++)
+    for (size_t i = 0; i < sizeof(ibus_frame_t) - 2; i++)
     {
         sum += frame->bytes[i];
     }
@@ -36,7 +36,7 @@ bool ibus_port_decode(ibus_port_t *port)
 
     while (end - start >= 6)
     {
-        size_t total_frame_size = port->buf[start];
+        int total_frame_size = port->buf[start];
 
         if (end - start < total_frame_size)
         {
@@ -60,12 +60,12 @@ bool ibus_port_decode(ibus_port_t *port)
     }
     if (start > 0)
     {
-        if (start > port->buf_pos)
+        if ((unsigned)start > port->buf_pos)
         {
             LOG_E(TAG, "Error %d > %d", start, (int)port->buf_pos);
         }
         assert(start <= port->buf_pos);
-        if (start != port->buf_pos)
+        if ((unsigned)start != port->buf_pos)
         {
             // Move remaining data to the front
             memmove(port->buf, &port->buf[start], end - start);
