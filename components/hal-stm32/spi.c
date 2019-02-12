@@ -8,6 +8,38 @@
 
 LOG_TAG_DECLARE("SPI");
 
+#define HAL_SPI_PRESCALER_MIN 0 // /2 prescaling
+#define HAL_SPI_PRESCALER_MAX 7 // /256 prescaling
+
+static uint32_t hal_spi_base_frequency(hal_spi_bus_t bus)
+{
+    switch (bus)
+    {
+    case SPI1:
+        return rcc_apb2_frequency;
+    case SPI2:
+        return rcc_apb1_frequency;
+    }
+    LOG_F(TAG, "Invalid SPI BUS");
+    return 0;
+}
+
+static unsigned hal_spi_select_prescaler(hal_spi_bus_t bus, uint32_t clock_speed_hz)
+{
+    // Calculate clock rate
+    uint32_t base_freq = hal_spi_base_frequency(bus);
+    for (int ii = HAL_SPI_PRESCALER_MIN; ii <= HAL_SPI_PRESCALER_MAX; ii++)
+    {
+        // Return the first prescaler that results on clock speed <= clock_speed_hz
+        uint32_t prescaled_freq = base_freq / (1 << (ii + 1));
+        if (prescaled_freq <= clock_speed_hz)
+        {
+            return ii;
+        }
+    }
+    return HAL_SPI_PRESCALER_MAX;
+}
+
 hal_err_t hal_spi_bus_init(hal_spi_bus_t bus, hal_gpio_t miso, hal_gpio_t mosi, hal_gpio_t sck)
 {
     int spi_rcc = 0;
@@ -31,14 +63,6 @@ hal_err_t hal_spi_bus_init(hal_spi_bus_t bus, hal_gpio_t miso, hal_gpio_t mosi, 
         gpio_mosi = HAL_GPIO_PB(15);
         gpio_sck = HAL_GPIO_PB(13);
         spi_rcc = RCC_SPI2;
-        gpio_rcc = RCC_GPIOB;
-        break;
-    case SPI3:
-        // NSS=PA15, SCK=PB3, MISO=PB4, MOSI=PB5
-        gpio_miso = HAL_GPIO_PB(3);
-        gpio_mosi = HAL_GPIO_PB(3);
-        gpio_sck = HAL_GPIO_PB(13);
-        spi_rcc = RCC_SPI3;
         gpio_rcc = RCC_GPIOB;
         break;
     default:
@@ -79,36 +103,25 @@ hal_err_t hal_spi_bus_add_device(hal_spi_bus_t bus, const hal_spi_device_config_
 
     spi_reset(bus);
 
-    uint32_t cpol = 0;
-    uint32_t cpha = 0;
-    switch (cfg->mode)
-    {
-    case HAL_SPI_MODE_0:
-        cpol = SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE;
-        cpha = SPI_CR1_CPHA_CLK_TRANSITION_1;
-        break;
-    case HAL_SPI_MODE_1:
-        cpol = SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE;
-        cpha = SPI_CR1_CPHA_CLK_TRANSITION_2;
-        break;
-    case HAL_SPI_MODE_2:
-        cpol = SPI_CR1_CPOL_CLK_TO_1_WHEN_IDLE;
-        cpha = SPI_CR1_CPHA_CLK_TRANSITION_1;
-        break;
-    case HAL_SPI_MODE_3:
-        cpol = SPI_CR1_CPOL_CLK_TO_1_WHEN_IDLE;
-        cpha = SPI_CR1_CPHA_CLK_TRANSITION_2;
-        break;
-    }
+    uint32_t cr1 = SPI_CR1(bus);
+    /* Reset all bits omitting SPE, CRCEN and CRCNEXT bits (from spi_init_master()). */
+    cr1 &= SPI_CR1_SPE | SPI_CR1_CRCEN | SPI_CR1_CRCNEXT;
+    // Enable master mode
+    cr1 |= SPI_CR1_MSTR;
 
-    // TODO: Clock speed
-    spi_init_master(bus, SPI_CR1_BAUDRATE_FPCLK_DIV_16, cpol, cpha, SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
+    // 8 bit data frame format and MSB first are the defaults.
+    // We handle clock divisor, cpol and cpha in hal_spi_device_transmit()
+    SPI_CR1(bus) = cr1;
 
     // Manage NSS by software
     spi_enable_software_slave_management(bus);
     spi_set_nss_high(bus);
 
     dev->bus = bus;
+    // We can assing directly since hal_spi_mode_t matches
+    // the format of the argument for spi_set_standard_mode()
+    dev->mode = cfg->mode;
+    dev->prescaler = hal_spi_select_prescaler(bus, cfg->clock_speed_hz);
     dev->command_bits = cfg->command_bits;
     dev->address_bits = cfg->address_bits;
     dev->cs = cfg->cs;
@@ -126,6 +139,9 @@ hal_err_t hal_spi_device_transmit(const hal_spi_device_handle_t *dev, uint16_t c
     uint32_t cs_port = hal_gpio_port(dev->cs);
     uint32_t cs_bit = hal_gpio_bit(dev->cs);
     gpio_clear(cs_port, cs_bit);
+
+    spi_set_baudrate_prescaler(dev->bus, dev->prescaler);
+    spi_set_standard_mode(dev->bus, dev->mode);
 
     spi_enable(dev->bus);
 
