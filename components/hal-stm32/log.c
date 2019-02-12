@@ -13,7 +13,7 @@ static const char log_levels[] = {
 static void log_print_prefix(int level, const char *tag)
 {
     extern uint32_t xTaskGetTickCount(void);
-    printf("[%u:%s - %c] ", xTaskGetTickCount(), tag, log_levels[level]);
+    printf("[%u:%s - %c] ", (unsigned)xTaskGetTickCount(), tag, log_levels[level]);
 }
 
 void log_printf(int level, const char *tag, const char *format, ...)
