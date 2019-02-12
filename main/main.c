@@ -81,15 +81,6 @@ static p2p_t p2p;
 #endif
 static ui_t ui;
 
-#define CREATE_TASK(handler, name, stack, params, prio, task, core)                            \
-    do                                                                                         \
-    {                                                                                          \
-        if (xTaskCreatePinnedToCore(handler, name, stack, params, prio, task, core) != pdTRUE) \
-        {                                                                                      \
-            LOG_E("main", "Could not create task %s", name);                                   \
-        }                                                                                      \
-    } while (0)
-
 static void shutdown(void)
 {
     air_radio_shutdown(&radio);

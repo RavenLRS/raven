@@ -342,7 +342,7 @@ void sx127x_init(sx127x_t *sx127x)
     sx127x->state.lora.freq = 0;
     sx127x->state.lora.ppm_correction = 0;
 
-    xTaskCreatePinnedToCore(sx127x_callback_task, "SX127X-CALLBACK", configMINIMAL_STACK_SIZE, sx127x, 1000, &callback_task_handle, 1);
+    CREATE_TASK(sx127x_callback_task, "SX127X", configMINIMAL_STACK_SIZE, sx127x, configMAX_PRIORITIES - 1, &callback_task_handle, 1);
 
     uint8_t version = sx127x_read_reg(sx127x, REG_VERSION);
     if (version == SX127X_EXPECTED_VERSION)

@@ -10,6 +10,14 @@
 // xTaskCreatePinnedToCore() is ESP32 specific. We don't support
 // multiple cores on STM32, so we map it to xTaskCreate()
 #define xTaskCreatePinnedToCore(c, n, ss, p, pr, h, cid) xTaskCreate(c, n, ss, p, pr, h)
+#define CREATE_TASK(handler, name, stack, params, prio, task, core)                            \
+    do                                                                                         \
+    {                                                                                          \
+        if (xTaskCreatePinnedToCore(handler, name, stack, params, prio, task, core) != pdTRUE) \
+        {                                                                                      \
+            LOG_E("", "Could not create task %s", name);                                       \
+        }                                                                                      \
+    } while (0)
 #else
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
