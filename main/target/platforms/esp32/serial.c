@@ -43,9 +43,9 @@ static void serial_half_duplex_enable_rx(serial_port_t *port)
     port->dev->int_ena.tx_done = 0;
 
     // Enable RX mode
-    ESP_ERROR_CHECK(gpio_set_direction(port->config.rx_pin, GPIO_MODE_INPUT));
-    ESP_ERROR_CHECK(gpio_set_pull_mode(port->config.rx_pin, port->config.inverted ? GPIO_PULLDOWN_ONLY : GPIO_PULLUP_ONLY));
-    gpio_matrix_in(port->config.rx_pin, port->rx_sig, false);
+    ESP_ERROR_CHECK(gpio_set_direction(port->config.rx, GPIO_MODE_INPUT));
+    ESP_ERROR_CHECK(gpio_set_pull_mode(port->config.rx, port->config.inverted ? GPIO_PULLDOWN_ONLY : GPIO_PULLUP_ONLY));
+    gpio_matrix_in(port->config.rx, port->rx_sig, false);
 
     // Empty RX fifo
     while (port->dev->status.rxfifo_cnt)
@@ -68,10 +68,10 @@ static void serial_half_duplex_enable_tx(serial_port_t *port)
     // Map the RX pin to something else, so the data we transmit
     // doesn't get into the RX fifo.
     gpio_matrix_in(RX_UNUSED_GPIO, port->rx_sig, false);
-    ESP_ERROR_CHECK(gpio_set_pull_mode(port->config.tx_pin, GPIO_FLOATING));
-    ESP_ERROR_CHECK(gpio_set_level(port->config.tx_pin, 0));
-    ESP_ERROR_CHECK(gpio_set_direction(port->config.tx_pin, GPIO_MODE_OUTPUT));
-    gpio_matrix_out(port->config.tx_pin, port->tx_sig, false, false);
+    ESP_ERROR_CHECK(gpio_set_pull_mode(port->config.tx, GPIO_FLOATING));
+    ESP_ERROR_CHECK(gpio_set_level(port->config.tx, 0));
+    ESP_ERROR_CHECK(gpio_set_direction(port->config.tx, GPIO_MODE_OUTPUT));
+    gpio_matrix_out(port->config.tx, port->tx_sig, false, false);
 
     port->dev->int_clr.tx_done = 1;
     port->dev->int_ena.tx_done = 1;
@@ -149,12 +149,12 @@ void serial_port_do_open(serial_port_t *port)
     };
 
     ESP_ERROR_CHECK(uart_param_config(port->port_num, &uart_config));
-    int tx_pin = port->config.tx_pin;
+    int tx_pin = port->config.tx;
     if (tx_pin < 0)
     {
         tx_pin = TX_UNUSED_GPIO;
     }
-    int rx_pin = port->config.rx_pin;
+    int rx_pin = port->config.rx;
     if (rx_pin < 0)
     {
         rx_pin = RX_UNUSED_GPIO;
@@ -178,7 +178,7 @@ void serial_port_do_open(serial_port_t *port)
     }
     else
     {
-        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[port->config.rx_pin], PIN_FUNC_GPIO);
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[port->config.rx], PIN_FUNC_GPIO);
         port->uses_driver = false;
         port->buf_pos = 0;
         // Half duplex, start as RX
@@ -314,7 +314,7 @@ void serial_port_close(serial_port_t *port)
 
 bool serial_port_is_half_duplex(const serial_port_t *port)
 {
-    return port->config.tx_pin == port->config.rx_pin;
+    return port->config.tx == port->config.rx;
 }
 
 serial_half_duplex_mode_e serial_port_half_duplex_mode(const serial_port_t *port)
@@ -346,22 +346,4 @@ void serial_port_set_half_duplex_mode(serial_port_t *port, serial_half_duplex_mo
             break;
         }
     }
-}
-
-void serial_port_destroy(serial_port_t **port)
-{
-    if (*port)
-    {
-        serial_port_close(*port);
-        *port = NULL;
-    }
-}
-
-io_flags_t serial_port_io_flags(serial_port_t *port)
-{
-    if (serial_port_is_half_duplex(port))
-    {
-        return IO_FLAG_HALF_DUPLEX;
-    }
-    return 0;
 }

@@ -105,8 +105,8 @@ static bool output_crsf_open(void *output, void *config)
 
     serial_port_config_t serial_config = {
         .baud_rate = CRSF_RX_BAUDRATE,
-        .tx_pin = config_crsf->tx,
-        .rx_pin = config_crsf->rx,
+        .tx = config_crsf->tx,
+        .rx = config_crsf->rx,
         .tx_buffer_size = half_duplex ? 0 : CRSF_SERIAL_BUFFER_SIZE,
         .rx_buffer_size = CRSF_SERIAL_BUFFER_SIZE,
         .parity = SERIAL_PARITY_DISABLE,

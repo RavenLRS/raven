@@ -73,8 +73,8 @@ static bool input_sbus_open(void *input, void *config)
 
     serial_port_config_t serial_config = {
         .baud_rate = SBUS_BAUDRATE,
-        .tx_pin = SERIAL_UNUSED_GPIO,
-        .rx_pin = config_sbus->rx,
+        .tx = SERIAL_UNUSED_GPIO,
+        .rx = config_sbus->rx,
         .tx_buffer_size = 0,
         .rx_buffer_size = 0,
         .parity = SERIAL_PARITY_EVEN,

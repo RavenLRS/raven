@@ -785,8 +785,8 @@ static bool input_crsf_open(void *input, void *config)
 
     serial_port_config_t serial_config = {
         .baud_rate = CRSF_OPENTX_BAUDRATE,
-        .tx_pin = config_crsf->gpio,
-        .rx_pin = config_crsf->gpio,
+        .tx = config_crsf->gpio,
+        .rx = config_crsf->gpio,
         .tx_buffer_size = 128,
         .parity = SERIAL_PARITY_DISABLE,
         .stop_bits = SERIAL_STOP_BITS_1,
@@ -880,7 +880,7 @@ static bool input_crsf_update(void *input, rc_data_t *data, time_micros_t now)
         input_crsf->next_resp_frame = TIME_MICROS_MAX;
         input_crsf_send_response(input_crsf);
     }
-    // The TX_DONE interrupt won't fire if there's a collision, so we use a timer
+    // The TX_DONE interrupt won't fire on ESP32 if there's a collision, so we use a timer
     // as a fallback to avoid leaving the pin in the TX state.
     if (now > input_crsf->enable_rx_deadline)
     {
