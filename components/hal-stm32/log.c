@@ -10,12 +10,18 @@ static const char log_levels[] = {
     'E',
 };
 
+static void log_print_prefix(int level, const char *tag)
+{
+    extern uint32_t xTaskGetTickCount(void);
+    printf("[%u:%s - %c] ", xTaskGetTickCount(), tag, log_levels[level]);
+}
+
 void log_printf(int level, const char *tag, const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
 
-    printf("[%s - %c] ", tag, log_levels[level]);
+    log_print_prefix(level, tag);
     vprintf(format, ap);
     printf("\n");
 
@@ -29,7 +35,7 @@ void log_print_buffer_hex(int level, const char *tag, const void *buffer, size_t
     const size_t per_line = 8;
     const uint8_t *input = buffer;
 
-    printf("[%s - %c] ", tag, log_levels[level]);
+    log_print_prefix(level, tag);
 
     for (size_t ii = 0; ii < size; ii++)
     {
@@ -37,7 +43,10 @@ void log_print_buffer_hex(int level, const char *tag, const void *buffer, size_t
         if ((ii > 0 && ii % per_line == 0) || ii == size - 1)
         {
             printf("\n");
-            printf("[%s - %c] ", tag, log_levels[level]);
+            if (ii < size - 1)
+            {
+                log_print_prefix(level, tag);
+            }
         }
         else
         {
