@@ -8,52 +8,40 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/usart.h>
 
+#include "io/serial.h"
+
 #include "FreeRTOSConfig.h"
 
 #define SYSTICK_RELOAD_VAL ((configCPU_CLOCK_HZ / 1) / configTICK_RATE_HZ)
 
-#define STDOUT_USART USART2
-#define STDOUT_USART_GPIO_RCC RCC_GPIOA
-#define STDOUT_USART_GPIO_BANK GPIOA
-#define STDOUT_USART_RCC RCC_USART2
-#define STDOUT_USART_GPIO_TX GPIO_USART2_TX
+#define STDOUT_TX HAL_GPIO_PA(2) // USART2_TX
 
-/*
-#define STDOUT_USART USART1
-#define STDOUT_USART_GPIO_RCC RCC_GPIOA
-#define STDOUT_USART_GPIO_BANK GPIOA
-#define STDOUT_USART_RCC RCC_USART1
-#define STDOUT_USART_GPIO_TX GPIO_USART1_TX
-*/
+#if defined(STDOUT_TX)
 
-#if defined(STDOUT_USART)
+static serial_port_t *stdout_port;
 
 static void setup_stdout_usart(void)
 {
-    rcc_periph_clock_enable(STDOUT_USART_GPIO_RCC);
-    rcc_periph_clock_enable(STDOUT_USART_RCC);
+    serial_port_config_t config = {
+        .baud_rate = 115200,
+        .tx = STDOUT_TX,
+        .rx = SERIAL_UNUSED_GPIO,
+        .parity = SERIAL_PARITY_DISABLE,
+        .stop_bits = SERIAL_STOP_BITS_1,
+    };
 
-    gpio_set_mode(STDOUT_USART_GPIO_BANK, GPIO_MODE_OUTPUT_50_MHZ,
-                  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, STDOUT_USART_GPIO_TX);
-
-    usart_set_baudrate(STDOUT_USART, 115200);
-    usart_set_databits(STDOUT_USART, 8);
-    usart_set_stopbits(STDOUT_USART, USART_STOPBITS_1);
-    usart_set_mode(STDOUT_USART, USART_MODE_TX);
-    usart_set_parity(STDOUT_USART, USART_PARITY_NONE);
-    usart_set_flow_control(STDOUT_USART, USART_FLOWCONTROL_NONE);
-
-    usart_enable(STDOUT_USART);
+    stdout_port = serial_port_open(&config);
 }
 
 int _write(int fd, char *ptr, int len)
 {
+    char r = '\r';
     for (int ii = 0; ii < len && *ptr; ii++, ptr++)
     {
-        usart_send_blocking(STDOUT_USART, *ptr);
+        serial_port_write(stdout_port, ptr, 1);
         if (*ptr == '\n')
         {
-            usart_send_blocking(STDOUT_USART, '\r');
+            serial_port_write(stdout_port, &r, 1);
         }
     }
     return len;
@@ -103,7 +91,7 @@ int main(void)
     _Static_assert(configCPU_CLOCK_HZ == 72000000, "Invalid CPU frequency");
     rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
-#if defined(STDOUT_USART)
+#if defined(STDOUT_TX)
     setup_stdout_usart();
 #else
     // For printf() via semihosting
