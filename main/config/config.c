@@ -1,5 +1,7 @@
 #include <string.h>
 
+#include "platform.h"
+
 #include <hal/log.h>
 #include <hal/rand.h>
 
@@ -40,19 +42,38 @@ typedef struct config_air_info_blob_s
     air_info_t info;
 } PACKED config_air_info_blob_t;
 
-typedef struct config_s
+typedef struct common_config_s
 {
     air_addr_t addr;
-    air_pairing_t paired_tx;                             // Pairing with a TX, used in RX mode
+#if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
+    const setting_t *rc_mode;
+#endif
+} common_config_t;
+
+typedef struct tx_config_s
+{
     config_paired_rx_t paired_rxs[CONFIG_MAX_PAIRED_RX]; // Pairings with an RX, used in TX mode
     // To keep track of the last seen RX, we use a rolling sequence number to avoid having
     // to rewrite all entries every time we switch RX. This way, we only do a full
     // renumbering once the seq overflows.
     uint8_t rx_seq;
-    const setting_t *rc_mode;
-} config_t;
+} tx_config_t;
 
-static config_t config;
+typedef struct rx_config_s
+{
+    air_pairing_t paired_tx; // Pairing with a TX, used in RX mode
+} rx_config_t;
+
+static common_config_t config;
+
+#if defined(USE_TX_SUPPORT)
+static tx_config_t tx_config;
+#endif
+
+#if defined(USE_RX_SUPPORT)
+static rx_config_t rx_config;
+#endif
+
 static storage_t storage;
 
 static void config_generate_addr(air_addr_t *addr)
@@ -68,6 +89,8 @@ static void config_generate_addr(air_addr_t *addr)
     addr->addr[5] = (val >> 8) & 0xFF;
 }
 
+#if defined(USE_TX_SUPPORT)
+
 static int config_format_paired_rx_key(uint8_t *buf, int num)
 {
     buf[0] = CONFIG_PAIRED_RX_KEY_PREFIX;
@@ -75,16 +98,18 @@ static int config_format_paired_rx_key(uint8_t *buf, int num)
     return 2;
 }
 
+static bool config_paired_rx_is_valid(const config_paired_rx_t *rx)
+{
+    return rx->seq >= CONFIG_RX_SEQ_MIN;
+}
+
+#endif
+
 static int config_format_air_info_key(uint8_t *buf, const air_addr_t *addr)
 {
     buf[0] = CONFIG_AIR_INFO_KEY_PREFIX;
     memcpy(&buf[1], addr, sizeof(*addr));
     return sizeof(*addr) + 1;
-}
-
-static bool config_paired_rx_is_valid(const config_paired_rx_t *rx)
-{
-    return rx->seq >= CONFIG_RX_SEQ_MIN;
 }
 
 static bool config_get_air_info_blob(config_air_info_blob_t *blob, uint8_t *buf, int *ks, const air_addr_t *addr)
@@ -98,9 +123,40 @@ static bool config_get_air_info_blob(config_air_info_blob_t *blob, uint8_t *buf,
     return found;
 }
 
-void config_init(void)
+#if defined(USE_TX_SUPPORT)
+static void config_init_tx(void)
 {
     uint8_t rx_key[CONFIG_KEY_BUFSIZE];
+    uint8_t ckey;
+    int ks;
+
+    memset(&tx_config.paired_rxs, 0, sizeof(tx_config.paired_rxs));
+    // Load each RX separately, to avoid losing all paired models if
+    // we change CONFIG_MAX_PAIRED_RX.
+    for (int ii = 0; ii < CONFIG_MAX_PAIRED_RX; ii++)
+    {
+        ks = config_format_paired_rx_key(rx_key, ii);
+        storage_get_sized_blob(&storage, rx_key, ks, &tx_config.paired_rxs[ii], sizeof(tx_config.paired_rxs[ii]));
+    }
+
+    tx_config.rx_seq = 0;
+    ckey = CONFIG_RX_SEQ_KEY;
+    storage_get_u8(&storage, &ckey, sizeof(ckey), &tx_config.rx_seq);
+}
+#endif
+
+#if defined(USE_RX_SUPPORT)
+static void config_init_rx(void)
+{
+    uint8_t ckey;
+    memset(&rx_config.paired_tx, 0, sizeof(rx_config.paired_tx));
+    ckey = CONFIG_PAIRED_TX_KEY;
+    storage_get_sized_blob(&storage, &ckey, sizeof(ckey), &rx_config.paired_tx, sizeof(rx_config.paired_tx));
+}
+#endif
+
+void config_init(void)
+{
     uint8_t ckey;
 
     settings_init();
@@ -115,33 +171,25 @@ void config_init(void)
         commit = true;
     }
 
-    memset(&config.paired_tx, 0, sizeof(config.paired_tx));
-    ckey = CONFIG_PAIRED_TX_KEY;
-    storage_get_sized_blob(&storage, &ckey, sizeof(ckey), &config.paired_tx, sizeof(config.paired_tx));
-
-    memset(&config.paired_rxs, 0, sizeof(config.paired_rxs));
-    // Load each RX separately, to avoid losing all paired models if
-    // we change CONFIG_MAX_PAIRED_RX.
-    for (int ii = 0; ii < CONFIG_MAX_PAIRED_RX; ii++)
-    {
-        int ks = config_format_paired_rx_key(rx_key, ii);
-        storage_get_sized_blob(&storage, rx_key, ks, &config.paired_rxs[ii], sizeof(config.paired_rxs[ii]));
-    }
-
-    config.rx_seq = 0;
-    ckey = CONFIG_RX_SEQ_KEY;
-    storage_get_u8(&storage, &ckey, sizeof(ckey), &config.rx_seq);
-
-    config.rc_mode = settings_get_key(SETTING_KEY_RC_MODE);
-
     char buf[AIR_ADDR_STRING_BUFFER_SIZE];
     air_addr_format(&config.addr, buf, sizeof(buf));
     LOG_I(TAG, "Module addr is %s", buf);
+
+#if defined(USE_TX_SUPPORT)
+    config_init_tx();
+#endif
+#if defined(USE_RX_SUPPORT)
+    config_init_rx();
+#endif
 
     if (commit)
     {
         storage_commit(&storage);
     }
+
+#if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
+    config.rc_mode = settings_get_key("rc_mode");
+#endif
 }
 
 #if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
@@ -153,11 +201,12 @@ rc_mode_e config_get_rc_mode(void)
 
 bool config_get_paired_rx(air_pairing_t *pairing, const air_addr_t *addr)
 {
+#if defined(USE_TX_SUPPORT)
     uint8_t max_seq = 0;
     int idx = -1;
-    for (size_t ii = 0; ii < ARRAY_COUNT(config.paired_rxs); ii++)
+    for (size_t ii = 0; ii < ARRAY_COUNT(tx_config.paired_rxs); ii++)
     {
-        config_paired_rx_t *rx = &config.paired_rxs[ii];
+        config_paired_rx_t *rx = &tx_config.paired_rxs[ii];
         if (!config_paired_rx_is_valid(rx))
         {
             continue;
@@ -188,15 +237,20 @@ bool config_get_paired_rx(air_pairing_t *pairing, const air_addr_t *addr)
         // Return the last active one
         if (pairing)
         {
-            air_pairing_cpy(pairing, &config.paired_rxs[idx].pairing);
+            air_pairing_cpy(pairing, &tx_config.paired_rxs[idx].pairing);
         }
         return true;
     }
+#else
+    UNUSED(pairing);
+    UNUSED(addr);
+#endif
     return false;
 }
 
 void config_add_paired_rx(const air_pairing_t *pairing)
 {
+#if defined(USE_TX_SUPPORT)
     uint8_t rx_key[CONFIG_KEY_BUFSIZE];
     config_paired_rx_t *dest = NULL;
     uint8_t ckey;
@@ -204,9 +258,9 @@ void config_add_paired_rx(const air_pairing_t *pairing)
 
     // Check if we already have a pairing for this addr. In that case,
     // just increase its seq number.
-    for (int ii = 0; ii < ARRAY_COUNT(config.paired_rxs); ii++)
+    for (int ii = 0; ii < ARRAY_COUNT(tx_config.paired_rxs); ii++)
     {
-        config_paired_rx_t *p = &config.paired_rxs[ii];
+        config_paired_rx_t *p = &tx_config.paired_rxs[ii];
         if (air_addr_equals(&p->pairing.addr, &pairing->addr))
         {
             // Found it
@@ -220,63 +274,67 @@ void config_add_paired_rx(const air_pairing_t *pairing)
         // seen one.
         uint8_t min_seq = CONFIG_RX_SEQ_MAX;
         int min_seq_idx = -1;
-        for (int ii = 0; ii < ARRAY_COUNT(config.paired_rxs); ii++)
+        for (int ii = 0; ii < ARRAY_COUNT(tx_config.paired_rxs); ii++)
         {
-            if (!config_paired_rx_is_valid(&config.paired_rxs[ii]))
+            if (!config_paired_rx_is_valid(&tx_config.paired_rxs[ii]))
             {
-                dest = &config.paired_rxs[ii];
+                dest = &tx_config.paired_rxs[ii];
                 break;
             }
             // Keep track of the last recently used one
-            if (min_seq_idx == -1 || config.paired_rxs[ii].seq < min_seq)
+            if (min_seq_idx == -1 || tx_config.paired_rxs[ii].seq < min_seq)
             {
                 min_seq_idx = ii;
-                min_seq = config.paired_rxs[ii].seq;
+                min_seq = tx_config.paired_rxs[ii].seq;
             }
         }
         if (!dest)
         {
             // Must delete the oldest one
             config_remove_paired_rx_at(min_seq_idx);
-            dest = &config.paired_rxs[min_seq_idx];
+            dest = &tx_config.paired_rxs[min_seq_idx];
         }
     }
     air_pairing_cpy(&dest->pairing, pairing);
-    if (config.rx_seq == CONFIG_RX_SEQ_MAX)
+    if (tx_config.rx_seq == CONFIG_RX_SEQ_MAX)
     {
         // Time to renumber all known RXs
-        config.rx_seq = 0;
+        tx_config.rx_seq = 0;
         for (int ii = CONFIG_RX_SEQ_MIN; ii < CONFIG_RX_SEQ_MAX; ii++)
         {
-            for (int jj = 0; jj < ARRAY_COUNT(config.paired_rxs); jj++)
+            for (int jj = 0; jj < ARRAY_COUNT(tx_config.paired_rxs); jj++)
             {
-                if (!config_paired_rx_is_valid(&config.paired_rxs[jj]))
+                if (!config_paired_rx_is_valid(&tx_config.paired_rxs[jj]))
                 {
                     continue;
                 }
-                if (config.paired_rxs[jj].seq == ii)
+                if (tx_config.paired_rxs[jj].seq == ii)
                 {
-                    config.paired_rxs[jj].seq = ++config.rx_seq;
+                    tx_config.paired_rxs[jj].seq = ++tx_config.rx_seq;
                     ks = config_format_paired_rx_key(rx_key, jj);
-                    storage_set_blob(&storage, rx_key, ks, &config.paired_rxs[jj], sizeof(config.paired_rxs[jj]));
+                    storage_set_blob(&storage, rx_key, ks, &tx_config.paired_rxs[jj], sizeof(tx_config.paired_rxs[jj]));
                     break;
                 }
             }
         }
     }
-    dest->seq = ++config.rx_seq;
-    ks = config_format_paired_rx_key(rx_key, dest - config.paired_rxs);
+    dest->seq = ++tx_config.rx_seq;
+    ks = config_format_paired_rx_key(rx_key, dest - tx_config.paired_rxs);
     storage_set_blob(&storage, rx_key, ks, dest, sizeof(*dest));
     ckey = CONFIG_RX_SEQ_KEY;
-    storage_set_u8(&storage, &ckey, sizeof(ckey), config.rx_seq);
+    storage_set_u8(&storage, &ckey, sizeof(ckey), tx_config.rx_seq);
     storage_commit(&storage);
+#else
+    UNUSED(pairing);
+#endif
 }
 
 bool config_get_paired_rx_at(air_pairing_t *pairing, int idx)
 {
+#if defined(USE_TX_SUPPORT)
     if (idx >= 0 && idx < CONFIG_MAX_PAIRED_RX)
     {
-        config_paired_rx_t *p = &config.paired_rxs[idx];
+        config_paired_rx_t *p = &tx_config.paired_rxs[idx];
         if (config_paired_rx_is_valid(p))
         {
             if (pairing)
@@ -286,27 +344,35 @@ bool config_get_paired_rx_at(air_pairing_t *pairing, int idx)
             return true;
         }
     }
+#else
+    UNUSED(pairing);
+    UNUSED(idx);
+#endif
     return false;
 }
 
 bool config_remove_paired_rx_at(int idx)
 {
+#if defined(USE_TX_SUPPORT)
     uint8_t key[CONFIG_KEY_BUFSIZE];
     int ks;
 
     if (idx >= 0 && idx < CONFIG_MAX_PAIRED_RX)
     {
         // Delete info
-        ks = config_format_air_info_key(key, &config.paired_rxs[idx].pairing.addr);
+        ks = config_format_air_info_key(key, &tx_config.paired_rxs[idx].pairing.addr);
         storage_set_blob(&storage, key, ks, NULL, 0);
 
         // Delete pairing
-        memset(&config.paired_rxs[idx], 0, sizeof(config.paired_rxs[idx]));
+        memset(&tx_config.paired_rxs[idx], 0, sizeof(tx_config.paired_rxs[idx]));
         ks = config_format_paired_rx_key(key, idx);
         storage_set_blob(&storage, key, ks, NULL, 0);
 
         storage_commit(&storage);
     }
+#else
+    UNUSED(idx);
+#endif
     return false;
 }
 
@@ -386,31 +452,37 @@ bool config_set_air_info(const air_addr_t *addr, const air_info_t *info, air_ban
 
 bool config_get_paired_tx(air_pairing_t *pairing)
 {
-    if (air_addr_is_valid(&config.paired_tx.addr))
+#if defined(USE_RX_SUPPORT)
+    if (air_addr_is_valid(&rx_config.paired_tx.addr))
     {
         if (pairing)
         {
-            air_pairing_cpy(pairing, &config.paired_tx);
+            air_pairing_cpy(pairing, &rx_config.paired_tx);
         }
         return true;
     }
+#endif
     return false;
 }
 
 void config_set_paired_tx(const air_pairing_t *pairing)
 {
+#if defined(USE_RX_SUPPORT)
     uint8_t ckey;
     if (pairing)
     {
-        air_pairing_cpy(&config.paired_tx, pairing);
+        air_pairing_cpy(&rx_config.paired_tx, pairing);
     }
     else
     {
-        memset(&config.paired_tx, 0, sizeof(config.paired_tx));
+        memset(&rx_config.paired_tx, 0, sizeof(rx_config.paired_tx));
     }
     ckey = CONFIG_PAIRED_TX_KEY;
-    storage_set_blob(&storage, &ckey, sizeof(ckey), &config.paired_tx, sizeof(config.paired_tx));
+    storage_set_blob(&storage, &ckey, sizeof(ckey), &rx_config.paired_tx, sizeof(rx_config.paired_tx));
     storage_commit(&storage);
+#else
+    UNUSED(pairing);
+#endif
 }
 
 bool config_get_pairing(air_pairing_t *pairing, const air_addr_t *addr)
