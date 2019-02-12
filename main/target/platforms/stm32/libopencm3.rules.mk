@@ -44,12 +44,13 @@ STYLECHECKFLAGS	:= --no-tree -f --terse --mailback
 STYLECHECKFILES	:= $(shell find . -name '*.[ch]')
 CSTD		?= -std=gnu11
 
+OPT			:= -Os
 DEBUG		?=
 ifeq ($(DEBUG),)
 CFLAGS		+= -DNDEBUG
-OPT			:= -Os
+OPT_DEBUG	:=
 else
-OPT			:= -Os -g
+OPT_DEBUG	:= -g
 endif
 
 
@@ -103,7 +104,7 @@ EXAMPLES_SCRIPT_DIR	= $(OPENCM3_DIR)/../scripts
 ###############################################################################
 # C flags
 
-TGT_CFLAGS	+= $(OPT) $(CSTD) $(DEBUG)
+TGT_CFLAGS	+= $(OPT) $(CSTD) $(OPT_DEBUG)
 TGT_CFLAGS	+= $(ARCH_FLAGS)
 TGT_CFLAGS	+= -Wextra -Wshadow -Wimplicit-function-declaration
 TGT_CFLAGS	+= -Wredundant-decls -Wstrict-prototypes
@@ -112,7 +113,7 @@ TGT_CFLAGS	+= -fno-common -ffunction-sections -fdata-sections
 ###############################################################################
 # C++ flags
 
-TGT_CXXFLAGS	+= $(OPT) $(CXXSTD) $(DEBUG)
+TGT_CXXFLAGS	+= $(OPT) $(CXXSTD) $(OPT_DEBUG)
 TGT_CXXFLAGS	+= $(ARCH_FLAGS)
 TGT_CXXFLAGS	+= -Wextra -Wshadow -Wredundant-decls  -Weffc++
 TGT_CXXFLAGS	+= -fno-common -ffunction-sections -fdata-sections
@@ -133,7 +134,7 @@ TGT_LDFLAGS		+= --specs=nano.specs -u _printf_float
 TGT_LDFLAGS		+= -Wl,--print-memory-usage
 TGT_LDFLAGS		+= $(OPT)
 TGT_LDFLAGS		+= -T$(LDSCRIPT)
-TGT_LDFLAGS		+= $(ARCH_FLAGS) $(DEBUG)
+TGT_LDFLAGS		+= $(ARCH_FLAGS) $(OPT_DEBUG)
 TGT_LDFLAGS		+= -Wl,-Map=$(*).map -Wl,--cref
 TGT_LDFLAGS		+= -Wl,--gc-sections
 ifeq ($(V),99)
