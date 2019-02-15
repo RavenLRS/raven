@@ -2,7 +2,7 @@ OPENCM3_DIR			= lib/libopencm3
 export OPENCM3_DIR
 
 CPPFLAGS			+= -DSTM32
-PLATFORM_SOURCES	+= stm32
+PLATFORM_SOURCES		+= stm32
 export PLATFORM_SOURCES
 
 BUILDDIR			= build-$(TARGET)
@@ -22,13 +22,17 @@ INCLUDES			+= $(ROOT)/main
 INCLUDES			+= $(ROOT)/components/os/include
 INCLUDES			+= $(ROOT)/components/hal-common/include
 INCLUDES			+= $(ROOT)/components/hal-stm32/include
+INCLUDES			+= $(ROOT)/lib/wldb/include
 INCLUDES			+= $(PLATFORMS_DIR)/stm32
 INCLUDES			+= $(FREERTOS_SOURCE)/include
 INCLUDES			+= $(FREERTOS_PORT_SOURCE)
 
 CFLAGS				+= -DUSE_FREERTOS_SOURCE $(addprefix -I,$(INCLUDES))
+CFLAGS				+= -DWLDB_WRITE_SIZE_MIN=2 -DWLDB_FS_DIRECT_READ
+CFLAGS				+= -DCONFIG_PAGE_SIZE=$(CONFIG_PAGE_SIZE) -DCONFIG_BLOCK_SIZE=$(CONFIG_BLOCK_SIZE)
 
 # Sources
+WLDB_SRCDIR			:= lib/wldb/src
 
 # Remove modules not supported on STM32
 COMPONENT_SRCDIRS	:= $(filter-out bluetooth,$(COMPONENT_SRCDIRS))
@@ -43,6 +47,7 @@ SRC_DIRS			+= components/hal-common components/hal-stm32 components/u8g2/u8g2/cs
 SRC_DIRS			+= $(MAIN_DIRS)
 SOURCES				:= $(foreach dir,$(SRC_DIRS),$(dir_sources))
 SOURCES				+= $(FREERTOS_HEAP_IMPL)
+SOURCES				+= $(WLDB_SRCDIR)/wldb.c $(WLDB_SRCDIR)/wldb-libopencm3.c
 export SOURCES
 
 .DEFAULT_GOAL := all

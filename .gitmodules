@@ -10,3 +10,6 @@
 [submodule "components/idf_wmonitor_lib"]
 	path = components/idf_wmonitor_lib
 	url = https://github.com/fiam/idf_wmonitor_lib.git
+[submodule "lib/wldb"]
+	path = lib/wldb
+	url = https://github.com/fiam/wldb.git
