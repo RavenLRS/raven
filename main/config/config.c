@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <string.h>
 
 #include <hal/log.h>
@@ -6,24 +5,25 @@
 
 #include "config/settings.h"
 
-#include "platform/storage.h"
+#include "io/storage.h"
 
 #include "util/macros.h"
 
 #include "config.h"
 
-#define CONFIG_STORAGE_NAME "config"
-#define CONFIG_ADDR_KEY "addr"
-#define CONFIG_PAIRED_TX_KEY "paired_tx"
-#define CONFIG_PAIRED_RX_KEY_PREFIX "prx"
-#define CONFIG_RX_SEQ_KEY "rx_seq"
+enum
+{
+    CONFIG_ADDR_KEY = 1,
+    CONFIG_PAIRED_TX_KEY = 2,
+    CONFIG_PAIRED_RX_KEY_PREFIX = 3,
+    CONFIG_RX_SEQ_KEY = 4,
+    CONFIG_AIR_INFO_KEY_PREFIX = 5,
+    CONFIG_FS_CHANS_KEY = 6,
+};
+
 #define CONFIG_RX_SEQ_MIN 1 // We never assign the zero to check for valid ones
 #define CONFIG_RX_SEQ_MAX 0xFF
-#define CONFIG_FS_CHANS_KEY "fs_chans"
-
-#define CONFIG_AIR_INFO_KEY_PREFIX "a:"
-
-#define CONFIG_KEY_BUFSIZE 16 // big enough for CONFIG_PAIRED_RX_KEY_PREFIX and CONFIG_AIR_INFO_KEY_PREFIX
+#define CONFIG_KEY_BUFSIZE (1 + sizeof(air_addr_t)) // big enough for CONFIG_PAIRED_RX_KEY_PREFIX and CONFIG_AIR_INFO_KEY_PREFIX
 
 static const char *TAG = "config";
 
@@ -68,17 +68,18 @@ static void config_generate_addr(air_addr_t *addr)
     addr->addr[5] = (val >> 8) & 0xFF;
 }
 
-static void config_format_paired_rx_key(char *buf, size_t size, int num)
+static int config_format_paired_rx_key(uint8_t *buf, int num)
 {
-    snprintf(buf, size, "%s%d", CONFIG_PAIRED_RX_KEY_PREFIX, num);
+    buf[0] = CONFIG_PAIRED_RX_KEY_PREFIX;
+    buf[1] = num & 0xFF;
+    return 2;
 }
 
-static void config_format_air_info_key(char *buf, size_t size, const air_addr_t *addr)
+static int config_format_air_info_key(uint8_t *buf, const air_addr_t *addr)
 {
-    char addr_buf[AIR_ADDR_STRING_BUFFER_SIZE];
-    air_addr_format(addr, addr_buf, sizeof(addr_buf));
-    strlcpy(buf, CONFIG_AIR_INFO_KEY_PREFIX, size);
-    strlcat(buf, addr_buf, size);
+    buf[0] = CONFIG_AIR_INFO_KEY_PREFIX;
+    memcpy(&buf[1], addr, sizeof(*addr));
+    return sizeof(*addr) + 1;
 }
 
 static bool config_paired_rx_is_valid(const config_paired_rx_t *rx)
@@ -86,10 +87,10 @@ static bool config_paired_rx_is_valid(const config_paired_rx_t *rx)
     return rx->seq >= CONFIG_RX_SEQ_MIN;
 }
 
-static bool config_get_air_info_blob(config_air_info_blob_t *blob, char *buf, size_t size, const air_addr_t *addr)
+static bool config_get_air_info_blob(config_air_info_blob_t *blob, uint8_t *buf, int *ks, const air_addr_t *addr)
 {
-    config_format_air_info_key(buf, size, addr);
-    bool found = storage_get_sized_blob(&storage, buf, blob, sizeof(*blob));
+    *ks = config_format_air_info_key(buf, addr);
+    bool found = storage_get_sized_blob(&storage, buf, *ks, blob, sizeof(*blob));
     if (!found)
     {
         memset(blob, 0, sizeof(*blob));
@@ -99,35 +100,39 @@ static bool config_get_air_info_blob(config_air_info_blob_t *blob, char *buf, si
 
 void config_init(void)
 {
-    char rx_key[CONFIG_KEY_BUFSIZE];
+    uint8_t rx_key[CONFIG_KEY_BUFSIZE];
+    uint8_t ckey;
 
     settings_init();
-    storage_init(&storage, CONFIG_STORAGE_NAME);
+    storage_init(&storage, STORAGE_NS_CONFIG);
 
     bool commit = false;
-    if (!storage_get_sized_blob(&storage, CONFIG_ADDR_KEY, &config.addr, sizeof(config.addr)))
+    ckey = CONFIG_ADDR_KEY;
+    if (!storage_get_sized_blob(&storage, &ckey, sizeof(ckey), &config.addr, sizeof(config.addr)))
     {
         config_generate_addr(&config.addr);
-        storage_set_blob(&storage, CONFIG_ADDR_KEY, &config.addr, sizeof(config.addr));
+        storage_set_blob(&storage, &ckey, sizeof(ckey), &config.addr, sizeof(config.addr));
         commit = true;
     }
 
     memset(&config.paired_tx, 0, sizeof(config.paired_tx));
-    storage_get_sized_blob(&storage, CONFIG_PAIRED_TX_KEY, &config.paired_tx, sizeof(config.paired_tx));
+    ckey = CONFIG_PAIRED_TX_KEY;
+    storage_get_sized_blob(&storage, &ckey, sizeof(ckey), &config.paired_tx, sizeof(config.paired_tx));
 
     memset(&config.paired_rxs, 0, sizeof(config.paired_rxs));
     // Load each RX separately, to avoid losing all paired models if
     // we change CONFIG_MAX_PAIRED_RX.
     for (int ii = 0; ii < CONFIG_MAX_PAIRED_RX; ii++)
     {
-        config_format_paired_rx_key(rx_key, sizeof(rx_key), ii);
-        storage_get_sized_blob(&storage, rx_key, &config.paired_rxs[ii], sizeof(config.paired_rxs[ii]));
+        int ks = config_format_paired_rx_key(rx_key, ii);
+        storage_get_sized_blob(&storage, rx_key, ks, &config.paired_rxs[ii], sizeof(config.paired_rxs[ii]));
     }
 
     config.rx_seq = 0;
-    storage_get_u8(&storage, CONFIG_RX_SEQ_KEY, &config.rx_seq);
+    ckey = CONFIG_RX_SEQ_KEY;
+    storage_get_u8(&storage, &ckey, sizeof(ckey), &config.rx_seq);
 
-    config.rc_mode = settings_get_key("rc_mode");
+    config.rc_mode = settings_get_key(SETTING_KEY_RC_MODE);
 
     char buf[AIR_ADDR_STRING_BUFFER_SIZE];
     air_addr_format(&config.addr, buf, sizeof(buf));
@@ -192,8 +197,10 @@ bool config_get_paired_rx(air_pairing_t *pairing, const air_addr_t *addr)
 
 void config_add_paired_rx(const air_pairing_t *pairing)
 {
-    char rx_key[CONFIG_KEY_BUFSIZE];
+    uint8_t rx_key[CONFIG_KEY_BUFSIZE];
     config_paired_rx_t *dest = NULL;
+    uint8_t ckey;
+    int ks;
 
     // Check if we already have a pairing for this addr. In that case,
     // just increase its seq number.
@@ -250,17 +257,18 @@ void config_add_paired_rx(const air_pairing_t *pairing)
                 if (config.paired_rxs[jj].seq == ii)
                 {
                     config.paired_rxs[jj].seq = ++config.rx_seq;
-                    config_format_paired_rx_key(rx_key, sizeof(rx_key), jj);
-                    storage_set_blob(&storage, rx_key, &config.paired_rxs[jj], sizeof(config.paired_rxs[jj]));
+                    ks = config_format_paired_rx_key(rx_key, jj);
+                    storage_set_blob(&storage, rx_key, ks, &config.paired_rxs[jj], sizeof(config.paired_rxs[jj]));
                     break;
                 }
             }
         }
     }
     dest->seq = ++config.rx_seq;
-    config_format_paired_rx_key(rx_key, sizeof(rx_key), dest - config.paired_rxs);
-    storage_set_blob(&storage, rx_key, dest, sizeof(*dest));
-    storage_set_u8(&storage, CONFIG_RX_SEQ_KEY, config.rx_seq);
+    ks = config_format_paired_rx_key(rx_key, dest - config.paired_rxs);
+    storage_set_blob(&storage, rx_key, ks, dest, sizeof(*dest));
+    ckey = CONFIG_RX_SEQ_KEY;
+    storage_set_u8(&storage, &ckey, sizeof(ckey), config.rx_seq);
     storage_commit(&storage);
 }
 
@@ -283,18 +291,19 @@ bool config_get_paired_rx_at(air_pairing_t *pairing, int idx)
 
 bool config_remove_paired_rx_at(int idx)
 {
-    char key[CONFIG_KEY_BUFSIZE];
+    uint8_t key[CONFIG_KEY_BUFSIZE];
+    int ks;
 
     if (idx >= 0 && idx < CONFIG_MAX_PAIRED_RX)
     {
         // Delete info
-        config_format_air_info_key(key, sizeof(key), &config.paired_rxs[idx].pairing.addr);
-        storage_set_blob(&storage, key, NULL, 0);
+        ks = config_format_air_info_key(key, &config.paired_rxs[idx].pairing.addr);
+        storage_set_blob(&storage, key, ks, NULL, 0);
 
         // Delete pairing
         memset(&config.paired_rxs[idx], 0, sizeof(config.paired_rxs[idx]));
-        config_format_paired_rx_key(key, sizeof(key), idx);
-        storage_set_blob(&storage, key, NULL, 0);
+        ks = config_format_paired_rx_key(key, idx);
+        storage_set_blob(&storage, key, ks, NULL, 0);
 
         storage_commit(&storage);
     }
@@ -303,10 +312,11 @@ bool config_remove_paired_rx_at(int idx)
 
 bool config_get_air_name(char *buf, size_t size, const air_addr_t *addr)
 {
-    char key[CONFIG_KEY_BUFSIZE];
+    uint8_t key[CONFIG_KEY_BUFSIZE];
     config_air_info_blob_t info;
+    int ks;
 
-    if (config_get_air_info_blob(&info, key, sizeof(key), addr))
+    if (config_get_air_info_blob(&info, key, &ks, addr))
     {
         if (strlen(info.name) > 0)
         {
@@ -322,23 +332,25 @@ bool config_get_air_name(char *buf, size_t size, const air_addr_t *addr)
 
 bool config_set_air_name(const air_addr_t *addr, const char *name)
 {
-    char key[CONFIG_KEY_BUFSIZE];
+    uint8_t key[CONFIG_KEY_BUFSIZE];
+    int ks;
     config_air_info_blob_t blob;
 
-    config_get_air_info_blob(&blob, key, sizeof(key), addr);
+    config_get_air_info_blob(&blob, key, &ks, addr);
     memset(blob.name, 0, sizeof(blob.name));
     strlcpy(blob.name, name, sizeof(blob.name));
-    storage_set_blob(&storage, key, &blob, sizeof(blob));
+    storage_set_blob(&storage, key, ks, &blob, sizeof(blob));
     storage_commit(&storage);
     return true;
 }
 
 bool config_get_air_info(air_info_t *info, air_band_e *band, const air_addr_t *addr)
 {
-    char key[CONFIG_KEY_BUFSIZE];
+    uint8_t key[CONFIG_KEY_BUFSIZE];
+    int ks;
     config_air_info_blob_t blob;
 
-    if (config_get_air_info_blob(&blob, key, sizeof(key), addr))
+    if (config_get_air_info_blob(&blob, key, &ks, addr))
     {
         if (info)
         {
@@ -355,17 +367,18 @@ bool config_get_air_info(air_info_t *info, air_band_e *band, const air_addr_t *a
 
 bool config_set_air_info(const air_addr_t *addr, const air_info_t *info, air_band_e band)
 {
-    char key[CONFIG_KEY_BUFSIZE];
+    uint8_t key[CONFIG_KEY_BUFSIZE];
+    int ks;
     config_air_info_blob_t blob;
 
-    config_get_air_info_blob(&blob, key, sizeof(key), addr);
+    config_get_air_info_blob(&blob, key, &ks, addr);
     bool changed = memcmp(&blob.info, info, sizeof(*info));
     memcpy(&blob.info, info, sizeof(*info));
     changed |= blob.band != band;
     blob.band = band;
     if (changed)
     {
-        storage_set_blob(&storage, key, &blob, sizeof(blob));
+        storage_set_blob(&storage, key, ks, &blob, sizeof(blob));
         storage_commit(&storage);
     }
     return changed;
@@ -386,6 +399,7 @@ bool config_get_paired_tx(air_pairing_t *pairing)
 
 void config_set_paired_tx(const air_pairing_t *pairing)
 {
+    uint8_t ckey;
     if (pairing)
     {
         air_pairing_cpy(&config.paired_tx, pairing);
@@ -394,7 +408,8 @@ void config_set_paired_tx(const air_pairing_t *pairing)
     {
         memset(&config.paired_tx, 0, sizeof(config.paired_tx));
     }
-    storage_set_blob(&storage, CONFIG_PAIRED_TX_KEY, &config.paired_tx, sizeof(config.paired_tx));
+    ckey = CONFIG_PAIRED_TX_KEY;
+    storage_set_blob(&storage, &ckey, sizeof(ckey), &config.paired_tx, sizeof(config.paired_tx));
     storage_commit(&storage);
 }
 

@@ -10,7 +10,9 @@
 
 #include "rc/rc_data.h"
 
+#if !defined(CONFIG_MAX_PAIRED_RX)
 #define CONFIG_MAX_PAIRED_RX 32 // Max RX paired to a TX
+#endif
 
 typedef struct air_pairing_s air_pairing_t;
 typedef struct air_addr_s air_addr_t;

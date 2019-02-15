@@ -830,12 +830,12 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
 {
     rc_t *rc = user_data;
 
-    if (STR_EQUAL(setting->key, SETTING_KEY_RC_MODE))
+    if (SETTING_IS(setting, SETTING_KEY_RC_MODE))
     {
         // Reboot after 500ms to allow the setting to be written
         dispatch_after((dispatch_fn)system_reboot, NULL, 500);
     }
-    else if (STR_EQUAL(setting->key, SETTING_KEY_BIND))
+    else if (SETTING_IS(setting, SETTING_KEY_BIND))
     {
         rc->state.bind_requested = setting_get_bool(setting);
     }
@@ -857,12 +857,12 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
         switch (rc_get_mode(rc))
         {
         case RC_MODE_TX:
-            if (STR_EQUAL(setting->key, SETTING_KEY_TX_RF_POWER))
+            if (SETTING_IS(setting, SETTING_KEY_TX_RF_POWER))
             {
                 rc_update_tx_rf_power(rc);
                 break;
             }
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RECEIVERS_RX_SELECT_PREFIX))
+            if (SETTING_HAS_RECEIVERS_PREFIX(setting, SETTING_KEY_RECEIVERS_RX_SELECT_PREFIX))
             {
                 // Switch receivers
                 int rx_num = setting_receiver_get_rx_num(setting);
@@ -873,7 +873,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
                 }
                 break;
             }
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RECEIVERS_RX_DELETE_PREFIX))
+            if (SETTING_HAS_RECEIVERS_PREFIX(setting, SETTING_KEY_RECEIVERS_RX_DELETE_PREFIX))
             {
                 // Receiver has been deleted. Check if it's the current one and invalidate
                 // the output.
@@ -896,8 +896,8 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
                 }
                 break;
             }
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_TX_PREFIX) &&
-                !STR_EQUAL(setting->key, SETTING_KEY_TX_PILOT_NAME))
+            if (SETTING_IS_FROM_FOLDER(setting, SETTING_KEY_TX) &&
+                !SETTING_IS(setting, SETTING_KEY_TX_PILOT_NAME))
             {
                 rc_invalidate_input(rc);
                 break;
@@ -909,10 +909,9 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
             }
             break;
         case RC_MODE_RX:
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RX_PREFIX) &&
-                !STR_EQUAL(setting->key, SETTING_KEY_RX_AUTO_CRAFT_NAME) &&
-                !STR_EQUAL(setting->key, SETTING_KEY_RX_CRAFT_NAME))
-
+            if (SETTING_IS_FROM_FOLDER(setting, SETTING_KEY_RX) &&
+                !SETTING_IS(setting, SETTING_KEY_RX_AUTO_CRAFT_NAME) &&
+                !SETTING_IS(setting, SETTING_KEY_RX_CRAFT_NAME))
             {
                 rc_invalidate_output(rc);
             }
@@ -922,7 +921,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
                 rc_invalidate_input(rc);
             }
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX))
+            if (SETTING_IS_FROM_FOLDER(setting, SETTING_KEY_RX_CHANNEL_OUTPUTS))
             {
                 pwm_update_config();
             }

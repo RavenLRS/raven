@@ -24,7 +24,7 @@ hal_gpio_t gpio_get_configurable_at(unsigned idx)
 hal_gpio_t gpio_get_by_tag(gpio_tag_e tag)
 {
 #if defined(USE_GPIO_REMAP)
-    const char *key = NULL;
+    setting_key_t key = NULL;
     switch (tag)
     {
     case GPIO_TAG_INPUT_BIDIR:
