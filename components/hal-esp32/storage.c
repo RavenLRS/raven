@@ -1,38 +1,10 @@
 #include <hal/log.h>
 #include <hal/storage.h>
 
-LOG_TAG_DECLARE("HAL.Storage");
-
-#define HAL_STORAGE_SKEY_SIZE 16
+#define HAL_STORAGE_SKEY_SIZE 4
 
 static void hal_storage_format_skey(hal_storage_t *s, char *buf, const void *key, size_t key_size)
 {
-    (void)s;
-
-    const uint8_t *p = key;
-    const uint8_t *pend = p + key_size;
-    char *bufend = buf + HAL_STORAGE_SKEY_SIZE;
-    for (; p != pend && buf < bufend; p++, buf++)
-    {
-        if (*p)
-        {
-            *buf = *p;
-        }
-        else
-        {
-            *buf = 0xFF;
-            buf++;
-            if (buf < bufend)
-            {
-                *buf = 0xFF;
-            }
-        }
-    }
-    if (buf >= bufend)
-    {
-        LOG_F(TAG, "Increase HAL_STORAGE_SKEY_SIZE (%d)", HAL_STORAGE_SKEY_SIZE);
-    }
-    *buf = '\0';
 }
 
 hal_err_t hal_storage_init(hal_storage_t *s, uint8_t tag)
@@ -65,13 +37,13 @@ hal_err_t hal_storage_get_blob(hal_storage_t *s, const void *key, size_t key_siz
         }
         return ESP_OK;
     }
-    if (found)
-    {
-        *found = false;
-    }
     if (err == ESP_ERR_NVS_NOT_FOUND)
     {
-        return ESP_OK;
+        if (found)
+        {
+            *found = false;
+        }
+        return false;
     }
     return err;
 }
