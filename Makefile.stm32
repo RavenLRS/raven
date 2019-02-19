@@ -15,7 +15,7 @@ include $(ROOT)/main/component.mk
 
 FREERTOS_SOURCE			:= lib/FreeRTOSv10.1.1/FreeRTOS/Source
 FREERTOS_PORT_SOURCE	:= $(FREERTOS_SOURCE)/portable/GCC/$(FREERTOS_PORT)
-FREERTOS_HEAP_IMPL		:= $(FREERTOS_SOURCE)/portable/MemMang/heap_2.c
+FREERTOS_HEAP_IMPL		:= $(FREERTOS_SOURCE)/portable/MemMang/heap_4.c
 
 INCLUDES			=
 INCLUDES			+= $(ROOT)/main
