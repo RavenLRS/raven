@@ -47,7 +47,9 @@
 #include "util/macros.h"
 #include "util/time.h"
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
 static const char *TAG = "Main";
+#endif
 
 static air_radio_t radio = {
 #if defined(USE_RADIO_SX127X)

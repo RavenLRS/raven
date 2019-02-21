@@ -435,10 +435,12 @@ rx_output_type_e config_get_output_type(void)
     return setting_get_u8(settings_get_key(SETTING_KEY_RX_OUTPUT));
 }
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
 rx_fs_mode_e config_get_fs_mode(void)
 {
     return setting_get_u8(settings_get_key(SETTING_KEY_RX_FS_MODE));
 }
+#endif
 
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
 bool config_get_fs_channels(uint16_t *blob, size_t size)

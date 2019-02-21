@@ -29,6 +29,10 @@
 
 static const char *TAG = "RC";
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+static bool custom_failsafe_warning_logged = false;
+#endif
+
 #define GET_AIR_IO_FILTERED_FIELD(rc, field) ({ \
     air_io_t *__air_io = rc_get_air_io(rc);     \
     __air_io ? lpf_value(&__air_io->field) : 0; \
@@ -1389,9 +1393,31 @@ void rc_update(rc_t *rc)
         rc->state.dirty &= !output_update(rc->output, input_new_data, now);
     }
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+    input_new_data = input_new_data || rc_is_failsafe_active(rc, NULL);
+#endif
+
     if (input_new_data)
     {
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+        if (rc_is_failsafe_active(rc, NULL) &&
+            setting_get_u8(settings_get_key(SETTING_KEY_RX_FS_MODE)) == RX_FS_CUSTOM &&
+            rc->data.failsafe.input->custom_channels_values_valid)
+        {
+            if (!custom_failsafe_warning_logged)
+            {
+                LOG_I(TAG, "Overriding channels with F/S values");
+                custom_failsafe_warning_logged = true;
+            }
+            for (int ii = 0; ii < RC_CHANNELS_NUM; ii++)
+            {
+                rc->data.channels[ii].value = rc->data.failsafe.input->custom_channels_values[ii];
+            }
+        }
+        else
+        {
+            custom_failsafe_warning_logged = false;
+        }
         pwm_update(&rc->data);
 #endif
     }

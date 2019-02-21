@@ -9,7 +9,11 @@
 // Number of succesful resets to clear the active state
 #define FAILSAFE_REQUIRED_RESETS_TO_CLEAR 5
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
 static const char *TAG = "Failsafe";
+
+static uint16_t custom_channels_values[RC_CHANNELS_NUM];
+#endif
 
 const char *failsafe_reason_get_name(failsafe_reason_e reason)
 {
@@ -35,11 +39,10 @@ void failsafe_init(failsafe_t *fs)
     fs->enable_at = TIME_MICROS_MAX;
 
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
-    size_t channels_size = sizeof(uint16_t) * RC_CHANNELS_NUM;
-    fs->custom_channels_values = malloc(channels_size);
-    fs->custom_channels_values_valid = config_get_fs_channels(fs->custom_channels_values, channels_size);
+    fs->custom_channels_values_valid = config_get_fs_channels(custom_channels_values, sizeof(custom_channels_values));
     if (fs->custom_channels_values_valid)
     {
+        fs->custom_channels_values = custom_channels_values;
         LOG_I(TAG, "Custom F/S channels values loaded");
     }
 #endif

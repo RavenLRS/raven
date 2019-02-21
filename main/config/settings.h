@@ -25,10 +25,12 @@
 #define SETTING_TX_FOLDER_COUNT 0
 #endif
 #if defined(USE_RX_SUPPORT)
-#if defined(USE_GPIO_REMAP)
+#if defined(USE_GPIO_REMAP) && defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
 #define SETTING_RX_FOLDER_COUNT 14
-#else
+#elif defined(USE_GPIO_REMAP)
 #define SETTING_RX_FOLDER_COUNT 12
+#else
+#define SETTING_RX_FOLDER_COUNT 10
 #endif
 #else
 #define SETTING_RX_FOLDER_COUNT 0
