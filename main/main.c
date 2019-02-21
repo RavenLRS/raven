@@ -47,6 +47,8 @@
 #include "util/macros.h"
 #include "util/time.h"
 
+static const char *TAG = "Main";
+
 static air_radio_t radio = {
 #if defined(USE_RADIO_SX127X)
     .sx127x.spi_bus = SX127X_SPI_BUS,
@@ -113,10 +115,11 @@ static void setting_changed(const setting_t *setting, void *user_data)
 {
     UNUSED(user_data);
 
-#if defined(USE_TX_SUPPORT)
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
     if (SETTING_IS(setting, SETTING_KEY_RX_FS_SET_CUSTOM))
     {
-        // TODO
+        config_set_fs_channels(&rc.data);
+        LOG_I(TAG, "Saved current RC values as Custom F/S");
     }
 #endif
 

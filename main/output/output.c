@@ -364,6 +364,8 @@ bool output_open(rc_data_t *data, output_t *output, void *config)
 
 bool output_update(output_t *output, bool input_was_updated, time_micros_t now)
 {
+    static bool fs_warning_logged = false;
+
     bool updated = false;
     if (output && output->is_open)
     {
@@ -387,6 +389,27 @@ bool output_update(output_t *output, bool input_was_updated, time_micros_t now)
                 rssi_channel->value = RC_CHANNEL_VALUE_FROM_PERCENTAGE(lq);
             }
         }
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+        else if (
+            failsafe_is_active(output->rc_data->failsafe.input) &&
+            setting_get_u8(settings_get_key(SETTING_KEY_RX_FS_MODE)) == RX_FS_CUSTOM &&
+            output->rc_data->failsafe.input->custom_channels_values_valid)
+        {
+            if (!fs_warning_logged)
+            {
+                LOG_W(TAG, "Overriding channels with F/S values");
+                fs_warning_logged = true;
+            }
+            for (int ii = 0; ii < RC_CHANNELS_NUM; ii++)
+            {
+                output->rc_data->channels[ii].value = output->rc_data->failsafe.input->custom_channels_values[ii];
+            }
+        }
+        else
+        {
+            fs_warning_logged = false;
+        }
+#endif
         updated = output->vtable.update(output, output->rc_data, update_rc, now);
         if (updated && update_rc)
         {
