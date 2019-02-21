@@ -50,6 +50,15 @@ typedef enum
 
 typedef enum
 {
+    RX_FS_HOLD,
+    RX_FS_CUSTOM,
+
+    RX_FS_FIRST = RX_FS_HOLD,
+    RX_FS_LAST = RX_FS_CUSTOM,
+} rx_fs_mode_e;
+
+typedef enum
+{
     RX_RSSI_CHANNEL_AUTO,
     RX_RSSI_CHANNEL_NONE,
     RX_RSSI_CHANNEL_1,
@@ -163,6 +172,8 @@ bool config_get_pairing(air_pairing_t *pairing, const air_addr_t *addr);
 
 tx_input_type_e config_get_input_type(void);
 rx_output_type_e config_get_output_type(void);
+
+rx_fs_mode_e config_get_fs_mode(void);
 
 air_addr_t config_get_addr(void);
 // Returns the configured name for the device

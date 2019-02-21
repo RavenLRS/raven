@@ -434,6 +434,11 @@ rx_output_type_e config_get_output_type(void)
     return setting_get_u8(settings_get_key(SETTING_KEY_RX_OUTPUT));
 }
 
+rx_fs_mode_e config_get_fs_mode(void)
+{
+    return setting_get_u8(settings_get_key(SETTING_KEY_RX_FS_MODE));
+}
+
 air_addr_t config_get_addr(void)
 {
     return config.addr;

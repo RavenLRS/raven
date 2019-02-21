@@ -113,6 +113,13 @@ static void setting_changed(const setting_t *setting, void *user_data)
 {
     UNUSED(user_data);
 
+#if defined(USE_TX_SUPPORT)
+    if (SETTING_IS(setting, SETTING_KEY_RX_FS_SET_CUSTOM))
+    {
+        // TODO
+    }
+#endif
+
 #if defined(USE_DEVELOPER_MENU)
     if (SETTING_IS(setting, SETTING_KEY_DEVELOPER_REBOOT))
     {
