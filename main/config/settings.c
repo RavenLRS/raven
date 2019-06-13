@@ -221,6 +221,18 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
         return SETTING_SHOW_IF(config_get_output_type() == RX_OUTPUT_FPORT);
     }
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+    if (SETTING_IS(setting, SETTING_KEY_RX_FS_MODE))
+    {
+        return SETTING_SHOW_IF(config_get_output_type() == RX_OUTPUT_NONE);
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_RX_FS_SET_CUSTOM))
+    {
+        return SETTING_SHOW_IF(config_get_fs_mode() == RX_FS_CUSTOM);
+    }
+#endif
+
     return SETTING_VISIBILITY_SHOW;
 }
 #endif
@@ -358,6 +370,9 @@ static const char *config_air_modes_table[] = {
 _Static_assert(ARRAY_COUNT(config_air_modes_table) == CONFIG_AIR_MODES_COUNT, "CONFIG_AIR_MODES_COUNT is invalid");
 #if defined(USE_RX_SUPPORT)
 static const char *rx_output_table[] = {"MSP", "CRSF", "FPort", "SBUS/Smartport", "Channels"};
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+static const char *fs_mode_table[] = {"Hold", "Custom"};
+#endif
 static const char *msp_baudrate_table[] = {"115200"};
 static const char *rssi_channel_table[] = {
     "Auto",
@@ -473,6 +488,8 @@ static const setting_t settings[] = {
     RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(13),
     RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(14),
     RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(15),
+    U8_MAP_SETTING(SETTING_KEY_RX_FS_MODE, "F/S Mode", 0, FOLDER_ID_RX, fs_mode_table, RX_FS_HOLD),
+    CMD_SETTING(SETTING_KEY_RX_FS_SET_CUSTOM, "Use current values", FOLDER_ID_RX, 0, 0),
 #endif
 
 #if defined(USE_SCREEN)

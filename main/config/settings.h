@@ -25,7 +25,9 @@
 #define SETTING_TX_FOLDER_COUNT 0
 #endif
 #if defined(USE_RX_SUPPORT)
-#if defined(USE_GPIO_REMAP)
+#if defined(USE_GPIO_REMAP) && defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+#define SETTING_RX_FOLDER_COUNT 14
+#elif defined(USE_GPIO_REMAP)
 #define SETTING_RX_FOLDER_COUNT 12
 #else
 #define SETTING_RX_FOLDER_COUNT 10
@@ -89,6 +91,11 @@
 
 #define SETTING_KEY_RX_CHANNEL_OUTPUTS "rx-chs"
 #define SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX SETTING_KEY_RX_CHANNEL_OUTPUTS "."
+
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+#define SETTING_KEY_RX_FS_MODE SETTING_KEY_RX_PREFIX "fs_mode"
+#define SETTING_KEY_RX_FS_SET_CUSTOM SETTING_KEY_RX_PREFIX "fs_set_cust"
+#endif
 
 #if defined(USE_SCREEN)
 #define SETTING_KEY_SCREEN "scr" // Using screen here makes esp32 NVS return "key-too-long"

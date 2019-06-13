@@ -18,6 +18,10 @@ typedef struct failsafe_s
     time_micros_t enable_at;
     time_micros_t active_since;
     unsigned resets_since_active; // Require a minimum number of succesful resets to clear
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+    uint16_t *custom_channels_values;
+    bool custom_channels_values_valid;
+#endif
 } failsafe_t;
 
 void failsafe_init(failsafe_t *fs);

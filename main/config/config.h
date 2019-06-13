@@ -48,6 +48,16 @@ typedef enum
     RX_OUTPUT_LAST = RX_OUTPUT_NONE,
 } rx_output_type_e;
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+typedef enum
+{
+    RX_FS_HOLD,
+    RX_FS_CUSTOM,
+
+    RX_FS_COUNT,
+} rx_fs_mode_e;
+#endif
+
 typedef enum
 {
     RX_RSSI_CHANNEL_AUTO,
@@ -163,6 +173,12 @@ bool config_get_pairing(air_pairing_t *pairing, const air_addr_t *addr);
 
 tx_input_type_e config_get_input_type(void);
 rx_output_type_e config_get_output_type(void);
+
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+rx_fs_mode_e config_get_fs_mode(void);
+bool config_get_fs_channels(uint16_t *blob, size_t size);
+bool config_set_fs_channels(const rc_data_t *rc_data);
+#endif
 
 air_addr_t config_get_addr(void);
 // Returns the configured name for the device

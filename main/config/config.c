@@ -19,6 +19,7 @@
 #define CONFIG_RX_SEQ_KEY "rx_seq"
 #define CONFIG_RX_SEQ_MIN 1 // We never assign the zero to check for valid ones
 #define CONFIG_RX_SEQ_MAX 0xFF
+#define CONFIG_FS_CHANS_KEY "fs_chans"
 
 #define CONFIG_AIR_INFO_KEY_PREFIX "a:"
 
@@ -433,6 +434,38 @@ rx_output_type_e config_get_output_type(void)
 {
     return setting_get_u8(settings_get_key(SETTING_KEY_RX_OUTPUT));
 }
+
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+rx_fs_mode_e config_get_fs_mode(void)
+{
+    return setting_get_u8(settings_get_key(SETTING_KEY_RX_FS_MODE));
+}
+#endif
+
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+bool config_get_fs_channels(uint16_t *blob, size_t size)
+{
+    bool found = storage_get_sized_blob(&storage, CONFIG_FS_CHANS_KEY, blob, size);
+    if (!found)
+    {
+        memset(blob, 0, size);
+    }
+    return found;
+}
+
+bool config_set_fs_channels(const rc_data_t *rc_data)
+{
+    uint16_t channels[RC_CHANNELS_NUM];
+    for (int ii = 0; ii < RC_CHANNELS_NUM; ii++)
+    {
+        channels[ii] = rc_data_get_channel_value(rc_data, ii);
+    }
+
+    storage_set_blob(&storage, CONFIG_FS_CHANS_KEY, channels, sizeof(channels));
+    storage_commit(&storage);
+    return true;
+}
+#endif
 
 air_addr_t config_get_addr(void)
 {
