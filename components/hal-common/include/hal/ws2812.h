@@ -14,8 +14,8 @@ typedef struct hal_ws2812_color_s
 {
     // Declared in the same order as they're sent out,
     // so we can avoid a copy to reorder the data in memory.
-    uint8_t g;
     uint8_t r;
+    uint8_t g;
     uint8_t b;
 } __attribute__((packed)) hal_ws2812_color_t;
 
@@ -34,7 +34,7 @@ typedef struct hal_ws2812_state_s
 
 #define HAL_WS2812_RGB(red, green, blue) \
     {                                    \
-        .g = green, .r = red, .b = blue  \
+        .r = red, .g = green, .b = blue  \
     }
 
 #define HAL_WS2812_RED HAL_WS2812_RGB(HAL_WS2812_COLOR_LEVEL_MAX, 0, 0)
