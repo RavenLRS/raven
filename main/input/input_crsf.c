@@ -596,7 +596,7 @@ static void input_crsf_send_setting_frame(input_crsf_t *input_crsf, const settin
     // XXX: Due to a bug in device.lua, if we send CRSF_MAX_SETTINGS_ENTRY_PAYLOAD_SIZE,
     // some chunks will be incorrectly interpreted and the current value will be
     // incorrectly displayed (e.g. value = 0 shows value = 2 for the RSSI channel setting).
-    const int max_setting_payload_size = CRSF_MAX_SETTINGS_ENTRY_PAYLOAD_SIZE - 8;
+    const size_t max_setting_payload_size = CRSF_MAX_SETTINGS_ENTRY_PAYLOAD_SIZE - 8;
     int cur_chunk = ring_buffer_count(&rb.b) / max_setting_payload_size;
     while (cur_chunk >= 0)
     {
@@ -604,7 +604,7 @@ static void input_crsf_send_setting_frame(input_crsf_t *input_crsf, const settin
         entry.settings_entry.chunk = cur_chunk;
         entry.header.frame_size = CRSF_SETTINGS_ENTRY_FRAME_SIZE(chunk_payload_size);
         uint8_t *ptr = entry.settings_entry.payload;
-        for (int ii = 0; ii < chunk_payload_size; ii++)
+        for (size_t ii = 0; ii < chunk_payload_size; ii++)
         {
             ASSERT(ring_buffer_pop(&rb.b, ptr++));
         }
@@ -711,8 +711,24 @@ static void input_crsf_rmp_handler(rmp_t *rmp, rmp_req_t *req, void *user_data)
                     do_write = settings_rmp_setting_set_value(&cpy, pending_write->payload.u8);
                     break;
                 case SETTING_TYPE_STRING:
+                    // Since the crossfire.lua script doesn't support deleting characters, the
+                    // only way to shorten a string is to set the characters at the end as blank
+                    // so we need to trim them manually.
+
+                    // Make sure there's at least a null at the end before we call strlen()
+                    pending_write->payload.s[sizeof(pending_write->payload.s) - 1] = '\0';
+                    for (int ii = (int)strlen(pending_write->payload.s) - 1; ii >= 0; ii--)
+                    {
+                        if (pending_write->payload.s[ii] != ' ')
+                        {
+                            // Non blank, stop
+                            break;
+                        }
+                        pending_write->payload.s[ii] = '\0';
+                    }
                     do_write = settings_rmp_setting_set_str_value(&cpy, pending_write->payload.s);
                     break;
+
                 default:
                     do_write = false;
                     LOG_W(TAG, "Can't handle CRSF write for setting of type %d", setting->type);
@@ -757,7 +773,7 @@ static bool input_crsf_open(void *input, void *config)
     input_crsf_t *input_crsf = input;
     input_crsf->bps = CRSF_INPUT_BPS_DETECT;
 
-    LOG_I(TAG, "Open");
+    LOG_I(TAG, "Open on GPIO %s", gpio_toa(config_crsf->gpio));
 
     io_t crsf_io = {
         .read = NULL,
@@ -769,8 +785,8 @@ static bool input_crsf_open(void *input, void *config)
 
     serial_port_config_t serial_config = {
         .baud_rate = CRSF_OPENTX_BAUDRATE,
-        .tx_pin = config_crsf->gpio,
-        .rx_pin = config_crsf->gpio,
+        .tx = config_crsf->gpio,
+        .rx = config_crsf->gpio,
         .tx_buffer_size = 128,
         .parity = SERIAL_PARITY_DISABLE,
         .stop_bits = SERIAL_STOP_BITS_1,
@@ -864,7 +880,7 @@ static bool input_crsf_update(void *input, rc_data_t *data, time_micros_t now)
         input_crsf->next_resp_frame = TIME_MICROS_MAX;
         input_crsf_send_response(input_crsf);
     }
-    // The TX_DONE interrupt won't fire if there's a collision, so we use a timer
+    // The TX_DONE interrupt won't fire on ESP32 if there's a collision, so we use a timer
     // as a fallback to avoid leaving the pin in the TX state.
     if (now > input_crsf->enable_rx_deadline)
     {

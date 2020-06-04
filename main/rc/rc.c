@@ -9,6 +9,7 @@
 
 #include "config/config.h"
 
+#include "io/gpio.h"
 #include "io/pwm.h"
 
 #include "platform/dispatch.h"
@@ -27,6 +28,10 @@
 #include "rc.h"
 
 static const char *TAG = "RC";
+
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+static bool custom_failsafe_warning_logged = false;
+#endif
 
 #define GET_AIR_IO_FILTERED_FIELD(rc, field) ({ \
     air_io_t *__air_io = rc_get_air_io(rc);     \
@@ -68,6 +73,21 @@ static void rc_update_rx_craft_name(rc_t *rc, time_micros_t now)
     (void)TELEMETRY_SET_STR(&rc->data, TELEMETRY_ID_CRAFT_NAME, name, now);
 }
 
+static int rc_get_tx_rf_power(rc_t *rc)
+{
+    return air_rf_power_to_dbm(settings_get_key_u8(SETTING_KEY_TX_RF_POWER));
+}
+
+static void rc_update_tx_rf_power(rc_t *rc)
+{
+    int power = rc_get_tx_rf_power(rc);
+    // This notification could arrive on any thread, so
+    // we can't just change the power from here, schedule
+    // it and change it in the main RC loop.
+    rc->state.tx_rf_power = power;
+    (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RF_POWER, power, time_micros_now());
+}
+
 // Initialize local telemetry values
 static void rc_data_initialize(rc_t *rc)
 {
@@ -95,6 +115,9 @@ static void rc_data_initialize(rc_t *rc)
         }
         rmp_set_role(rc->rmp, AIR_ROLE_TX);
         rmp_set_name(rc->rmp, telemetry_get_str(rc_data_get_uplink_telemetry(&rc->data, TELEMETRY_ID_PILOT_NAME), TELEMETRY_ID_PILOT_NAME));
+
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RF_POWER, rc_get_tx_rf_power(rc), time_micros_now());
+
         break;
     case RC_MODE_RX:
         rc_update_rx_craft_name(rc, now);
@@ -113,20 +136,17 @@ static void rc_data_initialize(rc_t *rc)
         }
         rmp_set_role(rc->rmp, AIR_ROLE_RX);
         rmp_set_name(rc->rmp, telemetry_get_str(rc_data_get_downlink_telemetry(&rc->data, TELEMETRY_ID_CRAFT_NAME), TELEMETRY_ID_CRAFT_NAME));
+
+        (void)TELEMETRY_SET_U8(&rc->data, TELEMETRY_ID_RX_ACTIVE_ANT, 1, time_micros_now());
+        (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RF_POWER, 20, time_micros_now());
+
         break;
     }
     if (channels_num > 0)
     {
-        rc->data.channels_num = MIN(channels_num, RC_CHANNELS_NUM);
+        rc->data.channels_num = MIN(channels_num, (unsigned)RC_CHANNELS_NUM);
     }
     rc->data.ready = false;
-
-    // TX
-    (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_TX_RF_POWER, 20, time_micros_now());
-
-    // RX
-    (void)TELEMETRY_SET_U8(&rc->data, TELEMETRY_ID_RX_ACTIVE_ANT, 1, time_micros_now());
-    (void)TELEMETRY_SET_I8(&rc->data, TELEMETRY_ID_RX_RF_POWER, 20, time_micros_now());
 }
 
 static void rc_invalidate_air(rc_t *rc)
@@ -142,11 +162,6 @@ static void rc_invalidate_air(rc_t *rc)
     default:
         UNREACHABLE();
     }
-}
-
-static int rc_get_tx_rf_power(rc_t *rc)
-{
-    return air_rf_power_to_dbm(settings_get_key_u8(SETTING_KEY_TX_RF_POWER));
 }
 
 static bool rc_should_enable_power_test(rc_t *rc)
@@ -286,6 +301,9 @@ static void rc_reconfigure_input(rc_t *rc)
     LOG_I(TAG, "Reconfigure input");
     union {
         input_crsf_config_t crsf;
+        input_crsf_config_t ibus;
+        input_ppm_config_t ppm;
+        input_sbus_config_t sbus;
     } input_config;
     if (rc->input != NULL)
     {
@@ -303,8 +321,26 @@ static void rc_reconfigure_input(rc_t *rc)
         case TX_INPUT_CRSF:
             input_crsf_init(&rc->inputs.crsf);
             rc->input = (input_t *)&rc->inputs.crsf;
-            input_config.crsf.gpio = settings_get_key_gpio(SETTING_KEY_TX_TX_GPIO);
+            input_config.crsf.gpio = gpio_get_by_tag(GPIO_TAG_INPUT_BIDIR);
             rc->input_config = &input_config.crsf;
+            break;
+        case TX_INPUT_PPM:
+            input_ppm_init(&rc->inputs.ppm);
+            rc->input = (input_t *)&rc->inputs.ppm;
+            input_config.ppm.gpio = gpio_get_by_tag(GPIO_TAG_INPUT_RX);
+            rc->input_config = &input_config.ppm;
+            break;
+        case TX_INPUT_IBUS:
+            input_ibus_init(&rc->inputs.ibus);
+            rc->input = (input_t *)&rc->inputs.ibus;
+            input_config.ibus.gpio = gpio_get_by_tag(GPIO_TAG_INPUT_RX);
+            rc->input_config = &input_config.ibus;
+            break;
+        case TX_INPUT_SBUS:
+            input_sbus_init(&rc->inputs.sbus);
+            rc->input = (input_t *)&rc->inputs.sbus;
+            input_config.sbus.rx = gpio_get_by_tag(GPIO_TAG_INPUT_RX);
+            rc->input_config = &input_config.sbus;
             break;
         case TX_INPUT_FAKE:
             input_fake_init(&rc->inputs.fake);
@@ -437,33 +473,38 @@ static void rc_reconfigure_output(rc_t *rc)
         case RX_OUTPUT_MSP:
             output_msp_init(&rc->outputs.msp);
             rc->output = (output_t *)&rc->outputs.msp;
-            output_config.msp.tx = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
-            output_config.msp.rx = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            output_config.msp.tx = gpio_get_by_tag(GPIO_TAG_OUTPUT_TX);
+            output_config.msp.rx = gpio_get_by_tag(GPIO_TAG_OUTPUT_RX);
             output_config.msp.baud_rate = settings_get_key_u8(SETTING_KEY_RX_MSP_BAUDRATE);
             rc->output_config = &output_config.msp;
             break;
         case RX_OUTPUT_CRSF:
             output_crsf_init(&rc->outputs.crsf);
             rc->output = (output_t *)&rc->outputs.crsf;
-            output_config.crsf.tx = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
-            output_config.crsf.rx = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            output_config.crsf.tx = gpio_get_by_tag(GPIO_TAG_OUTPUT_TX);
+            output_config.crsf.rx = gpio_get_by_tag(GPIO_TAG_OUTPUT_RX);
             output_config.crsf.inverted = false;
             rc->output_config = &output_config.crsf;
             break;
         case RX_OUTPUT_FPORT:
             output_fport_init(&rc->outputs.fport);
             rc->output = (output_t *)&rc->outputs.fport;
-            output_config.fport.tx = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
-            output_config.fport.rx = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            // Nothing expects full duplex FPort right now, so
+            // we only support it as half duplex although the driver
+            // is capable of both.
+            output_config.fport.tx = gpio_get_by_tag(GPIO_TAG_OUTPUT_BIDIR);
+            output_config.fport.rx = output_config.fport.tx;
             output_config.fport.inverted = settings_get_key_bool(SETTING_KEY_RX_FPORT_INVERTED);
             rc->output_config = &output_config.fport;
             break;
         case RX_OUTPUT_SBUS_SPORT:
             output_sbus_init(&rc->outputs.sbus);
             rc->output = (output_t *)&rc->outputs.sbus;
-            output_config.sbus.sbus = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
+            output_config.sbus.sbus = gpio_get_by_tag(GPIO_TAG_OUTPUT_TX);
             output_config.sbus.sbus_inverted = settings_get_key_bool(SETTING_KEY_RX_SBUS_INVERTED);
-            output_config.sbus.sport = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            // TODO: This doesn't work on hardware that doesn't allow
+            // UART pin remapping
+            output_config.sbus.sport = gpio_get_by_tag(GPIO_TAG_OUTPUT_RX);
             output_config.sbus.sport_inverted = settings_get_key_bool(SETTING_KEY_RX_SPORT_INVERTED);
             rc->output_config = &output_config.sbus;
             break;
@@ -641,7 +682,7 @@ static void rc_rmp_msp_request_response_handler(msp_conn_t *conn, uint16_t cmd, 
         .cmd = cmd,
         .payload_size = size,
     };
-    size_t cpy_size = MIN(size, sizeof(resp.payload));
+    size_t cpy_size = MIN((unsigned)MAX(size, 0), sizeof(resp.payload));
     memcpy(resp.payload, payload, cpy_size);
     size_t rmp_payload_size = sizeof(resp) - sizeof(resp.payload) + cpy_size;
     rmp_send(ctx->rc->rmp, ctx->rc->state.msp_recv_port, &ctx->dst, ctx->dst_port, &resp, rmp_payload_size);
@@ -755,7 +796,7 @@ static void rc_msp_request_callback(msp_conn_t *conn, uint16_t cmd, const void *
                     .cmd = cmd,
                     .payload_size = size,
                 };
-                size_t cpy_size = MIN(size, sizeof(req.payload));
+                size_t cpy_size = MIN((unsigned)MAX(0, size), sizeof(req.payload));
                 memcpy(req.payload, payload, cpy_size);
                 size_t rmp_payload_size = sizeof(req) - sizeof(req.payload) + cpy_size;
                 if (rmp_send(rc->rmp, port, &pair_addr, RMP_PORT_MSP, &req, rmp_payload_size))
@@ -789,12 +830,12 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
 {
     rc_t *rc = user_data;
 
-    if (STR_EQUAL(setting->key, SETTING_KEY_RC_MODE))
+    if (SETTING_IS(setting, SETTING_KEY_RC_MODE))
     {
         // Reboot after 500ms to allow the setting to be written
         dispatch_after((dispatch_fn)system_reboot, NULL, 500);
     }
-    else if (STR_EQUAL(setting->key, SETTING_KEY_BIND))
+    else if (SETTING_IS(setting, SETTING_KEY_BIND))
     {
         rc->state.bind_requested = setting_get_bool(setting);
     }
@@ -816,15 +857,12 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
         switch (rc_get_mode(rc))
         {
         case RC_MODE_TX:
-            if (STR_EQUAL(setting->key, SETTING_KEY_TX_RF_POWER))
+            if (SETTING_IS(setting, SETTING_KEY_TX_RF_POWER))
             {
-                // This notification could arrive on any thread, so
-                // we can't just change the power from here, schedule
-                // it and change it in the main RC loop.
-                rc->state.tx_rf_power = rc_get_tx_rf_power(rc);
+                rc_update_tx_rf_power(rc);
                 break;
             }
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RECEIVERS_RX_SELECT_PREFIX))
+            if (SETTING_HAS_RECEIVERS_PREFIX(setting, SETTING_KEY_RECEIVERS_RX_SELECT_PREFIX))
             {
                 // Switch receivers
                 int rx_num = setting_receiver_get_rx_num(setting);
@@ -835,7 +873,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
                 }
                 break;
             }
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RECEIVERS_RX_DELETE_PREFIX))
+            if (SETTING_HAS_RECEIVERS_PREFIX(setting, SETTING_KEY_RECEIVERS_RX_DELETE_PREFIX))
             {
                 // Receiver has been deleted. Check if it's the current one and invalidate
                 // the output.
@@ -858,8 +896,8 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
                 }
                 break;
             }
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_TX_PREFIX) &&
-                !STR_EQUAL(setting->key, SETTING_KEY_TX_PILOT_NAME))
+            if (SETTING_IS_FROM_FOLDER(setting, SETTING_KEY_TX) &&
+                !SETTING_IS(setting, SETTING_KEY_TX_PILOT_NAME))
             {
                 rc_invalidate_input(rc);
                 break;
@@ -871,10 +909,9 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
             }
             break;
         case RC_MODE_RX:
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RX_PREFIX) &&
-                !STR_EQUAL(setting->key, SETTING_KEY_RX_AUTO_CRAFT_NAME) &&
-                !STR_EQUAL(setting->key, SETTING_KEY_RX_CRAFT_NAME))
-
+            if (SETTING_IS_FROM_FOLDER(setting, SETTING_KEY_RX) &&
+                !SETTING_IS(setting, SETTING_KEY_RX_AUTO_CRAFT_NAME) &&
+                !SETTING_IS(setting, SETTING_KEY_RX_CRAFT_NAME))
             {
                 rc_invalidate_output(rc);
             }
@@ -884,7 +921,7 @@ static void rc_setting_changed(const setting_t *setting, void *user_data)
                 rc_invalidate_input(rc);
             }
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
-            if (STR_HAS_PREFIX(setting->key, SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX))
+            if (SETTING_IS_FROM_FOLDER(setting, SETTING_KEY_RX_CHANNEL_OUTPUTS))
             {
                 pwm_update_config();
             }
@@ -1199,7 +1236,7 @@ int rc_get_alternative_pairings(rc_t *rc, air_pairing_t *pairings, size_t size)
                 continue;
             }
             crc = rc_crc_addr(crc, &peer->addr);
-            if (count < size)
+            if (count < (int)size)
             {
                 air_pairing_cpy(&pairings[count], &pairing);
                 if (paired_idx < 0 && air_addr_equals(&paired_addr, &peer->addr))
@@ -1242,7 +1279,7 @@ int rc_get_alternative_pairings(rc_t *rc, air_pairing_t *pairings, size_t size)
             }
         }
     }
-    return MIN(count, size);
+    return MIN(count, (int)size);
 }
 
 void rc_switch_pairing(rc_t *rc, air_pairing_t *pairing)
@@ -1355,9 +1392,31 @@ void rc_update(rc_t *rc)
         rc->state.dirty &= !output_update(rc->output, input_new_data, now);
     }
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+    input_new_data = input_new_data || rc_is_failsafe_active(rc, NULL);
+#endif
+
     if (input_new_data)
     {
 #if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+        if (rc_is_failsafe_active(rc, NULL) &&
+            setting_get_u8(settings_get_key(SETTING_KEY_RX_FS_MODE)) == RX_FS_CUSTOM &&
+            rc->data.failsafe.input->custom_channels_values_valid)
+        {
+            if (!custom_failsafe_warning_logged)
+            {
+                LOG_I(TAG, "Overriding channels with F/S values");
+                custom_failsafe_warning_logged = true;
+            }
+            for (int ii = 0; ii < RC_CHANNELS_NUM; ii++)
+            {
+                rc->data.channels[ii].value = rc->data.failsafe.input->custom_channels_values[ii];
+            }
+        }
+        else
+        {
+            custom_failsafe_warning_logged = false;
+        }
         pwm_update(&rc->data);
 #endif
     }

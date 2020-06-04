@@ -9,10 +9,10 @@
 #include "config/config.h"
 
 #include "io/pwm.h"
+#include "io/storage.h"
 
 #include "msp/msp_serial.h"
 
-#include "platform/storage.h"
 #include "platform/system.h"
 
 #include "ui/screen.h"
@@ -66,17 +66,15 @@ static const char *gpio_names[HAL_GPIO_USER_COUNT];
 
 #define GPIO_USER_SETTING(k, n, p, def) U8_MAP_SETTING(k, n, 0, p, gpio_names, def)
 
-#define RX_CHANNEL_OUTPUT_GPIO_USER_SETTING_KEY(p) (SETTING_KEY_RX_CHANNEL_OUTPUTS_PREFIX #p)
+#define RX_CHANNEL_OUTPUT_GPIO_USER_SETTING_KEY(p) _SKE(FOLDER_ID_RX_CHANNEL_OUTPUTS, p)
 #define RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(p) \
     (setting_t) { .key = RX_CHANNEL_OUTPUT_GPIO_USER_SETTING_KEY(p), .name = NULL, .type = SETTING_TYPE_U8, .flags = SETTING_FLAG_NAME_MAP | SETTING_FLAG_DYNAMIC, .val_names = pwm_channel_names, .unit = NULL, .folder = FOLDER_ID_RX_CHANNEL_OUTPUTS, .min = U8(0), .max = U8(PWM_CHANNEL_COUNT - 1), .def_val = U8(0), .data = setting_format_rx_channel_output }
 
-#define RX_FOLDER_ID(n) (0xFF - n)
+#define RX_FOLDER_ID(rx_num) (_SK_FOLDER_MAX - rx_num)
 
-#define RX_KEY(k, n) (k #n)
+#define RX_KEY(prefix, rx_num) SETTING_KEY_RECEIVER_ENCODE(prefix, rx_num)
 #define RX_STRING_SETTING(k, n, p, f) FLAGS_STRING_SETTING(k, n, SETTING_FLAG_READONLY | SETTING_FLAG_DYNAMIC, p, f)
 #define RX_CMD(k, n, p) CMD_SETTING(k, n, p, 0, SETTING_CMD_FLAG_CONFIRM)
-
-#define RX_ENSURE_COUNT(n) _Static_assert(CONFIG_MAX_PAIRED_RX == n, "invalid CONFIG_MAX_PAIRED_RX vs settings")
 
 #define RX_FOLDER(n)                                                                                                            \
     FOLDER(RX_KEY(SETTING_KEY_RECEIVERS_RX_PREFIX, n), "Receiver #" #n, RX_FOLDER_ID(n), FOLDER_ID_RECEIVERS, NULL),            \
@@ -84,8 +82,6 @@ static const char *gpio_names[HAL_GPIO_USER_COUNT];
         RX_STRING_SETTING(RX_KEY(SETTING_KEY_RECEIVERS_RX_ADDR_PREFIX, n), "Address", RX_FOLDER_ID(n), setting_format_rx_addr), \
         RX_CMD(RX_KEY(SETTING_KEY_RECEIVERS_RX_SELECT_PREFIX, n), "Select", RX_FOLDER_ID(n)),                                   \
         RX_CMD(RX_KEY(SETTING_KEY_RECEIVERS_RX_DELETE_PREFIX, n), "Delete", RX_FOLDER_ID(n))
-
-#define SETTINGS_STORAGE_KEY "settings"
 
 typedef enum
 {
@@ -103,8 +99,23 @@ typedef enum
 typedef setting_visibility_e (*setting_visibility_f)(folder_id_e folder, settings_view_e view_id, const setting_t *setting);
 typedef int (*setting_dynamic_format_f)(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt);
 
+static int setting_format_own_addr(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
+{
+    UNUSED(setting);
+
+    if (fmt == SETTING_DYNAMIC_FORMAT_VALUE)
+    {
+        air_addr_t addr = config_get_addr();
+        air_addr_format(&addr, buf, size);
+        return strlen(buf) + 1;
+    }
+    return 0;
+}
+
 static setting_visibility_e setting_visibility_root(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
+    UNUSED(folder);
+
     if (SETTING_IS(setting, SETTING_KEY_RC_MODE))
     {
 #if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
@@ -127,10 +138,12 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
     {
         return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_RX);
     }
+#if defined(USE_SCREEN)
     if (SETTING_IS(setting, SETTING_KEY_SCREEN))
     {
         return SETTING_SHOW_IF_SCREEN(view_id);
     }
+#endif
     if (SETTING_IS(setting, SETTING_KEY_RECEIVERS))
     {
         return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_TX);
@@ -153,20 +166,25 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
 #if defined(USE_TX_SUPPORT)
 static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
+    UNUSED(folder);
+    UNUSED(view_id);
+
     if (SETTING_IS(setting, SETTING_KEY_TX_INPUT))
     {
         return SETTING_SHOW_IF(view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
+#if defined(USE_GPIO_REMAP)
     if (SETTING_IS(setting, SETTING_KEY_TX_TX_GPIO))
     {
-        // Don't allow changing the TX pin from the CRSF configuration scripts
+        // Don't allow changing the TX pin from the CRSF/IBUS configuration scripts
         // since it will break communication.
         return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_CRSF && view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
     if (SETTING_IS(setting, SETTING_KEY_TX_RX_GPIO))
     {
-        return SETTING_VISIBILITY_HIDE;
+        return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_IBUS || config_get_input_type() == TX_INPUT_PPM || config_get_input_type() == TX_INPUT_SBUS);
     }
+#endif
     return SETTING_VISIBILITY_SHOW;
 }
 #endif
@@ -174,6 +192,10 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
 #if defined(USE_RX_SUPPORT)
 static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
+    UNUSED(folder);
+    UNUSED(view_id);
+
+#if defined(USE_GPIO_REMAP)
     if (SETTING_IS(setting, SETTING_KEY_RX_TX_GPIO))
     {
         return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
@@ -183,6 +205,7 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
     {
         return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
     }
+#endif
 
     if (SETTING_IS(setting, SETTING_KEY_RX_RSSI_CHANNEL))
     {
@@ -204,6 +227,18 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
         return SETTING_SHOW_IF(config_get_output_type() == RX_OUTPUT_FPORT);
     }
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+    if (SETTING_IS(setting, SETTING_KEY_RX_FS_MODE))
+    {
+        return SETTING_SHOW_IF(config_get_output_type() == RX_OUTPUT_NONE);
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_RX_FS_SET_CUSTOM))
+    {
+        return SETTING_SHOW_IF(config_get_fs_mode() == RX_FS_CUSTOM);
+    }
+#endif
+
     return SETTING_VISIBILITY_SHOW;
 }
 #endif
@@ -214,7 +249,7 @@ static setting_visibility_e setting_visibility_rx_channel_outputs(folder_id_e fo
     int index = setting_rx_channel_output_get_pos(setting);
     if (index >= 0)
     {
-        int gpio = hal_gpio_user_at(index);
+        int gpio = gpio_get_configurable_at(index);
         if (gpio != HAL_GPIO_NONE && pwm_output_can_use_gpio(gpio))
         {
             return SETTING_VISIBILITY_SHOW;
@@ -229,7 +264,7 @@ static int setting_format_rx_channel_output(char *buf, size_t size, const settin
     char gpio_name[HAL_GPIO_NAME_LENGTH];
     if (index >= 0)
     {
-        int gpio = hal_gpio_user_at(index);
+        int gpio = gpio_get_configurable_at(index);
         switch (fmt)
         {
         case SETTING_DYNAMIC_FORMAT_NAME:
@@ -316,7 +351,15 @@ static const char *air_band_table[] = {
 };
 _Static_assert(ARRAY_COUNT(air_band_table) == CONFIG_AIR_BAND_COUNT, "Invalid air band names table");
 #if defined(USE_TX_SUPPORT)
-static const char *tx_input_table[] = {"CRSF", "Test"};
+static const char *tx_input_table[] = {
+    "CRSF",
+    "PPM",
+    "IBUS",
+    "SBUS",
+#if defined(CONFIG_RAVEN_FAKE_INPUT)
+    "Test",
+#endif
+};
 #endif
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");
@@ -333,6 +376,9 @@ static const char *config_air_modes_table[] = {
 _Static_assert(ARRAY_COUNT(config_air_modes_table) == CONFIG_AIR_MODES_COUNT, "CONFIG_AIR_MODES_COUNT is invalid");
 #if defined(USE_RX_SUPPORT)
 static const char *rx_output_table[] = {"MSP", "CRSF", "FPort", "SBUS/Smartport", "Channels"};
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+static const char *fs_mode_table[] = {"Hold", "Custom"};
+#endif
 static const char *msp_baudrate_table[] = {"115200"};
 static const char *rssi_channel_table[] = {
     "Auto",
@@ -366,13 +412,15 @@ static const char *rssi_channel_table[] = {
 };
 #endif
 #if defined(USE_SCREEN)
+#if !defined(SCREEN_FIXED_ORIENTATION)
 static const char *screen_orientation_table[] = {"Horizontal", "Horizontal (buttons at the right)", "Vertical", "Vertical (buttons on top)"};
+#endif
 static const char *screen_brightness_table[] = {"Low", "Medium", "High"};
 static const char *screen_autopoweroff_table[] = {"Disabled", "30 sec", "1 min", "5 min", "10 min"};
 #endif
 
-static const char *view_crsf_input_tx_settings[] = {
-    "",
+static setting_key_t view_crsf_input_tx_settings[] = {
+    SETTING_KEY_ROOT,
     SETTING_KEY_BIND,
     SETTING_KEY_TX,
     SETTING_KEY_TX_RF_POWER,
@@ -380,6 +428,7 @@ static const char *view_crsf_input_tx_settings[] = {
     SETTING_KEY_ABOUT,
     SETTING_KEY_ABOUT_VERSION,
     SETTING_KEY_ABOUT_BUILD_DATE,
+    SETTING_KEY_ABOUT_ADDR,
 };
 
 static setting_value_t setting_values[SETTING_COUNT];
@@ -388,7 +437,7 @@ static setting_value_t setting_values[SETTING_COUNT];
 #define RX_DEFAULT_GPIO_IDX HAL_GPIO_USER_GET_IDX(RX_DEFAULT_GPIO)
 
 static const setting_t settings[] = {
-    FOLDER("", "Settings", FOLDER_ID_ROOT, 0, setting_visibility_root),
+    FOLDER(SETTING_KEY_ROOT, "Settings", FOLDER_ID_ROOT, 0, setting_visibility_root),
 #if defined(USE_TX_SUPPORT) && defined(USE_RX_SUPPORT)
     U8_MAP_SETTING(SETTING_KEY_RC_MODE, "RC Mode", 0, FOLDER_ID_ROOT, mode_table, RC_MODE_TX),
 #elif defined(USE_TX_SUPPORT)
@@ -404,8 +453,10 @@ static const setting_t settings[] = {
     U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),
     STRING_SETTING(SETTING_KEY_TX_PILOT_NAME, "Pilot Name", FOLDER_ID_TX),
     U8_MAP_SETTING(SETTING_KEY_TX_INPUT, "Input", 0, FOLDER_ID_TX, tx_input_table, TX_INPUT_FIRST),
+#if defined(USE_GPIO_REMAP)
     GPIO_USER_SETTING(SETTING_KEY_TX_TX_GPIO, "TX Pin", FOLDER_ID_TX, TX_DEFAULT_GPIO_IDX),
     GPIO_USER_SETTING(SETTING_KEY_TX_RX_GPIO, "RX Pin", FOLDER_ID_TX, RX_DEFAULT_GPIO_IDX),
+#endif
 #endif
 
 #if defined(USE_RX_SUPPORT)
@@ -414,8 +465,10 @@ static const setting_t settings[] = {
     BOOL_YN_SETTING(SETTING_KEY_RX_AUTO_CRAFT_NAME, "Auto Craft Name", 0, FOLDER_ID_RX, true),
     STRING_SETTING(SETTING_KEY_RX_CRAFT_NAME, "Craft Name", FOLDER_ID_RX),
     U8_MAP_SETTING(SETTING_KEY_RX_OUTPUT, "Output", 0, FOLDER_ID_RX, rx_output_table, RX_OUTPUT_MSP),
+#if defined(USE_GPIO_REMAP)
     GPIO_USER_SETTING(SETTING_KEY_RX_TX_GPIO, "TX Pin", FOLDER_ID_RX, TX_DEFAULT_GPIO_IDX),
     GPIO_USER_SETTING(SETTING_KEY_RX_RX_GPIO, "RX Pin", FOLDER_ID_RX, RX_DEFAULT_GPIO_IDX),
+#endif
     U8_MAP_SETTING(SETTING_KEY_RX_RSSI_CHANNEL, "RSSI Channel", 0, FOLDER_ID_RX, rssi_channel_table, RX_RSSI_CHANNEL_AUTO),
     BOOL_YN_SETTING(SETTING_KEY_RX_SBUS_INVERTED, "SBUS Inverted", 0, FOLDER_ID_RX, true),
     BOOL_YN_SETTING(SETTING_KEY_RX_SPORT_INVERTED, "S.Port Inverted", 0, FOLDER_ID_RX, true),
@@ -441,11 +494,15 @@ static const setting_t settings[] = {
     RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(13),
     RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(14),
     RX_CHANNEL_OUTPUT_GPIO_USER_SETTING(15),
+    U8_MAP_SETTING(SETTING_KEY_RX_FS_MODE, "F/S Mode", 0, FOLDER_ID_RX, fs_mode_table, RX_FS_HOLD),
+    CMD_SETTING(SETTING_KEY_RX_FS_SET_CUSTOM, "Use current values", FOLDER_ID_RX, 0, 0),
 #endif
 
 #if defined(USE_SCREEN)
     FOLDER(SETTING_KEY_SCREEN, "Screen", FOLDER_ID_SCREEN, FOLDER_ID_ROOT, NULL),
+#if !defined(SCREEN_FIXED_ORIENTATION)
     U8_MAP_SETTING(SETTING_KEY_SCREEN_ORIENTATION, "Orientation", 0, FOLDER_ID_SCREEN, screen_orientation_table, SCREEN_ORIENTATION_DEFAULT),
+#endif
     U8_MAP_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, "Brightness", 0, FOLDER_ID_SCREEN, screen_brightness_table, SCREEN_BRIGHTNESS_DEFAULT),
     U8_MAP_SETTING(SETTING_KEY_SCREEN_AUTO_OFF, "Auto Off", 0, FOLDER_ID_SCREEN, screen_autopoweroff_table, UI_SCREEN_AUTOOFF_DEFAULT),
 #endif
@@ -500,7 +557,8 @@ static const setting_t settings[] = {
     FOLDER(SETTING_KEY_ABOUT, "About", FOLDER_ID_ABOUT, FOLDER_ID_ROOT, NULL),
     RO_STRING_SETTING(SETTING_KEY_ABOUT_VERSION, "Version", FOLDER_ID_ABOUT, SOFTWARE_VERSION),
     RO_STRING_SETTING(SETTING_KEY_ABOUT_BUILD_DATE, "Build Date", FOLDER_ID_ABOUT, __DATE__),
-    RO_STRING_SETTING(SETTING_KEY_ABOUT_BUILD_DATE, "Board", FOLDER_ID_ABOUT, BOARD_NAME),
+    RO_STRING_SETTING(SETTING_KEY_ABOUT_BOARD, "Board", FOLDER_ID_ABOUT, BOARD_NAME),
+    RX_STRING_SETTING(SETTING_KEY_ABOUT_ADDR, "Address", FOLDER_ID_ABOUT, setting_format_own_addr),
 
     FOLDER(SETTING_KEY_DIAGNOSTICS, "Diagnostics", FOLDER_ID_DIAGNOSTICS, FOLDER_ID_ROOT, NULL),
     CMD_SETTING(SETTING_KEY_DIAGNOSTICS_FREQUENCIES, "Frequencies", FOLDER_ID_DIAGNOSTICS, 0, 0),
@@ -528,7 +586,7 @@ typedef struct settings_listener_s
 static settings_listener_t listeners[4];
 static storage_t storage;
 
-static void map_setting_keys(settings_view_t *view, const char *keys[], int size)
+static void map_setting_keys(settings_view_t *view, setting_key_t keys[], int size)
 {
     view->count = 0;
     for (int ii = 0; ii < size; ii++)
@@ -569,27 +627,27 @@ static void setting_save(const setting_t *setting)
     switch (setting->type)
     {
     case SETTING_TYPE_U8:
-        storage_set_u8(&storage, setting->key, setting_get_val_ptr(setting)->u8);
+        storage_set_u8(&storage, &setting->key, sizeof(setting->key), setting_get_val_ptr(setting)->u8);
         break;
         /*
     case SETTING_TYPE_I8:
-        storage_set_i8(&storage, setting->key, setting->val.i8);
+        storage_set_i8(&storage, &setting->key, sizeof(setting->key), setting->val.i8);
         break;
     case SETTING_TYPE_U16:
-        storage_set_u16(&storage, setting->key, setting->val.u16);
+        storage_set_u16(&storage, &setting->key, sizeof(setting->key), setting->val.u16);
         break;
     case SETTING_TYPE_I16:
-        storage_set_i16(&storage, setting->key, setting->val.i16);
+        storage_set_i16(&storage, &setting->key, sizeof(setting->key), setting->val.i16);
         break;
     case SETTING_TYPE_U32:
-        storage_set_u32(&storage, setting->key, setting->val.u32);
+        storage_set_u32(&storage, &setting->key, sizeof(setting->key), setting->val.u32);
         break;
     case SETTING_TYPE_I32:
-        storage_set_i32(&storage, setting->key, setting->val.i32);
+        storage_set_i32(&storage, &setting->key, sizeof(setting->key), setting->val.i32);
         break;
         */
     case SETTING_TYPE_STRING:
-        storage_set_str(&storage, setting->key, setting_get_str_ptr(setting));
+        storage_set_str(&storage, &setting->key, sizeof(setting->key), setting_get_str_ptr(setting));
         break;
     case SETTING_TYPE_FOLDER:
         break;
@@ -599,7 +657,7 @@ static void setting_save(const setting_t *setting)
 
 static void setting_changed(const setting_t *setting)
 {
-    LOG_I(TAG, "Setting %s changed", setting->key);
+    LOG_I(TAG, "Setting %04x changed", setting->key);
     for (int ii = 0; ii < ARRAY_COUNT(listeners); ii++)
     {
         if (listeners[ii].callback)
@@ -648,12 +706,12 @@ static void setting_move(const setting_t *setting, int delta)
 
 void settings_init(void)
 {
-    storage_init(&storage, SETTINGS_STORAGE_KEY);
+    storage_init(&storage, STORAGE_NS_SETTINGS);
 
     // Initialize GPIO names
     for (int ii = 0; ii < HAL_GPIO_USER_COUNT; ii++)
     {
-        hal_gpio_t x = hal_gpio_user_at(ii);
+        hal_gpio_t x = gpio_get_configurable_at(ii);
         hal_gpio_toa(x, gpio_name_storage[ii], sizeof(gpio_name_storage[ii]));
         gpio_names[ii] = gpio_name_storage[ii];
     }
@@ -663,14 +721,13 @@ void settings_init(void)
     for (int ii = 0; ii < ARRAY_COUNT(settings); ii++)
     {
         const setting_t *setting = &settings[ii];
-        // Checking this at compile time is tricky, since most strings are
-        // assembled via macros. Do it a runtime instead, impact should be
-        // pretty minimal.
-        if (strlen(setting->key) > MAX_SETTING_KEY_LENGTH)
+        for (int jj = 0; jj < ARRAY_COUNT(settings); jj++)
         {
-            LOG_E(TAG, "Setting key '%s' is too long (%d, max is %d)", setting->key,
-                  strlen(setting->key), MAX_SETTING_KEY_LENGTH);
-            abort();
+            if (jj != ii && settings[jj].key == setting->key)
+            {
+                LOG_F(TAG, "Duplicate setting key 0x%04x at indexes %d and %d ('%s' and '%s')",
+                      setting->key, ii, jj, settings[ii].name, settings[jj].name);
+            }
         }
         if (setting->flags & SETTING_FLAG_READONLY)
         {
@@ -681,30 +738,30 @@ void settings_init(void)
         switch (setting->type)
         {
         case SETTING_TYPE_U8:
-            found = storage_get_u8(&storage, setting->key, &setting_get_val_ptr(setting)->u8);
+            found = storage_get_u8(&storage, &setting->key, sizeof(setting->key), &setting_get_val_ptr(setting)->u8);
             break;
             /*
         case SETTING_TYPE_I8:
-            found = storage_get_i8(&storage, setting->key, &setting->val.i8);
+            found = storage_get_i8(&storage, &setting->key, sizeof(setting->key), &setting->val.i8);
             break;
         case SETTING_TYPE_U16:
-            found = storage_get_u16(&storage, setting->key, &setting->val.u16);
+            found = storage_get_u16(&storage, &setting->key, sizeof(setting->key), &setting->val.u16);
             break;
         case SETTING_TYPE_I16:
-            found = storage_get_i16(&storage, setting->key, &setting->val.i16);
+            found = storage_get_i16(&storage, &setting->key, sizeof(setting->key), &setting->val.i16);
             break;
         case SETTING_TYPE_U32:
-            found = storage_get_u32(&storage, setting->key, &setting->val.u32);
+            found = storage_get_u32(&storage, &setting->key, sizeof(setting->key), &setting->val.u32);
             break;
         case SETTING_TYPE_I32:
-            found = storage_get_i32(&storage, setting->key, &setting->val.i32);
+            found = storage_get_i32(&storage, &setting->key, sizeof(setting->key), &setting->val.i32);
             break;
             */
         case SETTING_TYPE_STRING:
             assert(string_storage_index < ARRAY_COUNT(settings_string_storage));
             setting_get_val_ptr(setting)->u8 = string_storage_index++;
             size = sizeof(settings_string_storage[0]);
-            if (!storage_get_str(&storage, setting->key, setting_get_str_ptr(setting), &size))
+            if (!storage_get_str(&storage, &setting->key, sizeof(setting->key), setting_get_str_ptr(setting), &size))
             {
                 memset(setting_get_str_ptr(setting), 0, SETTING_STRING_BUFFER_SIZE);
             }
@@ -757,36 +814,36 @@ const setting_t *settings_get_setting_at(int idx)
     return &settings[idx];
 }
 
-const setting_t *settings_get_key(const char *key)
+const setting_t *settings_get_key(setting_key_t key)
 {
     return settings_get_key_idx(key, NULL);
 }
 
-uint8_t settings_get_key_u8(const char *key)
+uint8_t settings_get_key_u8(setting_key_t key)
 {
     return setting_get_u8(settings_get_key(key));
 }
 
-hal_gpio_t settings_get_key_gpio(const char *key)
+hal_gpio_t settings_get_key_gpio(setting_key_t key)
 {
     return setting_get_gpio(settings_get_key(key));
 }
 
-bool settings_get_key_bool(const char *key)
+bool settings_get_key_bool(setting_key_t key)
 {
     return setting_get_bool(settings_get_key(key));
 }
 
-const char *settings_get_key_string(const char *key)
+const char *settings_get_key_string(setting_key_t key)
 {
     return setting_get_string(settings_get_key(key));
 }
 
-const setting_t *settings_get_key_idx(const char *key, int *idx)
+const setting_t *settings_get_key_idx(setting_key_t key, int *idx)
 {
     for (int ii = 0; ii < ARRAY_COUNT(settings); ii++)
     {
-        if (STR_EQUAL(key, settings[ii].key))
+        if (settings[ii].key == key)
         {
             if (idx)
             {
@@ -816,7 +873,7 @@ bool settings_is_folder_visible(settings_view_e view_id, folder_id_e folder)
     return setting && setting_is_visible(view_id, setting->key);
 }
 
-bool setting_is_visible(settings_view_e view_id, const char *key)
+bool setting_is_visible(settings_view_e view_id, setting_key_t key)
 {
     const setting_t *setting = settings_get_key(key);
     if (setting)
@@ -971,7 +1028,7 @@ void setting_set_u8(const setting_t *setting, uint8_t v)
 hal_gpio_t setting_get_gpio(const setting_t *setting)
 {
     assert(setting->val_names == gpio_names);
-    return hal_gpio_user_at(setting_get_val_ptr(setting)->u8);
+    return gpio_get_configurable_at(setting_get_val_ptr(setting)->u8);
 }
 
 bool setting_get_bool(const setting_t *setting)
@@ -1162,7 +1219,7 @@ int setting_rx_channel_output_get_pos(const setting_t *setting)
 
 int setting_receiver_get_rx_num(const setting_t *setting)
 {
-    if (strstr(setting->key, SETTING_KEY_RECEIVERS_PREFIX))
+    if (SETTING_IS_FROM_RECEIVER_FOLDER(setting))
     {
         folder_id_e folder;
         if (setting->type == SETTING_TYPE_FOLDER)

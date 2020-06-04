@@ -1,3 +1,11 @@
+#include "target.h"
+
+#if defined(USE_BEEPER)
+
+#if defined(BEEPER_USE_PWM)
+#include <hal/pwm.h>
+#endif
+
 #include "beeper.h"
 
 #define BEEP_LENGTH_TO_TICKS(t) MILLIS_TO_TICKS(t * 10)
@@ -46,17 +54,33 @@ static const beep_pattern_t patterns[BEEPER_MODE_COUNT - 1] = {
 
 static void beeper_gpio_init(beeper_t *beeper)
 {
+#if defined(BEEPER_USE_PWM)
+    HAL_ERR_ASSERT_OK(hal_pwm_init());
+#if !defined(BEEPER_PWM_RESONANT_FREQUENCY)
+#define BEEPER_PWM_RESONANT_FREQUENCY 440
+#endif
+    HAL_ERR_ASSERT_OK(hal_pwm_open(beeper->gpio, BEEPER_PWM_RESONANT_FREQUENCY, BEEPER_PWM_RESOLUTION_BITS));
+#else
     HAL_ERR_ASSERT_OK(hal_gpio_setup(beeper->gpio, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
+#endif
 }
 
 static void beeper_on(beeper_t *beeper)
 {
+#if defined(BEEPER_USE_PWM)
+    HAL_ERR_ASSERT_OK(hal_pwm_set_duty(beeper->gpio, BEEPER_PWM_DEFAULT_DUTY));
+#else
     HAL_ERR_ASSERT_OK(hal_gpio_set_level(beeper->gpio, HAL_GPIO_HIGH));
+#endif
 }
 
 static void beeper_off(beeper_t *beeper)
 {
+#if defined(BEEPER_USE_PWM)
+    HAL_ERR_ASSERT_OK(hal_pwm_set_duty(beeper->gpio, 0));
+#else
     HAL_ERR_ASSERT_OK(hal_gpio_set_level(beeper->gpio, HAL_GPIO_LOW));
+#endif
 }
 
 static void beeper_begin_mode(beeper_t *beeper, beeper_mode_e mode)
@@ -165,3 +189,5 @@ void beeper_set_mode(beeper_t *beeper, beeper_mode_e mode)
 {
     beeper_set_mode_force(beeper, mode, false);
 }
+
+#endif

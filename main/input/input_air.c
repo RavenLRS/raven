@@ -223,7 +223,7 @@ static void input_air_send_response(input_air_t *input_air, rc_data_t *data, tim
             count += n;
         }
     }
-    int p = 0;
+    size_t p = 0;
     uint8_t c;
     // Check if we have buffered data to send
     while (p < sizeof(out_pkt.data) && air_stream_pop_output(&input_air->air_stream, &c))

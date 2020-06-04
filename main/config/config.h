@@ -10,7 +10,9 @@
 
 #include "rc/rc_data.h"
 
+#if !defined(CONFIG_MAX_PAIRED_RX)
 #define CONFIG_MAX_PAIRED_RX 32 // Max RX paired to a TX
+#endif
 
 typedef struct air_pairing_s air_pairing_t;
 typedef struct air_addr_s air_addr_t;
@@ -24,12 +26,15 @@ typedef enum
 typedef enum
 {
     TX_INPUT_CRSF,
+    TX_INPUT_PPM,
+    TX_INPUT_IBUS,
+    TX_INPUT_SBUS,
     TX_INPUT_FAKE,
     TX_INPUT_FIRST = TX_INPUT_CRSF,
 #if defined(CONFIG_RAVEN_FAKE_INPUT)
     TX_INPUT_LAST = TX_INPUT_FAKE,
 #else
-    TX_INPUT_LAST = TX_INPUT_CRSF,
+    TX_INPUT_LAST = TX_INPUT_SBUS,
 #endif
 } tx_input_type_e;
 
@@ -44,6 +49,16 @@ typedef enum
     RX_OUTPUT_FIRST = RX_OUTPUT_MSP,
     RX_OUTPUT_LAST = RX_OUTPUT_NONE,
 } rx_output_type_e;
+
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+typedef enum
+{
+    RX_FS_HOLD,
+    RX_FS_CUSTOM,
+
+    RX_FS_COUNT,
+} rx_fs_mode_e;
+#endif
 
 typedef enum
 {
@@ -161,7 +176,19 @@ bool config_get_pairing(air_pairing_t *pairing, const air_addr_t *addr);
 tx_input_type_e config_get_input_type(void);
 rx_output_type_e config_get_output_type(void);
 
+#if defined(CONFIG_RAVEN_USE_PWM_OUTPUTS)
+rx_fs_mode_e config_get_fs_mode(void);
+bool config_get_fs_channels(uint16_t *blob, size_t size);
+bool config_set_fs_channels(const rc_data_t *rc_data);
+#endif
+
 air_addr_t config_get_addr(void);
+// Returns the configured name for the device
+// (pilot name in TX mode, craft name in RX mode)
+const char *config_get_name(void);
+// Returns the name of the current rc_mode_e
+// ("TX" or "RX")
+const char *config_get_mode_name(void);
 
 air_band_e config_get_air_band(config_air_band_e band);
 air_band_mask_t config_get_air_band_mask(void);

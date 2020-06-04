@@ -103,7 +103,7 @@ static int fport_write_payload(output_fport_t *output, uint8_t type, const void 
     count += fport_write_byte(output, type, &sum);
 
     const uint8_t *ptr = data;
-    for (int ii = 0; ii < size; ii++, ptr++)
+    for (size_t ii = 0; ii < size; ii++, ptr++)
     {
         count += fport_write_byte(output, *ptr, &sum);
     }
@@ -123,8 +123,8 @@ static bool output_fport_open(void *output, void *config)
 
     serial_port_config_t port_config = {
         .baud_rate = FPORT_BAUDRATE,
-        .tx_pin = cfg->tx,
-        .rx_pin = cfg->rx,
+        .tx = cfg->tx,
+        .rx = cfg->rx,
         .tx_buffer_size = FPORT_SERIAL_BUFFER_SIZE,
         .rx_buffer_size = FPORT_SERIAL_BUFFER_SIZE,
         .parity = SERIAL_PARITY_DISABLE,
@@ -151,7 +151,7 @@ static bool output_fport_open(void *output, void *config)
 static void output_fport_receive(output_fport_t *output_fport)
 {
     // Read potential telemetry response
-    int n = 0;
+    unsigned n = 0;
     if (output_fport->buf_pos == 0)
     {
         // We're in half duplex mode (or we're talking to a faulty end).
@@ -237,7 +237,7 @@ static void output_fport_close(void *output, void *config)
 
 void output_fport_init(output_fport_t *output)
 {
-    output->output.flags = OUTPUT_FLAG_LOCAL;
+    output->output.flags = OUTPUT_FLAG_LOCAL | OUTPUT_FLAG_SENDS_RSSI;
     output->output.vtable = (output_vtable_t){
         .open = output_fport_open,
         .update = output_fport_update,

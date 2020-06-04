@@ -18,6 +18,7 @@
 #define MSP_ALTITUDE 109
 #define MSP_ANALOG 110
 #define MSP_MISC 114
+#define MSP_SET_TX_INFO 186
 #define MSP_SET_RAW_RC 200
 
 // This is the maximum payload size we accept. MSP doesn't have

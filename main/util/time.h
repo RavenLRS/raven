@@ -8,6 +8,8 @@
 
 #include <hal/time.h>
 
+#include "util/macros.h"
+
 #define MILLIS_PER_SEC (1000)
 #define MICROS_PER_SEC (1000000)
 
@@ -28,32 +30,32 @@ typedef uint64_t time_micros_t;
 
 #define TIME_CYCLE_EVERY_MS(ms, n) (((time_ticks_now() * portTICK_PERIOD_MS) / ms) % n)
 
-inline time_ticks_t time_ticks_now(void)
+INLINE time_ticks_t time_ticks_now(void)
 {
     return xTaskGetTickCount();
 }
 
-inline time_millis_t time_millis_now(void)
+INLINE time_millis_t time_millis_now(void)
 {
     return xTaskGetTickCount() * portTICK_PERIOD_MS;
 }
 
-inline void time_millis_delay(unsigned ms)
+INLINE void time_millis_delay(unsigned ms)
 {
     vTaskDelay(ms / portTICK_PERIOD_MS);
 }
 
-inline bool time_ticks_ellapsed(time_ticks_t since, time_ticks_t now, time_ticks_t duration)
+INLINE bool time_ticks_ellapsed(time_ticks_t since, time_ticks_t now, time_ticks_t duration)
 {
     return since == 0 || now - since >= duration;
 }
 
-inline time_micros_t time_micros_now(void)
+INLINE time_micros_t time_micros_now(void)
 {
     return hal_time_micros_now();
 }
 
-inline void time_micros_delay(time_micros_t delay)
+INLINE void time_micros_delay(time_micros_t delay)
 {
     time_micros_t end = time_micros_now() + delay;
     while (time_micros_now() < end)

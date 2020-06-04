@@ -240,7 +240,7 @@ static size_t output_air_feed_stream(output_air_t *output_air, rc_data_t *data, 
     int dtidx = -1;
     uint32_t max_score = 0;
     // First, try to fill the buffer with dirty data
-    for (int ii = 4; ii < data->channels_num; ii++)
+    for (unsigned ii = 4; ii < data->channels_num; ii++)
     {
         control_channel_t *ch = &data->channels[ii];
         if (data_state_is_ack_received(&ch->data_state))
@@ -378,7 +378,7 @@ static void output_air_send_control_packet(output_air_t *output_air, rc_data_t *
             break;
         }
     }
-    int p = 0;
+    size_t p = 0;
     uint8_t c;
     // Check if we have buffered data to send
     while (p < sizeof(pkt.data) && air_stream_pop_output(&output_air->air_stream, &c))
@@ -453,7 +453,7 @@ static bool output_air_open(void *output, void *config)
     output_air->air_modes.faster = air_mode_faster(output_air->air_modes.current, output_air->air_modes.common);
     output_air->air_modes.longer = air_mode_longer(output_air->air_modes.current, output_air->air_modes.common);
     output_air_invalidate_mode_sw(output_air);
-    LOG_I(TAG, "Open with key %u", output_air->air.pairing.key);
+    LOG_I(TAG, "Open with key %u", (unsigned)output_air->air.pairing.key);
     output_air_config_t *config_air = config;
     output_air->tx_power = config_air->tx_power;
     output_air->seq = 0;

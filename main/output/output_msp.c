@@ -1,11 +1,17 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <hal/log.h>
+
+#include "io/gpio.h"
+
 #include "msp/msp.h"
 
 #include "util/macros.h"
 
 #include "output_msp.h"
+
+static const char *TAG = "MSP.Output";
 
 #define MSP_RC_MAX_SUPPORTED_CHANNELS 18
 // No data in the response
@@ -144,7 +150,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     {
     case MSP_RAW_GPS:
     {
-        if (size < sizeof(msp_raw_gps_t))
+        if (size < (int)sizeof(msp_raw_gps_t))
         {
             break;
         }
@@ -176,7 +182,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     }
     case MSP_ANALOG:
     {
-        if (size < sizeof(msp_analog_t))
+        if (size < (int)sizeof(msp_analog_t))
         {
             break;
         }
@@ -202,7 +208,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     }
     case MSP_CURRENT_METER_CONFIG:
     {
-        if (size < sizeof(msp_current_meter_config_t))
+        if (size < (int)sizeof(msp_current_meter_config_t))
         {
             break;
         }
@@ -212,7 +218,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     }
     case MSP_ALTITUDE:
     {
-        if (size < sizeof(msp_altitude_t))
+        if (size < (int)sizeof(msp_altitude_t))
         {
             break;
         }
@@ -223,17 +229,21 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
     }
     case MSP_ATTITUDE:
     {
-        if (size < sizeof(msp_attitude_t))
+        if (size < (int)sizeof(msp_attitude_t))
         {
             break;
         }
         const msp_attitude_t *data = payload;
+        OUTPUT_TELEMETRY_UPDATE_I16(arg, TELEMETRY_ID_ATTITUDE_X, data->pitch * 10);
+        OUTPUT_TELEMETRY_UPDATE_I16(arg, TELEMETRY_ID_ATTITUDE_Y, data->roll * 10);
+        // Convert from (0, 360] to (-180, 180)
+        OUTPUT_TELEMETRY_UPDATE_I16(arg, TELEMETRY_ID_ATTITUDE_Z, (data->yaw > 180 ? -360 + data->yaw : data->yaw) * 100);
         OUTPUT_TELEMETRY_UPDATE_U16(arg, TELEMETRY_ID_HEADING, data->yaw * 100);
         break;
     }
     case MSP_RAW_IMU:
     {
-        if (size < sizeof(msp_raw_imu_t))
+        if (size < (int)sizeof(msp_raw_imu_t))
         {
             break;
         }
@@ -245,7 +255,7 @@ static void output_msp_message_callback(msp_conn_t *conn, uint16_t cmd, const vo
         break;
     }
     case MSP_MISC:
-        if (size < sizeof(msp_misc_t))
+        if (size < (int)sizeof(msp_misc_t))
         {
             break;
         }
@@ -262,8 +272,8 @@ static bool output_msp_open(void *output, void *config)
 
     serial_port_config_t serial_config = {
         .baud_rate = msp_serial_baudrate_get(cfg->baud_rate),
-        .tx_pin = cfg->tx,
-        .rx_pin = cfg->rx,
+        .tx = cfg->tx,
+        .rx = cfg->rx,
         .tx_buffer_size = 256,
         .rx_buffer_size = MSP_MAX_PAYLOAD_SIZE * 2,
         .parity = SERIAL_PARITY_DISABLE,
@@ -281,6 +291,7 @@ static bool output_msp_open(void *output, void *config)
     {
         output_msp->output.min_rc_update_interval = 0;
     }
+    LOG_I(TAG, "Open with TX: %s, RX: %s", gpio_toa(cfg->tx), gpio_toa(cfg->rx));
     io_t msp_serial_io = SERIAL_IO(output_msp->output.serial_port);
     msp_serial_init(&output_msp->msp_serial, &msp_serial_io);
     OUTPUT_SET_MSP_TRANSPORT(output_msp, MSP_TRANSPORT(&output_msp->msp_serial));

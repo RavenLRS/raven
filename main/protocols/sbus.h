@@ -4,9 +4,15 @@
 #include <stdint.h>
 
 #define SBUS_BAUDRATE 100000
+#define SBUS_EXPECTED_TRANSMISSION_TIME_US ((1000000 * (sizeof(sbus_payload_t) * (8 + 1 + 2))) / SBUS_BAUDRATE)
 #define SBUS_START_BYTE 0x0F
 #define SBUS_END_BYTE 0x00
 #define SBUS_NUM_CHANNELS 16
+
+// Looks like FrSky hardware never sends values outside this range,
+// but we should test this with hardware from other manufacturers.
+#define SBUS_CHANNEL_VALUE_MIN 172
+#define SBUS_CHANNEL_VALUE_MAX 1811
 
 #define SBUS_FLAG_CHANNEL_16 (1 << 0)
 #define SBUS_FLAG_CHANNEL_17 (1 << 1)

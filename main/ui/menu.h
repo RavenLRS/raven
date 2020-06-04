@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "ui/button.h"
+
 #define MENU_ALT_PAIRINGS_MAX 8
 
 typedef struct air_pairing_s air_pairing_t;
@@ -17,9 +19,7 @@ extern menu_t menu_alt_pairings;
 
 void menu_init(rc_t *rc);
 void menu_update(void);
-bool menu_press(void);
-bool menu_long_press(void);
-bool menu_really_long_press(void);
+bool menu_handle_button_event(const button_event_t *ev);
 void menu_push_active(menu_t *menu);
 void menu_set_active(menu_t *menu);
 void menu_pop_active(void);

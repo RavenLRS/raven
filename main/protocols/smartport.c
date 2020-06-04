@@ -121,7 +121,7 @@ static uint8_t smartport_payload_checksum(smartport_payload_t *payload)
 {
     uint16_t checksum = 0;
     const uint8_t *ptr = (uint8_t *)payload;
-    for (int ii = 0; ii < sizeof(*payload); ii++)
+    for (size_t ii = 0; ii < sizeof(*payload); ii++)
     {
         checksum += ptr[ii];
     }
@@ -367,7 +367,7 @@ static int smartport_master_msp_write_chunk(smartport_master_t *sp, smartport_ms
     buf[0] = *ptr++;
     buf[1] = *ptr++;
     int buf_pos = 2;
-    for (int ii = 0; ii < sizeof(smartport_msp_req_chunk_t) - 2; ii++)
+    for (size_t ii = 0; ii < sizeof(smartport_msp_req_chunk_t) - 2; ii++)
     {
         uint8_t c = ptr[ii];
         checksum += c;

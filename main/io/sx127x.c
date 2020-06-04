@@ -160,6 +160,16 @@ static void sx127x_set_fsk_parameters(sx127x_t *sx127x);
 static void sx127x_fsk_wait_for_mode_ready(sx127x_t *sx127x);
 static void sx127x_set_fsk_sync_word(sx127x_t *sx127x);
 
+static bool sx127x_mode_is_tx(uint8_t mode)
+{
+    return (mode | MODE_LORA) == (MODE_LORA | MODE_TX);
+}
+
+static bool sx127x_mode_is_rx(uint8_t mode)
+{
+    return (mode | MODE_LORA) == (MODE_LORA | MODE_RX_CONTINUOUS);
+}
+
 static uint8_t sx127x_read_reg(sx127x_t *sx127x, uint8_t addr)
 {
     // Send 8 arbitrary bits to get one byte back in full duplex
@@ -179,6 +189,16 @@ static void sx127x_set_mode(sx127x_t *sx127x, uint8_t mode)
     {
         sx127x_write_reg(sx127x, REG_OP_MODE, mode);
         sx127x->state.mode = mode;
+
+        if (sx127x->txen != HAL_GPIO_NONE)
+        {
+            HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->txen, sx127x_mode_is_tx(mode) ? HAL_GPIO_HIGH : HAL_GPIO_LOW));
+        }
+
+        if (sx127x->rxen != HAL_GPIO_NONE)
+        {
+            HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rxen, sx127x_mode_is_rx(mode) ? HAL_GPIO_HIGH : HAL_GPIO_LOW));
+        }
     }
 }
 
@@ -290,6 +310,18 @@ void sx127x_init(sx127x_t *sx127x)
     HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->rst, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
     sx127x_reset(sx127x);
 
+    if (sx127x->txen != HAL_GPIO_NONE)
+    {
+        HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->txen, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
+        HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->txen, HAL_GPIO_LOW));
+    }
+
+    if (sx127x->rxen != HAL_GPIO_NONE)
+    {
+        HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->rxen, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
+        HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rxen, HAL_GPIO_LOW));
+    }
+
     // Initialize the SPI bus
     HAL_ERR_ASSERT_OK(hal_spi_bus_init(sx127x->spi_bus, sx127x->miso, sx127x->mosi, sx127x->sck));
 
@@ -299,6 +331,7 @@ void sx127x_init(sx127x_t *sx127x)
         .address_bits = 7,                 // 7 addr bits
         .clock_speed_hz = 9 * 1000 * 1000, // Clock out at 9 MHz: XXX => 10Mhz will cause incorrect reads from REG_MODEM_CONFIG_1
         .cs = sx127x->cs,                  // CS pin
+        .mode = HAL_SPI_MODE_0,
     };
 
     HAL_ERR_ASSERT_OK(hal_spi_bus_add_device(sx127x->spi_bus, &cfg, &sx127x->state.spi));
@@ -309,7 +342,7 @@ void sx127x_init(sx127x_t *sx127x)
     sx127x->state.lora.freq = 0;
     sx127x->state.lora.ppm_correction = 0;
 
-    xTaskCreatePinnedToCore(sx127x_callback_task, "SX127X-CALLBACK", 4096, sx127x, 1000, &callback_task_handle, 1);
+    CREATE_TASK(sx127x_callback_task, "SX127X", configMINIMAL_STACK_SIZE, sx127x, configMAX_PRIORITIES - 1, &callback_task_handle, 1);
 
     uint8_t version = sx127x_read_reg(sx127x, REG_VERSION);
     if (version == SX127X_EXPECTED_VERSION)

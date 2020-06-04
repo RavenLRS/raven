@@ -13,9 +13,24 @@
 #include "ui/menu.h"
 #include "ui/screen.h"
 
+#include "util/macros.h"
+
 #include "ui/ui.h"
 
+#ifdef USE_SCREEN
+// We don't log anything without a screen, so this would
+// produce a warning if we didn't guard it
 static const char *TAG = "UI";
+#endif
+
+static void ui_beep(ui_t *ui)
+{
+#if defined(USE_BEEPER)
+    beeper_beep(&ui->internal.beeper);
+#else
+    UNUSED(ui);
+#endif
+}
 
 #ifdef USE_SCREEN
 
@@ -40,7 +55,7 @@ static void ui_reset_screen_autooff(ui_t *ui)
     }
 }
 
-static void ui_handle_screen_button_press(void *user_data)
+static void ui_handle_screen_button_event(const button_event_t *ev, void *user_data)
 {
     ui_t *ui = user_data;
     ui_reset_screen_autooff(ui);
@@ -48,80 +63,55 @@ static void ui_handle_screen_button_press(void *user_data)
     {
         return;
     }
-    bool handled = screen_handle_press(&ui->internal.screen, true);
+    bool handled = screen_handle_button_event(&ui->internal.screen, true, ev);
     if (!handled)
     {
-        handled |= menu_press();
+        handled |= menu_handle_button_event(ev);
     }
     if (!handled)
     {
-        handled |= screen_handle_press(&ui->internal.screen, false);
+        handled |= screen_handle_button_event(&ui->internal.screen, false, ev);
     }
     if (handled)
     {
-        beeper_beep(&ui->internal.beeper);
-    }
-}
-
-static void ui_handle_screen_button_long_press(void *user_data)
-{
-    ui_t *ui = user_data;
-    ui_reset_screen_autooff(ui);
-    if (ui_handle_screen_wake(ui))
-    {
-        return;
-    }
-    bool handled = menu_long_press();
-    if (handled)
-    {
-        beeper_beep(&ui->internal.beeper);
-    }
-}
-
-static void ui_handle_screen_button_really_long_press(void *user_data)
-{
-    ui_t *ui = user_data;
-    ui_reset_screen_autooff(ui);
-    if (ui_handle_screen_wake(ui))
-    {
-        return;
-    }
-    bool handled = menu_really_long_press();
-    if (handled)
-    {
-        beeper_beep(&ui->internal.beeper);
+        ui_beep(ui);
     }
 }
 #endif
 
-static void ui_handle_noscreen_button_press(void *user_data)
+static void ui_handle_noscreen_button_event(const button_event_t *ev, void *user_data)
 {
-    ui_t *ui = user_data;
-    if (rc_has_pending_bind_request(ui->internal.rc, NULL))
-    {
-        rc_accept_bind(ui->internal.rc);
-        beeper_beep(&ui->internal.beeper);
-    }
-}
+    // No screen configurations only support BUTTON_NAME_ENTER
+    ASSERT(button_event_id(ev) == BUTTON_ID_ENTER);
 
-static void ui_handle_noscreen_button_long_press(void *user_data)
-{
-}
-
-static void ui_handle_noscreen_button_really_long_press(void *user_data)
-{
     ui_t *ui = user_data;
-    const setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
-    bool is_binding = setting_get_bool(bind_setting);
-    if (time_micros_now() < SECS_TO_MICROS(15) && !is_binding)
+    switch (ev->type)
     {
-        setting_set_bool(bind_setting, true);
-        beeper_beep(&ui->internal.beeper);
+    case BUTTON_EVENT_TYPE_SHORT_PRESS:
+        if (rc_has_pending_bind_request(ui->internal.rc, NULL))
+        {
+            rc_accept_bind(ui->internal.rc);
+            ui_beep(ui);
+        }
+        break;
+    case BUTTON_EVENT_TYPE_LONG_PRESS:
+        break;
+    case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
+    {
+        const setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
+        bool is_binding = setting_get_bool(bind_setting);
+        if (time_micros_now() < SECS_TO_MICROS(15) && !is_binding)
+        {
+            setting_set_bool(bind_setting, true);
+            ui_beep(ui);
+        }
+        else if (is_binding)
+        {
+            setting_set_bool(bind_setting, false);
+            ui_beep(ui);
+        }
+        break;
     }
-    else if (is_binding)
-    {
-        setting_set_bool(bind_setting, false);
-        beeper_beep(&ui->internal.beeper);
     }
 }
 
@@ -139,7 +129,9 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
     } while (0)
 
     ui_t *ui = user_data;
+#if !defined(SCREEN_FIXED_ORIENTATION)
     UPDATE_SCREEN_SETTING(SETTING_KEY_SCREEN_ORIENTATION, screen_set_orientation);
+#endif
     UPDATE_SCREEN_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, screen_set_brightness);
 
     if (SETTING_IS(setting, SETTING_KEY_SCREEN_AUTO_OFF) && screen_is_available(&ui->internal.screen))
@@ -159,6 +151,7 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
 #endif
 }
 
+#if defined(USE_BEEPER)
 static void ui_update_beeper(ui_t *ui)
 {
     if (rc_is_failsafe_active(ui->internal.rc, NULL))
@@ -175,45 +168,51 @@ static void ui_update_beeper(ui_t *ui)
     }
     beeper_update(&ui->internal.beeper);
 }
+#endif
 
 void ui_init(ui_t *ui, ui_config_t *cfg, rc_t *rc)
 {
     led_init();
+    button_callback_f button_callback = ui_handle_noscreen_button_event;
 #ifdef USE_SCREEN
     if (screen_init(&ui->internal.screen, &cfg->screen, rc))
     {
-        ui->internal.button.press_callback = ui_handle_screen_button_press;
-        ui->internal.button.long_press_callback = ui_handle_screen_button_long_press;
-        ui->internal.button.really_long_press_callback = ui_handle_screen_button_really_long_press;
+        button_callback = ui_handle_screen_button_event;
     }
-    else
+#endif
+
+    for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
     {
-#endif
-        ui->internal.button.press_callback = ui_handle_noscreen_button_press;
-        ui->internal.button.long_press_callback = ui_handle_noscreen_button_long_press;
-        ui->internal.button.really_long_press_callback = ui_handle_noscreen_button_really_long_press;
-#ifdef USE_SCREEN
+        ui->internal.buttons[ii].user_data = ui;
+        ui->internal.buttons[ii].callback = button_callback;
     }
-#endif
+
     ui->internal.rc = rc;
-    ui->internal.button.user_data = ui;
-    ui->internal.button.gpio = cfg->button;
-#if defined(USE_TOUCH_BUTTON)
-    ui->internal.button.is_touch = cfg->button_is_touch;
-#endif
-    if (cfg->beeper != HAL_GPIO_NONE)
+    for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
     {
-        beeper_init(&ui->internal.beeper, cfg->beeper);
-        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
+        ui->internal.buttons[ii].user_data = ui;
+        ui->internal.buttons[ii].id = ii;
+        ui->internal.buttons[ii].cfg = cfg->buttons[ii];
+        button_init(&ui->internal.buttons[ii]);
     }
-    button_init(&ui->internal.button);
+
+#if defined(USE_BEEPER)
+    beeper_init(&ui->internal.beeper, cfg->beeper);
+    beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_STARTUP);
+#endif
+
     system_add_flag(SYSTEM_FLAG_BUTTON);
 #ifdef USE_SCREEN
     if (screen_is_available(&ui->internal.screen))
     {
         LOG_I(TAG, "Screen detected");
         system_add_flag(SYSTEM_FLAG_SCREEN);
-        screen_set_orientation(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_ORIENTATION));
+#if defined(SCREEN_FIXED_ORIENTATION)
+        screen_orientation_e screen_orientation = SCREEN_ORIENTATION_DEFAULT;
+#else
+        screen_orientation_e screen_orientation = settings_get_key_u8(SETTING_KEY_SCREEN_ORIENTATION);
+#endif
+        screen_set_orientation(&ui->internal.screen, screen_orientation);
         screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
         ui_set_screen_set_autooff(ui, settings_get_key_u8(SETTING_KEY_SCREEN_AUTO_OFF));
     }
@@ -253,11 +252,13 @@ bool ui_is_animating(const ui_t *ui)
 
 void ui_update(ui_t *ui)
 {
-    if (ui->internal.cfg.beeper != HAL_GPIO_NONE)
+#if defined(USE_BEEPER)
+    ui_update_beeper(ui);
+#endif
+    for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
     {
-        ui_update_beeper(ui);
+        button_update(&ui->internal.buttons[ii]);
     }
-    button_update(&ui->internal.button);
     led_mode_set(LED_MODE_FAILSAFE, rc_is_failsafe_active(ui->internal.rc, NULL));
     led_update();
 #ifdef USE_SCREEN

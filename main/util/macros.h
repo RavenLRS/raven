@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-#define ARRAY_COUNT(arr) (sizeof(arr) / sizeof(arr[0]))
+#define ARRAY_COUNT(arr) ((int)(sizeof(arr) / sizeof(arr[0])))
 #define ARRAY_ASSERT_COUNT(arr, count, msg) _Static_assert(ARRAY_COUNT(arr) == count, msg)
 #define PACKED __attribute__((packed))
 
@@ -21,10 +21,10 @@
 #endif
 
 #define CONSTRAIN(v, min, max) ({ \
-    __typeof(v) __v = v;          \
-    __typeof(min) __min = min;    \
-    __typeof(max) __max = max;    \
-    assert(min < max);            \
+    __typeof(v) __v = (v);        \
+    __typeof(min) __min = (min);  \
+    __typeof(max) __max = (max);  \
+    assert(__min < __max);        \
     if (__v < __min)              \
     {                             \
         __v = __min;              \
@@ -70,3 +70,18 @@
 #define UNUSED(...)                       \
     UNUSED_IMPL(VA_NUM_ARGS(__VA_ARGS__)) \
     (__VA_ARGS__)
+
+#if __GNUC__ > 6
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH \
+    do              \
+    {               \
+    } while (0)
+#endif
+
+#if __STDC_VERSION__ >= 199901L
+#define INLINE static inline __attribute__((always_inline))
+#else
+#define INLINE inline
+#endif

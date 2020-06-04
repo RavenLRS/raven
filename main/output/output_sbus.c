@@ -17,8 +17,8 @@ static bool output_sbus_open(void *output, void *config)
 
     serial_port_config_t sbus_port_config = {
         .baud_rate = SBUS_BAUDRATE,
-        .tx_pin = cfg->sbus,
-        .rx_pin = -1,
+        .tx = cfg->sbus,
+        .rx = SERIAL_UNUSED_GPIO,
         .tx_buffer_size = 0,
         .rx_buffer_size = 0,
         .parity = SERIAL_PARITY_EVEN,
@@ -30,8 +30,8 @@ static bool output_sbus_open(void *output, void *config)
 
     serial_port_config_t sport_port_config = {
         .baud_rate = SMARTPORT_BAUDRATE,
-        .tx_pin = cfg->sport,
-        .rx_pin = cfg->sport,
+        .tx = cfg->sport,
+        .rx = cfg->sport,
         .tx_buffer_size = 0,
         .rx_buffer_size = sizeof(smartport_payload_t) * 2,
         .parity = SERIAL_PARITY_DISABLE,

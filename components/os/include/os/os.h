@@ -24,3 +24,12 @@
         }                         \
     } while (0)
 #endif
+
+#define CREATE_TASK(handler, name, stack, params, prio, task, core)                            \
+    do                                                                                         \
+    {                                                                                          \
+        if (xTaskCreatePinnedToCore(handler, name, stack, params, prio, task, core) != pdTRUE) \
+        {                                                                                      \
+            LOG_E("", "Could not create task %s", name);                                       \
+        }                                                                                      \
+    } while (0)

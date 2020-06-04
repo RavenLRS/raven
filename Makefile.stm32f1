@@ -1,7 +1,10 @@
-LDSCRIPT 		= $(OPENCM3_DIR)/lib/stm32/f1/stm32f103xb.ld
 FREERTOS_PORT		= ARM_CM3
 CPPFLAGS		+= -DSTM32F1
 PLATFORM_SOURCES	= stm32/f1
+CONFIG_PAGE_SIZE	= 1024
+CONFIG_BLOCK_SIZE	= 2048
+STM32F1_DIR		:= $(PLATFORMS_DIR)/$(PLATFORM_SOURCES)
+LDSCRIPT		= $(STM32F1_DIR)/ldscript.ld
 
 include $(ROOT)/Makefile.stm32
-include $(PLATFORMS_DIR)/stm32/f1/libopencm3.target.mk
+include $(STM32F1_DIR)/libopencm3.target.mk

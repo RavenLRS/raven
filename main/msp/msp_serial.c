@@ -41,7 +41,7 @@ static unsigned msp_serial_expected_response_delay(msp_serial_t *serial, size_t 
     }
 
     unsigned delay = ((response_size + serial->half_duplex.last_write_size) * MICROS_PER_SEC / serial->half_duplex.bytes_per_second) * 1.2f;
-    return CONSTRAIN(delay, MSP_HALF_DUPLEX_MIN_TIMEOUT_US, MSP_HALF_DUPLEX_MAX_TIMEOUT_US);
+    return CONSTRAIN(delay, (unsigned)MSP_HALF_DUPLEX_MIN_TIMEOUT_US, (unsigned)MSP_HALF_DUPLEX_MAX_TIMEOUT_US);
 }
 
 static int msp_serial_v1_encode(msp_direction_e direction, uint16_t code, const void *data, size_t size, void *buf, size_t bufsize)
@@ -156,8 +156,8 @@ static int msp_serial_v1_decode(msp_serial_t *serial, int *start, int *end, msp_
 
     // Size is after $M>
     uint8_t payload_size = serial->buf[*start + 3];
-    size_t packet_size = MSP_V1_PROTOCOL_BYTES + payload_size;
-    LOG_D(TAG, "Expecting MSPv1 packet of size %d, got %d", (int)packet_size, (int)*end - *start);
+    int packet_size = MSP_V1_PROTOCOL_BYTES + payload_size;
+    LOG_D(TAG, "Expecting MSPv1 packet of size %d, got %d", packet_size, (int)*end - *start);
     if (*end - *start < packet_size)
     {
         // Incomplete packet, must wait until next update
@@ -217,7 +217,7 @@ static int msp_serial_v2_decode(msp_serial_t *serial, int *start, int *end, msp_
     // Size is after $X>
     uint16_t payload_size = serial->buf[*start + 6];
     payload_size |= serial->buf[*start + 7] << 8;
-    size_t packet_size = MSP_V2_PROTOCOL_BYTES + payload_size;
+    int packet_size = MSP_V2_PROTOCOL_BYTES + payload_size;
     LOG_D(TAG, "Expecting MSPv2 packet of size %d, got %d", (int)packet_size, (int)*end - *start);
     if (*end - *start < packet_size)
     {

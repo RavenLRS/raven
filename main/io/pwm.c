@@ -106,7 +106,7 @@ void pwm_update_config(void)
         }
         int pos = setting_rx_channel_output_get_pos(setting);
         ASSERT(pos >= 0);
-        int gpio = hal_gpio_user_at(pos);
+        int gpio = gpio_get_configurable_at(pos);
         if (!pwm_output_can_use_gpio(gpio))
         {
             continue;
@@ -162,8 +162,8 @@ bool pwm_output_can_use_gpio(hal_gpio_t gpio)
         // Check if the pin is being used as serial IO
         if (config_get_output_type() != RX_OUTPUT_NONE)
         {
-            int tx_gpio = settings_get_key_gpio(SETTING_KEY_RX_TX_GPIO);
-            int rx_gpio = settings_get_key_gpio(SETTING_KEY_RX_RX_GPIO);
+            int tx_gpio = gpio_get_by_tag(GPIO_TAG_OUTPUT_TX);
+            int rx_gpio = gpio_get_by_tag(GPIO_TAG_OUTPUT_RX);
             if (gpio == tx_gpio || gpio == rx_gpio)
             {
                 return false;

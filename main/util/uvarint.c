@@ -5,7 +5,7 @@
 static int uvarint_encode64(void *buf, size_t size, uint64_t v)
 {
     uint8_t *ptr = buf;
-    for (int ii = 0; ii < size; ii++)
+    for (size_t ii = 0; ii < size; ii++)
     {
         if (v < 0x80)
         {
@@ -25,7 +25,7 @@ static int uvarint_decode64(uint64_t *v, const void *data, size_t size, size_t t
     *v = 0;
     // for a type of N bytes we need at most N+1 bytes, since
     // we don't support types of more than 8 bytes
-    for (int ii = 0; ii < MIN(size, type_size + 1); ii++)
+    for (size_t ii = 0; ii < MIN(size, type_size + 1); ii++)
     {
         uint8_t b = ptr[ii];
         if (b < 0x80)

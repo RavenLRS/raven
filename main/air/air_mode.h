@@ -18,7 +18,6 @@ typedef enum
     AIR_MODE_LONGEST = AIR_MODE_5,
 } air_mode_e;
 
-
 typedef uint16_t air_mode_mask_t;
 
 typedef enum
@@ -42,4 +41,3 @@ bool air_mode_mask_contains(air_mode_mask_t mask, air_mode_e mode);
 air_mode_mask_t air_mode_mask_remove(air_mode_mask_t mask, air_mode_e mode);
 air_mode_mask_t air_modes_pack(air_supported_modes_e supported);
 bool air_modes_intersect(air_mode_mask_t *intersection, air_supported_modes_e s1, air_supported_modes_e s2);
-

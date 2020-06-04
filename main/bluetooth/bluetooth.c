@@ -8,6 +8,8 @@
 #include "bluetooth/bluetooth_ota.h"
 #include "bluetooth/bluetooth_uuid.h"
 
+#include "config/config.h"
+
 #include "io/io.h"
 
 #include "rc/rc.h"
@@ -225,20 +227,59 @@ static esp_gatt_status_t telemetry_read(gatt_server_t *server, gatt_server_char_
     return ESP_GATT_OK;
 }
 
+static void bluetooth_default_device_name(rc_mode_e device_type, char *buf, size_t size)
+{
+    air_addr_t addr = config_get_addr();
+    snprintf(buf, size, "%02X:%02X:%02X-%s", addr.addr[3], addr.addr[4], addr.addr[5], config_get_mode_name());
+}
+
+static void bluetooth_format_device_name(rc_t *rc, rc_mode_e device_type, char *buf, size_t size)
+{
+    const char *local_name = config_get_name();
+
+    // Try to use currently set device name if valid
+    if (local_name && strlen(local_name) > 0)
+    {
+        char addr_buf[AIR_ADDR_STRING_BUFFER_SIZE];
+        air_addr_t addr = config_get_addr();
+        air_addr_format(&addr, addr_buf, sizeof(addr_buf));
+
+        // If device name equals MAC address (default), use its last 3 bytes
+        if (STR_EQUAL(local_name, addr_buf))
+        {
+            return bluetooth_default_device_name(device_type, buf, size);
+        }
+
+        // If not, shorten the custom one as needed
+        char local_name_short[13]; // max 12 chars + null terminator
+        const char *mode_name = config_get_mode_name();
+        const int max_local_name_size = 13 - strlen(mode_name) - 1;
+        if (strlen(local_name) > max_local_name_size)
+        {
+            strncpy(local_name_short, local_name, max_local_name_size);
+            local_name_short[max_local_name_size] = '\0';
+        }
+        else
+        {
+            strcpy(local_name_short, local_name);
+        }
+
+        strcat(local_name_short, "-");
+        strcat(local_name_short, mode_name);
+        strncpy(buf, local_name_short, size);
+        return;
+    }
+
+    // Fallback to last three bytes of MAC address
+    bluetooth_default_device_name(device_type, buf, size);
+}
+
 static void bluetooth_update_device_name(rc_t *rc)
 {
-    const char *name = "";
+    char buf[12];
+    bluetooth_format_device_name(rc, config_get_rc_mode(), buf, sizeof(buf));
 
-    switch (config_get_rc_mode())
-    {
-    case RC_MODE_TX:
-        name = "Raven TX";
-        break;
-    case RC_MODE_RX:
-        name = "Raven RX";
-        break;
-    }
-    gatt_server_set_name(&gatt_server, name);
+    gatt_server_set_name(&gatt_server, buf);
 }
 
 static esp_err_t bluetooth_init(rc_t *rc)

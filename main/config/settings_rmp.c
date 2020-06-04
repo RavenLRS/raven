@@ -174,7 +174,7 @@ size_t settings_rmp_msg_size(const settings_rmp_msg_t *msg)
     case SETTINGS_RMP_HELO:
         return 1 + sizeof(settings_rmp_helo_t);
     case SETTINGS_RMP_EHLO:
-        for (int ii = 0; ii < sizeof(msg->ehlo.name); ii++)
+        for (size_t ii = 0; ii < sizeof(msg->ehlo.name); ii++)
         {
             if (msg->ehlo.name[ii] == '\0')
             {

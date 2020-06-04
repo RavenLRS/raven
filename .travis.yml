@@ -1,3 +1,6 @@
+# Use Ubuntu 16.04 (Xenial)
+dist: xenial
+
 sudo: false
 
 git:
@@ -6,6 +9,10 @@ git:
 
 addons:
   apt:
+    sources:
+      - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main'
+        key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
+      - ubuntu-toolchain-r-test
     packages:
       - gcc
       - git
@@ -17,9 +24,9 @@ addons:
       - gperf
       - python
       - python-serial
+      - clang-format-9
 
 language: cpp
-dist: trusty
 
 jobs:
   include:

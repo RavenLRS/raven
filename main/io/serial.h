@@ -2,11 +2,14 @@
 
 #include <stddef.h>
 
+#include "io/gpio.h"
 #include "io/io.h"
 
 #include "util/time.h"
 
 #define SERIAL_IO(port) IO_MAKE(serial_port_read, serial_port_write, serial_port_io_flags, port)
+
+#define SERIAL_UNUSED_GPIO HAL_GPIO_NONE
 
 typedef struct serial_port_s serial_port_t;
 
@@ -35,9 +38,9 @@ typedef void (*serial_byte_callback_f)(const serial_port_t *port, uint8_t b, voi
 typedef struct serial_port_config_s
 {
     int baud_rate;
-    // Set tx == rx for half duplex. -1 for unused.
-    int tx_pin;
-    int rx_pin;
+    // Set tx == rx for half duplex. SERIAL_UNUSED_GPIO for unused.
+    hal_gpio_t tx;
+    hal_gpio_t rx;
     int tx_buffer_size;
     int rx_buffer_size;
     serial_parity_e parity;
@@ -53,6 +56,7 @@ bool serial_port_begin_write(serial_port_t *port);
 bool serial_port_end_write(serial_port_t *port);
 int serial_port_write(serial_port_t *port, const void *buf, size_t size);
 bool serial_port_set_baudrate(serial_port_t *port, uint32_t baudrate);
+bool serial_port_set_inverted(serial_port_t *port, bool inverted);
 void serial_port_close(serial_port_t *port);
 bool serial_port_is_half_duplex(const serial_port_t *port);
 serial_half_duplex_mode_e serial_port_half_duplex_mode(const serial_port_t *port);

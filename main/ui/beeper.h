@@ -7,6 +7,10 @@
 
 #include "util/time.h"
 
+#define BEEPER_PWM_RESOLUTION_BITS 10
+#define BEEPER_PWM_MAX ((1 << BEEPER_PWM_RESOLUTION_BITS) - 1)
+#define BEEPER_PWM_DEFAULT_DUTY (BEEPER_PWM_MAX / 2)
+
 typedef enum
 {
     BEEPER_MODE_NONE,

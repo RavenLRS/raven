@@ -4,5 +4,5 @@
 
 typedef struct hal_storage_s
 {
-    // TODO
+    uint8_t ns;
 } hal_storage_t;
